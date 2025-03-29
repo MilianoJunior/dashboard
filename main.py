@@ -17,10 +17,15 @@ from libs.db import (
 )
 from libs.componentes import (
     create_energy_card,
-    criar_grafico_nivel
 )
 import os
 import base64
+
+# Inicializar session_state
+if 'logado' not in st.session_state:
+    st.session_state['logado'] = False
+if 'load_data' not in st.session_state:
+    st.session_state['load_data'] = False
 
 # Configuração da página
 st.set_page_config(
@@ -82,10 +87,6 @@ st.markdown("""
 load_dotenv()
 
 cont = 0
-# Inicializar session_state
-if 'logado' not in st.session_state:
-    st.session_state['logado'] = False
-
 # Carregar configurações
 with open("config/usuarios_usinas.yaml", "r") as file:
     config = yaml.safe_load(file)
@@ -162,9 +163,12 @@ def carregar_dados(usina, periodo='M', janela=180):
         st.error('Erro ao conectar ao banco de dados')
     
 def carregar_dados_selecionados(usina, colunas_selecionadas, tempo_inicial, tempo_final):
-    conexao = conectar_db(usina['ip'], usina['usuario'], usina['senha'], usina['database'], usina['port'])
-    df = read_where_data(conexao, usina['tabela'], tempo_inicial, tempo_final, colunas_selecionadas)
-    return df
+    try:
+        conexao = conectar_db(usina['ip'], usina['usuario'], usina['senha'], usina['database'], usina['port'])
+        df = read_where_data(conexao, usina['tabela'], tempo_inicial, tempo_final, colunas_selecionadas)
+        return df
+    except Exception as e:
+        return pd.DataFrame(columns=colunas_selecionadas)
 
 # Função para definir que os dados devem ser carregados
 def set_load_data():
@@ -264,11 +268,12 @@ def layout(usina):
     st.write('EngeSEP - Engenharia integrada de sistemas')
     st.write(f'Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
 
-
-if st.session_state['logado']:
-    menu_principal(config, st.session_state['usina'])
-    layout(config['usinas'][st.session_state['usina']])
-else:
-    login(config, usinas)
-
+try:
+    if st.session_state['logado']:
+        menu_principal(config, st.session_state['usina'])
+        layout(config['usinas'][st.session_state['usina']])
+    else:
+        login(config, usinas)
+except Exception as e:
+    st.error(f'Erro: {e}')
 
