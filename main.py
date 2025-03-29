@@ -86,10 +86,25 @@ st.markdown("""
 
 load_dotenv()
 
+deploy = True
+if not deploy:
+    with open("config/usuarios_usinas.yaml", "r") as file:
+        config = yaml.safe_load(file)
+else:
+    url = os.getenv('MYSQLHOST')
+    user = os.getenv('MYSQLUSER')
+    password = os.getenv('MYSQLPASSWORD')
+    database = os.getenv('MYSQLDATABASE')
+    port = os.getenv('MYSQLPORT')
+    with open("config/usuarios_usinas.yaml", "r") as file:
+        config = yaml.safe_load(file)
+    for usina in config['usinas']:
+        usina['ip'] = url  # ok
+        usina['usuario'] = user  # ok
+        usina['senha'] = password  # ok
+        usina['database'] = database  # ok
+        usina['port'] = port  # ok
 
-# Carregar configurações
-with open("config/usuarios_usinas.yaml", "r") as file:
-    config = yaml.safe_load(file)
 
 # variaveis de configuração
 usinas = list(config['usinas'].keys())
