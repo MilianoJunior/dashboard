@@ -1,0 +1,29 @@
+# Arquivos de dependências
+node_modules/
+vendor/
+
+# Arquivos compilados
+*.class
+*.o
+*.pyc
+
+# Arquivos de ambiente
+.env
+.env.local
+
+# Diretórios de build
+/build/
+/dist/
+
+# Logs
+*.log
+log/
+logs/
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
+
+# Arquivos de configuração
+prompt.py
+test.py

@@ -1,0 +1,38 @@
+usinas:
+  CGH-APARECIDA:
+    users: "aparecida"
+    password: "Apa654123@"
+    ip: "100.110.212.125"
+    port: "3306"
+    database: "engesepdb"
+    usuario: "engegom"
+    senha: "654123"
+    tabela: "cgh_aparecida"
+    energia:
+      data_hora: "data_hora"
+      energia_ug01: "acumulador_energia"
+    nivel:
+      data_hora: "data_hora"
+      nivel_montante: "nivel_montante"
+      nivel_jusante: "nivel_jusante"
+
+  CGH-FAE:
+    users: "fae"
+    password: "Fae654123@"
+    ip: "100.106.33.66"
+    port: "3306"
+    database: "engesepdb"
+    usuario: "engesep"
+    senha: "654123"
+    tabela: "cgh_fae"
+    energia:
+      data_hora: "data_hora"
+      energia_ug01: "ug01_acumulador_energia"
+      energia_ug02: "ug02_acumulador_energia"
+    nivel:
+      data_hora: "data_hora"
+      nivel_montante: "ug01_nivel_agua"
+      nivel_jusante_ug01: "ug01_nivel_jusante"
+      nivel_jusante_ug02: "ug02_nivel_jusante"
+
+
