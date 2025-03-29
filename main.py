@@ -88,9 +88,11 @@ load_dotenv()
 
 deploy = True
 if not deploy:
+    print('Carregando configurações do arquivo: False')
     with open("config/usuarios_usinas.yaml", "r") as file:
         config = yaml.safe_load(file)
 else:
+    print('Carregando configurações do ambiente: True')
     url = os.getenv('MYSQLHOST')
     user = os.getenv('MYSQLUSER')
     password = os.getenv('MYSQLPASSWORD')
@@ -99,12 +101,11 @@ else:
     with open("config/usuarios_usinas.yaml", "r") as file:
         config = yaml.safe_load(file)
     for usina in config['usinas']:
-        usina['ip'] = url  # ok
-        usina['usuario'] = user  # ok
-        usina['senha'] = password  # ok
-        usina['database'] = database  # ok
-        usina['port'] = port  # ok
-
+        config['usinas'][usina]['ip'] = url  # ok
+        config['usinas'][usina]['usuario'] = user  # ok
+        config['usinas'][usina]['senha'] = password  # ok
+        config['usinas'][usina]['database'] = database  # ok
+        config['usinas'][usina]['port'] = port  # ok
 
 # variaveis de configuração
 usinas = list(config['usinas'].keys())
@@ -226,10 +227,14 @@ def layout(usina):
     dict_return = st.session_state.dict_return
     colunas = st.session_state.colunas
 
-    cols = st.columns(len(dict_return))
-    for i, (key, value) in enumerate(dict_return.items()):
-        with cols[i]:
-            create_energy_card(key, value['value'], value['data_hora'], value['medida'], value['percentual'], value['value_max'], value['value_min'])
+    # Verifica se há dados para exibir
+    if len(dict_return) > 0:
+        cols = st.columns(len(dict_return))
+        for i, (key, value) in enumerate(dict_return.items()):
+            with cols[i]:
+                create_energy_card(key, value['value'], value['data_hora'], value['medida'], value['percentual'], value['value_max'], value['value_min'])
+    else:
+        st.warning("Nenhum dado de energia disponível para exibição.")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -291,12 +296,12 @@ def layout(usina):
     st.write('EngeSEP - Engenharia integrada de sistemas')
     st.write(f'Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
 
-try:
-    if st.session_state['logado']:
-        menu_principal(config, st.session_state['usina'])
-        layout(config['usinas'][st.session_state['usina']])
-    else:
-        login(config, usinas)
-except Exception as e:
-    st.error(f'Erro: {e}')
+# try:
+if st.session_state['logado']:
+    menu_principal(config, st.session_state['usina'])
+    layout(config['usinas'][st.session_state['usina']])
+else:
+    login(config, usinas)
+# except Exception as e:
+#     st.error(f'Erro: {e}')
 
