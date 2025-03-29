@@ -86,7 +86,7 @@ st.markdown("""
 
 load_dotenv()
 
-cont = 0
+
 # Carregar configurações
 with open("config/usuarios_usinas.yaml", "r") as file:
     config = yaml.safe_load(file)
@@ -129,38 +129,46 @@ def menu_principal(config, usina):
             logout()
 
 def carregar_dados(usina, periodo='M', janela=180):
-    conexao = conectar_db(usina['ip'], usina['usuario'], usina['senha'], usina['database'], usina['port'])
-    if not conexao is None:
-        colunas_energia = list(usina['energia'].values())
-        colunas_nivel = list(usina['nivel'].values())
-        if periodo == 'Mensal':
-            periodo = 'M'
-        else:
-            periodo = 'D'
-        energia_total, nivel, describe_nivel, energia_mensal, dict_return = dados(conexao, usina['tabela'], colunas_energia, colunas_nivel, periodo, janela)
-        if periodo == 'D':
-            energia_mensal['data_hora'] = energia_mensal['data_hora'].dt.strftime('%Y-%m-%d')
-        else:
-            energia_mensal['data_hora'] = energia_mensal['data_hora'].dt.strftime('%Y-%m')
-        energia_mensal = energia_mensal.set_index('data_hora')
-        colunas_energia = [col for col in colunas_energia if 'energia' in col]
-        energia_mensal = energia_mensal.drop(columns=colunas_energia)
-        nivel = nivel.set_index('data_hora')
-        st.session_state.energia_total = energia_total
-        st.session_state.nivel = nivel
-        st.session_state.describe_nivel = describe_nivel
-        st.session_state.energia_mensal = energia_mensal
-        st.session_state.dict_return = dict_return
+    try:
+        conexao = conectar_db(usina['ip'], usina['usuario'], usina['senha'], usina['database'], usina['port'])
+        if not conexao is None:
+            colunas_energia = list(usina['energia'].values())
+            colunas_nivel = list(usina['nivel'].values())
+            if periodo == 'Mensal':
+                periodo = 'M'
+            else:
+                periodo = 'D'
+            energia_total, nivel, describe_nivel, energia_mensal, dict_return = dados(conexao, usina['tabela'], colunas_energia, colunas_nivel, periodo, janela)
+            if periodo == 'D':
+                energia_mensal['data_hora'] = energia_mensal['data_hora'].dt.strftime('%Y-%m-%d')
+            else:
+                energia_mensal['data_hora'] = energia_mensal['data_hora'].dt.strftime('%Y-%m')
+            energia_mensal = energia_mensal.set_index('data_hora')
+            colunas_energia = [col for col in colunas_energia if 'energia' in col]
+            energia_mensal = energia_mensal.drop(columns=colunas_energia)
+            nivel = nivel.set_index('data_hora')
+            st.session_state.energia_total = energia_total
+            st.session_state.nivel = nivel
+            st.session_state.describe_nivel = describe_nivel
+            st.session_state.energia_mensal = energia_mensal
+            st.session_state.dict_return = dict_return
 
-        # carregar todas as colunas da tabela do banco de dados
-        colunas = columns_table(conexao, usina['tabela'])
-        # colunas = colunas.drop(columns=['id'])
-        colunas = colunas['Field'].tolist()
-        if 'id' in colunas:
-            colunas.remove('id')
-        st.session_state.colunas = colunas
-    else:
-        st.error('Erro ao conectar ao banco de dados')
+            # carregar todas as colunas da tabela do banco de dados
+            colunas = columns_table(conexao, usina['tabela'])
+            # colunas = colunas.drop(columns=['id'])
+            colunas = colunas['Field'].tolist()
+            if 'id' in colunas:
+                colunas.remove('id')
+            st.session_state.colunas = colunas
+        else:
+            st.error('Erro ao conectar ao banco de dados')
+    except Exception as e:
+        st.session_state.energia_total = pd.DataFrame()
+        st.session_state.nivel = pd.DataFrame()
+        st.session_state.describe_nivel = pd.DataFrame()
+        st.session_state.energia_mensal = pd.DataFrame()
+        st.session_state.dict_return = {}
+        st.session_state.colunas = []
     
 def carregar_dados_selecionados(usina, colunas_selecionadas, tempo_inicial, tempo_final):
     try:

@@ -25,7 +25,7 @@ def desempenho(funcao):
 def conectar_db(host, user, password, database, port):
     try:
         print(f"Conectando ao banco de dados {database} em {host}:{user}, {port}")
-        conexao = mysql.connector.connect(host=host, user=user, password=password, database=database, port=port)
+        conexao = mysql.connector.connect(host=host, user=user, password=password, database=database, port=port, timeout=10)
         print(f"Conexão estabelecida com sucesso")
         return conexao
     except Error as e:
