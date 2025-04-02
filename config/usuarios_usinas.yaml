@@ -8,6 +8,7 @@ usinas:
     usuario: "engegom"
     senha: "654123"
     tabela: "cgh_aparecida"
+    nivel_vertimento: "405.30"
     energia:
       data_hora: "data_hora"
       energia_ug01: "acumulador_energia"
@@ -24,6 +25,7 @@ usinas:
     database: "engesepdb"
     usuario: "engesep"
     senha: "654123"
+    nivel_vertimento: "701.27"
     tabela: "cgh_fae"
     energia:
       data_hora: "data_hora"

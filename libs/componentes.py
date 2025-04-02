@@ -52,9 +52,13 @@ def create_energy_card(description, value, data_hora, medida, percentual, value_
         max_min = ""
     if percentual is not None:
         # preciso do icon verde ou vermelho
+        
         cor = "#A8EF6A" if percentual > 0 else "#EF6A6A"
         icon_color = "🔼" if percentual > 0 else "🔽"
-        percentual = f"{icon_color} {percentual} cm"
+        if medida == 'MWh':
+            percentual = f"{icon_color} {percentual} %"
+        else:
+            percentual =f"{icon_color} {percentual} m"
         
     else:
         percentual = ""
