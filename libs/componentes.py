@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 
+
 def create_energy_card(description, value, data_hora, medida, percentual, value_max=None, value_min=None):
     """
     Creates a styled card displaying energy production information.

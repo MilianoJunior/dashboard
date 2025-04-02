@@ -27,3 +27,7 @@ Thumbs.db
 # Arquivos de configuração
 prompt.py
 test.py
+
+*.csv
+*.xlsx
+*.xls

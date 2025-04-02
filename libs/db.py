@@ -75,9 +75,16 @@ def columns_table(conexao, table_name):
 def dados(conexao, table_name, colunas_energia, colunas_nivel, periodo='M', janela=180):
     try:
         # Montar a query
+        print('colunas_energia', colunas_energia)
+        print('colunas_nivel', colunas_nivel)
         energia_total = total_gerado(conexao, table_name, colunas_energia)
+        print('energia_total', energia_total)
         nivel, describe_nivel, percentual_nivel = description_nivel(conexao, table_name, colunas_nivel)
+        print('nivel', nivel)
+        print('describe_nivel', describe_nivel)
+        print('percentual_nivel', percentual_nivel)
         energia_mensal = description_energia(conexao, table_name, colunas_energia, periodo=periodo, janela=janela)
+        print('energia_mensal', energia_mensal)
             
         dict_return = {
             'Produção total': {
