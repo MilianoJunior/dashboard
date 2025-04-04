@@ -493,7 +493,9 @@ def get_temperatura() -> pd.DataFrame:
     try:
         query = get_info_usina('describe temperatura')
         df = get_db_data(query)
-        df = df[[col for col in df.columns if 'temp' or 'enrol' in col]]
+        colunas_temp = [col for col in df.columns if 'temp' in col or 'enrol' in col]
+        st.write(colunas_temp)
+        df = df[colunas_temp]
         df = df.describe()
         return df
     except Exception as e:
