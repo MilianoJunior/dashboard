@@ -11,6 +11,8 @@ import pandas as pd
 from libs.componentes import create_energy_card
 import plotly.graph_objects as go
 import math
+import os
+import base64
 
 from libs.db import (
     conectar_db, 
@@ -151,7 +153,9 @@ def menu_principal(config, usina):
 
     col1, col2, col3, col4 = st.columns([1, 6, 1, 4])
     with col1:
+        st.markdown(f"<div style='width: 20%;'>", unsafe_allow_html=True)
         st.image("assets/logo.png", width=100)
+        st.markdown(f"</div>", unsafe_allow_html=True)
     with col2:
         st.markdown(f"<h2 style='text-align: left; margin-top: 0;'>Dashboard {st.session_state['usina']['tabela'].replace('_', ' ').capitalize()}</h2>", unsafe_allow_html=True)
     with col3:
@@ -494,7 +498,6 @@ def get_temperatura() -> pd.DataFrame:
         query = get_info_usina('describe temperatura')
         df = get_db_data(query)
         colunas_temp = [col for col in df.columns if 'temp' in col or 'enrol' in col]
-        st.write(colunas_temp)
         df = df[colunas_temp]
         df = df.describe()
         return df
