@@ -493,7 +493,7 @@ def get_temperatura() -> pd.DataFrame:
     try:
         query = get_info_usina('describe temperatura')
         df = get_db_data(query)
-        df = df[[col for col in df.columns if 'temp' in col]]
+        df = df[[col for col in df.columns if 'temp' or 'enrol' in col]]
         df = df.describe()
         return df
     except Exception as e:
@@ -658,5 +658,6 @@ if st.session_state['logado']:
     layout(st.session_state['usina'])
 else:
     login(config, usinas)
+    
 # except Exception as e:
 #     st.error(f'Erro: {e}')
