@@ -268,7 +268,7 @@ def get_total_gerado() -> pd.DataFrame:
 # @desempenho
 def calcular_energia_acumulada(df, colunas, periodo):
     """
-    Calcula a energia acumulada diária ou mensal para as colunas de energia especificadas.
+    Calcula a energia acumulada diário ou mensal para as colunas de energia especificadas.
 
     Parâmetros:
     df (pd.DataFrame): DataFrame contendo os dados com uma coluna 'data_hora'.
@@ -584,30 +584,13 @@ def carregar_dados(usina, periodo='M', janela=180):
             periodo = 'M'
         else:
             periodo = 'D'
-        import time
-        inicio = time.time()
-        print('-'*100)
-        print(' '*5, 'Cards')
         st.session_state.list_cards = get_data_card_energia()
-        print(f'Tempo de execução: {time.time() - inicio} segundos')    
-        print('-'*100)
-        inicio = time.time()
-        print(' '*5, 'Produção de energia')
         st.session_state.ultimos_30_dias = get_ultimos_30_dias(periodo, janela)
-        print(f'Tempo de execução: {time.time() - inicio} segundos')
-        print('-'*100)
-        inicio = time.time()
-        print(' '*5, 'Nível')
         st.session_state.ultimos_1_hora_nivel = get_ultimos_1_hora_nivel()
-        print(f'Tempo de execução: {time.time() - inicio} segundos')
-        inicio = time.time()
-        print(' '*5, 'Temperatura')
         st.session_state.temperatura = get_temperatura()
-        print(f'Tempo de execução: {time.time() - inicio} segundos')
         
     except Exception as e:
         raise e
-        print('carregar_dados: ', e)
     
 
 # @desempenho
@@ -648,8 +631,52 @@ def layout(usina):
         for i, (key, value) in enumerate(st.session_state.list_cards.items()):
             create_energy_card(key, value['value'], value['data_hora'], value['medida'], value['percentual'], value['value_max'], value['value_min'])
 
+    with st.container(border=True):
+        colunas = get_names_all_columns()
+        cols1, cols2, col3, col4 = st.columns(4)
+        with cols1:
+            colunas_selecionadas = st.multiselect('Selecione as colunas', colunas['COLUMN_NAME'].tolist(), default=colunas['COLUMN_NAME'].tolist()[1])
+        with cols2:
+            data_hora_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
+        with col3:
+            data_hora_final = st.date_input('Data final', value=datetime.now())
+        with col4:
+            st.write('')
+            st.write('')
+            btn_grafico = st.button('Carregar gráficos')
         
+        if btn_grafico:
+            columns_query = ', '.join(colunas_selecionadas)
+            query = f"SELECT {'data_hora,'+ columns_query} FROM {usina['tabela']} WHERE data_hora BETWEEN '{data_hora_inicial}' AND '{data_hora_final}'"
+            df = get_db_data(query)
 
+            # Converter data_hora para datetime e definir como índice
+            df['data_hora'] = pd.to_datetime(df['data_hora'])
+            df = df.set_index('data_hora')
+            df_original = df.copy()
+
+            # Normalizar os dados usando z-score (média 0 e desvio padrão 1)
+            df_normalized = df.copy()
+            df_normalized[colunas_selecionadas] = df_normalized[colunas_selecionadas].apply(
+                lambda x: (x - x.mean()) / x.std())
+
+            # Criar abas para dados originais e normalizados
+            tab1, tab2 = st.tabs(["Dados Originais", "Dados Normalizados"])
+
+            with tab1:
+                # Gráfico de dados originais
+                st.subheader("Gráfico de Dados Originais")
+                st.line_chart(df_original[colunas_selecionadas])
+                with st.expander('Informações dos Dados Originais'):
+                    st.write(df_original)
+
+            with tab2:
+                # Gráfico de dados normalizados
+                st.subheader("Gráfico de Dados Normalizados")
+                st.line_chart(df_normalized[colunas_selecionadas])
+                with st.expander('Informações dos Dados Normalizados'):
+                    st.write(df_normalized)
+        
     # fazer um rodapé com as informações da usina
     st.divider()
     st.write(f'Usina: {usina["tabela"].replace("_", " ").capitalize()}')
@@ -663,6 +690,3 @@ if st.session_state['logado']:
     layout(st.session_state['usina'])
 else:
     login(config, usinas)
-    
-# except Exception as e:
-#     st.error(f'Erro: {e}')
