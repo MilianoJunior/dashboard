@@ -464,8 +464,3 @@ if st.session_state['logado']:
     layout(st.session_state['usina'])
 else:
     login(config, usinas)
-
-'''
-1 -Demora: 18.02209973335266 s
-2- Demora: 9.437216520309448 s
-'''
