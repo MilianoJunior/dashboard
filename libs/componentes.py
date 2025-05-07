@@ -4,20 +4,9 @@ from datetime import datetime
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
-
+import plotly.express as px
 
 def create_energy_card(description, value, data_hora, medida, percentual, value_max=None, value_min=None):
-    """
-    Creates a styled card displaying energy production information.
-    
-    Parameters:
-    description (str): The description text (e.g., "Produção Energia - 09/2025")
-    value (str): The value to display (e.g., "60 MWh")
-    
-    Returns:
-    None: Displays the card directly in the Streamlit app
-    """
-    # Apply the dark card style
     card_style = """
         <style>
         .energy-card {
@@ -51,8 +40,6 @@ def create_energy_card(description, value, data_hora, medida, percentual, value_
     else:
         max_min = ""
     if percentual is not None:
-        # preciso do icon verde ou vermelho
-        
         cor = "#A8EF6A" if percentual > 0 else "#EF6A6A"
         icon_color = "🔼" if percentual > 0 else "🔽"
         if medida == 'MWh':
@@ -66,7 +53,7 @@ def create_energy_card(description, value, data_hora, medida, percentual, value_
 
     card_html = f"""
         <div class="energy-card">
-            <div class="description">{description} - <span style="font-size: 14px; color: #808495;">Atual.: {data_hora}</span></div>
+            <div class="description">{description}<span style="font-size: 14px; color: #808495;"></div>
             <div class="value"> 
                 {value} 
                 <span style="font-size: 20px; color: #808495;">{medida}</span>
@@ -79,9 +66,6 @@ def create_energy_card(description, value, data_hora, medida, percentual, value_
 
 
 def calculadora_ganho(energia_gerada: float = 0, valor_megawatt: float = 450):
-    """
-    Calcula o ganho de energia em reais.
-    """
     st.markdown("""
         <style>
         /* Container da Calculadora */
@@ -148,101 +132,108 @@ def calculadora_ganho(energia_gerada: float = 0, valor_megawatt: float = 450):
         except ValueError:
             st.error("Por favor, insira valores numéricos válidos")
 
+def create_widget_temperatura(df):
+    try:
+        cols = st.columns(5)
+        icons = {
+            'oleo_uhlm': '🔥',
+            'oleo_uhrv': '🔥',
+            'casq_comb': '⚙️',
+            'manc_casq_esc': '⚙️',
+            'enrol_a': '⚡',
+            'enrol_b': '⚡',
+            'enrol_c': '⚡',
+            'nucleo_estator_01': '🧲',
+            'nucleo_estator_02': '🧲',
+            'nucleo_estator_03': '🧲'
+        }
+        for i, col in enumerate(df.columns):
+            with cols[i % 5]:
+                mean_value = round(float(df.loc['mean', col]), 2)
+                min_value = round(float(df.loc['min', col]), 2)
+                max_value = round(float(df.loc['max', col]), 2)
+                icon = icons.get(col, '🌡️')
+                st.markdown(
+                    f"""
+                    <div style="
+                        background-color: #1E1E1E; 
+                        border-radius: 10px; 
+                        padding: 10px; 
+                        margin-bottom: 10px;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    ">
+                        <div style="font-size: 12px; color: #CCCCCC; margin-bottom: 5px;">
+                            Temp {col.replace('_', ' ')}
+                        </div>
+                        <div style="
+                            display: flex; 
+                            justify-content: space-between; 
+                            align-items: center;
+                        ">
+                            <span style="font-size: 28px; font-weight: bold; color: white;">
+                                {mean_value}°
+                            </span>
+                            <span style="font-size: 24px;">
+                                {icon}
+                            </span>
+                        </div>
+                        <div style="
+                            font-size: 11px;
+                            color: #AAAAAA;
+                            margin-top: 5px;
+                            display: flex;
+                            justify-content: space-between;
+                        ">
+                            <span>Min: {min_value}°</span>
+                            <span>Max: {max_value}°</span>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+    except Exception as e:
+        st.error(f'Erro ao criar widget de temperatura: {e}')
 
+def menu_principal(config, usina):
+    col1, col2, col3, col4 = st.columns([1, 6, 1, 4])
+    with col1:
+        st.markdown(f"<div style='width: 15%;'>", unsafe_allow_html=True)
+        st.image("assets/logo.png", width=80)
+        st.markdown(f"</div>", unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"<h2 style='text-align: left; margin-top: 0;'>Dashboard {st.session_state['usina']['tabela'].replace('_', ' ').capitalize()}</h2>", unsafe_allow_html=True)
+    with col3:
+        st.write(" ")
+        logout_btn = st.button("Logout", use_container_width=True)
+        if logout_btn:
+            st.session_state.clear()
+            st.rerun()
 
-
-
-def criar_grafico_nivel(df, colunas_nivel, coluna_data=None, titulo="Níveis de Água"):
-    """
-    Cria um gráfico de níveis de água otimizado para visualizar pequenas variações.
-    
-    Parameters:
-    -----------
-    df : pandas.DataFrame
-        DataFrame contendo os dados de nível
-    colunas_nivel : list
-        Lista contendo os nomes das colunas de nível no dataframe
-        Ex: ['nivel_montante', 'nivel_jusante']
-    coluna_data : str, opcional
-        Nome da coluna que contém as datas/horas (se None, usará o índice do dataframe)
-    titulo : str, opcional
-        Título do gráfico (default: "Níveis de Água")
-    """
-    # Criar figura
-    fig = go.Figure()
-    
-    # Determinar o eixo X (data/hora)
-    if coluna_data and coluna_data in df.columns:
-        x_values = df[coluna_data]
-    else:
-        x_values = df.index
-    
-    # Remover a coluna de data/hora da lista de colunas de nível, se estiver presente
-    colunas_nivel_plot = [col for col in colunas_nivel if col != coluna_data]
-    
-    # Verificar quais colunas são numéricas
-    colunas_numericas = []
-    for coluna in colunas_nivel_plot:
-        if coluna in df.columns:
-            # Verificar se a coluna é numérica
-            if np.issubdtype(df[coluna].dtype, np.number):
-                colunas_numericas.append(coluna)
-                
-                # Criar nome de exibição mais amigável
-                nome_exibicao = coluna.replace('_', ' ').title()
-                
-                fig.add_trace(go.Scatter(
-                    x=x_values,
-                    y=df[coluna],
-                    mode='lines',
-                    name=nome_exibicao,
-                    line=dict(width=2)
-                ))
-    
-    # Calcular limites dinâmicos para o eixo Y apenas com colunas numéricas
-    if colunas_numericas:
-        # Calcular mínimo e máximo de forma segura
-        y_min = df[colunas_numericas].min().min()
-        y_max = df[colunas_numericas].max().max()
-        
-        # Calcular intervalo de forma segura
-        intervalo = float(y_max) - float(y_min)
-        
-        # Definir margem apropriada
-        if intervalo < 0.5:
-            margem = 0.1
-        else:
-            # Margem de 2% do intervalo
-            margem = intervalo * 0.02
-            
-        y_min = float(y_min) - margem
-        y_max = float(y_max) + margem
-    else:
-        # Valores padrão se não houver colunas numéricas válidas
-        y_min = 0
-        y_max = 10
-    
-    # Configurar layout do gráfico
-    fig.update_layout(
-        title=titulo,
-        xaxis_title='Data/Hora',
-        yaxis_title='Nível (m)',
-        yaxis=dict(
-            range=[y_min, y_max],
-            tickformat='.3f',  # Mostrar 3 casas decimais
-        ),
-        plot_bgcolor='rgb(17, 17, 17)',
-        paper_bgcolor='rgb(17, 17, 17)',
-        font=dict(color='white'),
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1
-        ),
-        margin=dict(l=10, r=10, t=50, b=50),
-        hovermode='x unified'
+def create_grafico_producao_energia(df):
+    colunas_prod = [col for col in st.session_state.ultimos_30_dias.columns if col.startswith('prod_')]
+    fig = px.bar(
+        st.session_state.ultimos_30_dias,
+        x='data_hora',
+        y=colunas_prod,
+        title='Produção de Energia',
+        barmode='group',
+        height=500
     )
-    
-    return fig
+    fig.update_layout(
+        xaxis_title='Data/Hora',
+        yaxis_title='Energia (MWh)',
+        legend_title='Unidades Geradoras'
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+def create_grafico_nivel(df):
+    colunas_nivel = [col for col in df.columns if 'niv' in col]
+    fig = px.line(df, x='data_hora', y=colunas_nivel, title='Nível')
+    nivel_vertimento = float(st.session_state['usina']['nivel_vertimento'])
+    fig.add_hline(y=nivel_vertimento, line_dash="dash", line_color="red", 
+                  annotation_text="Nível de Vertimento", annotation_position="right")
+    fig.update_layout(
+        yaxis_title='Nível (m)',
+        showlegend=True
+    )
+    st.plotly_chart(fig, use_container_width=True)

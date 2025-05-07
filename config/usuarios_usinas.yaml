@@ -37,4 +37,42 @@ usinas:
       nivel_jusante_ug01: "ug01_nivel_jusante"
       nivel_jusante_ug02: "ug02_nivel_jusante"
 
+  PCH-PEDRAS:
+    users: "pedras"
+    password: "Pedras654123@"
+    ip: "100.93.237.40"
+    port: "3306"
+    database: "engesepdb"
+    usuario: "engesep"
+    senha: "654123"
+    nivel_vertimento: "1099.0"
+    tabela: "pch_pedras_ug01"
+    energia:
+      data_hora: "data_hora"
+      energia_ug01: "acum_energia"
+    nivel:
+      data_hora: "data_hora"
+      nivel_montante: "niv_mont_grade"
+      nivel_jusante: "niv_jus_grade"
+
+  CGH-PICADAS-ALTAS:
+    users: "picadas_altas"
+    password: "PicadasAltas654123@"
+    ip: "100.79.241.13"
+    port: "3306"
+    database: "engesepdb"
+    usuario: "engesep"
+    senha: "654123"
+    nivel_vertimento: "416.50"
+    tabela: "cgh_picadas_altas"
+    energia:
+      data_hora: "data_hora"
+      energia_ug01: "ug01_acumulador_energia"
+      energia_ug02: "ug02_acumulador_energia"
+    nivel:
+      data_hora: "data_hora"
+      nivel_montante: "nivel_montante"
+      nivel_jusante: "nivel_jusante"
+    
+
 

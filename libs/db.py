@@ -9,28 +9,29 @@ import traceback
 from datetime import datetime, timedelta
 import time
 
+cont = 0
+funcoes = []
 
 def desempenho(funcao):
     def wrapper(*args, **kwargs):
-        print(f"      Iniciando a função {funcao.__name__}")
+        global cont
+        if funcao.__name__ not in funcoes:
+            funcoes.append(funcao.__name__)
+            cont += 1
+        print(' '*cont,f"{cont} - Iniciando:  {funcao.__name__}")
         inicio = time.time()
         resultado = funcao(*args, **kwargs)
         fim = time.time()
-        print(f"      Tempo de execução: {fim - inicio} segundos")
-        print('--------------------------------')
+        print(' '*cont,f"{cont} - Finalizado: {funcao.__name__} Time: {fim - inicio} s")
+        print(' '*cont,'--------------------------------')
         return resultado
     return wrapper
 
-
 def conectar_db(host, user, password, database, port):
     try:
-        print(f"Conectando ao banco de dados {database} em {host}:{user}, {port}")
-        conexao = mysql.connector.connect(host=host, user=user, password=password, database=database, port=port)
-        print(f"Conexão estabelecida com sucesso")
-        return conexao
+        return mysql.connector.connect(host=host, user=user, password=password, database=database, port=port)
     except Error as e:
-        print(f"Erro ao conectar ao banco de dados: {e}")
-        return None
+        raise Exception(f"Erro ao conectar ao banco de dados: {e}")
     
 # @desempenho
 def read_all_data(conexao, table_name):
@@ -235,29 +236,3 @@ def calcular_energia_acumulada(df, colunas, periodo):
         return df_mensal
         
     return df
-    
-
-
-
-'''
-
-Com base no dataframe df_original, preciso calcular a energia acumulada que é a diferença entre o valor atual e o valor anterior,
-por que o valor retornado sempre é o acumulado (Soma do atual com o anterior).
-
-'''
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
