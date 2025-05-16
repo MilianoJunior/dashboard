@@ -1,3 +1,4 @@
+import base64
 from typing import Dict
 import streamlit as st
 from datetime import datetime
@@ -5,132 +6,119 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import plotly.express as px
+from libs.models.db import Database
+import streamlit.components.v1 as components
 
-def create_energy_card(description, value, data_hora, medida, percentual, value_max=None, value_min=None):
+
+def render_percentual_icon(percentual, medida='MWh'):
+    """
+    Renderiza o ícone de percentual com SVG colorido: azul para positivo, vermelho para negativo.
+    """
+    if percentual is None:
+        return ""
+    if percentual > 0:
+        svg = """
+        <svg width='11' height='11' style='vertical-align:middle'>
+            <polygon points='5.5,2 10,9 1,9' style='fill:#3A80EF'/>
+        </svg>
+        """
+        color = "#3A80EF"
+    else:
+        svg = """
+        <svg width='11' height='11' style='vertical-align:middle'>
+            <polygon points='1,2 10,2 5.5,9' style='fill:#EF6A6A'/>
+        </svg>
+        """
+        color = "#EF6A6A"
+    unidade = '%' if medida == 'MWh' else 'm'
+    return f"<span style='color:{color}; font-size: 0.98em; display: flex; align-items: center;'>{svg} {percentual} {unidade}</span>"
+
+def create_energy_card(description, value, data_hora, medida, percentual, value_max=None, value_min=None, valor_real=None):
     card_style = """
         <style>
         .energy-card {
-            background-color: #1E1E1E;
-            color: white;
-            padding: 20px;
-            border-radius: 20px;
-            margin: 10px 0px;
-            max-width: 500px;
+            background: linear-gradient(135deg, #232526 0%, #414345 100%);
+            color: #F3F6F9;
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin: 8px 0px;
+            max-width: 400px;
+            min-width: 220px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
         .description {
-            font-size: 20px;
+            font-size: 0.98rem;
             font-weight: 500;
-            margin-bottom: 10px;
+            color: #A0AEC0;
+            margin-bottom: 0;
+        }
+        .value-row {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
         }
         .value {
-            font-size: 32px;
-            font-weight: 600;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #F3F6F9;
+        }
+        .unit {
+            font-size: 0.95rem;
+            color: #A0AEC0;
+            margin-left: 1px;
         }
         .percentual {
-            font-size: 14px;
+            margin-left: 6px;
+            display: flex;
+            align-items: center;
+            font-size: 0.98rem;
+            font-weight: 500;
+        }
+        .valor_real {
+            font-size: 0.95rem;
             color: #A8EF6A;
             font-weight: 500;
+            margin-top: 0;
+        }
+        .maxmin {
+            font-size: 0.90rem;
+            color: #808495;
+            margin-top: 0;
         }
         </style>
     """
     
-    # Create HTML for the card
     if value_max is not None and value_min is not None:
         max_min = f"Máx: {value_max} - Mín: {value_min}"
     else:
         max_min = ""
     if percentual is not None:
-        cor = "#A8EF6A" if percentual > 0 else "#EF6A6A"
-        icon_color = "🔼" if percentual > 0 else "🔽"
-        if medida == 'MWh':
-            percentual = f"{icon_color} {percentual} %"
-        else:
-            percentual =f"{icon_color} {percentual} m"
-        
+        percentual_html = render_percentual_icon(percentual, medida)
     else:
-        percentual = ""
-        cor = "#808495"
+        percentual_html = ""
+
+    if valor_real is not None:
+        valor_real = f"R$ {valor_real:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
+    else:
+        valor_real = ""
 
     card_html = f"""
         <div class="energy-card">
-            <div class="description">{description}<span style="font-size: 14px; color: #808495;"></div>
-            <div class="value"> 
-                {value} 
-                <span style="font-size: 20px; color: #808495;">{medida}</span>
-                <span style="font-size: 14px; color: #3A608F;">{max_min}</span>
-                <span style="font-size: 14px; color: {cor};">{percentual}</span>
+            <div class="description">{description}</div>
+            <div class="value-row">
+                <span class="value">{str(value).replace('.', ',')}</span>
+                <span class="unit">{medida}</span>
+                <span class="percentual">{percentual_html}</span>
             </div>
+            <div class="valor_real">{valor_real}</div>
+            <div class="maxmin">{max_min}</div>
         </div>
     """
     return st.markdown(card_style + card_html, unsafe_allow_html=True)
 
-
-def calculadora_ganho(energia_gerada: float = 0, valor_megawatt: float = 450):
-    st.markdown("""
-        <style>
-        /* Container da Calculadora */
-        .calculadora-container {
-            background-color: rgba(30, 30, 30, 0.8);
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin: 1rem 1rem;
-            backdrop-filter: blur(10px);
-        }
-        
-        /* Campos de entrada */
-        .stNumberInput > div > div {
-            background-color: #1E1E1E !important;
-            border: 1px solid #3E3E3E !important;
-            color: white !important;
-        }
-        
-        /* Resultado */
-        .resultado-calculadora {
-            background-color: #2E2E2E;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-top: 1rem;
-            text-align: center;
-        }
-        
-        .resultado-valor {
-            color: #4C6EF5;
-            font-size: 1.5rem;
-            font-weight: 500;
-            margin: 0;
-        }
-        
-        .resultado-texto {
-            color: #808495;
-            font-size: 0.85rem;
-            margin-top: 0.25rem;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    with st.container():
-        energia = st.number_input("Energia gerada (MWh)", value=energia_gerada, key="energia_gerada")
-        valor = st.number_input("Valor do megawatt (R$)", value=valor_megawatt, key="valor_megawatt")
-        
-        try:
-            # Calcula o ganho inicial
-            ganho = energia * valor
-            
-            # Se o botão for clicado, recalcula com os valores atuais
-            if st.button("Calcular"):
-                energia = st.session_state.energia_gerada
-                valor = st.session_state.valor_megawatt
-                ganho = energia * valor
-            
-            st.markdown(f"""
-                <div class="resultado-calculadora">
-                    <p class="resultado-valor">R$ {ganho:,.2f}</p>
-                    <p class="resultado-texto">Ganho estimado</p>
-                </div>
-            """, unsafe_allow_html=True)
-            
-        except ValueError:
-            st.error("Por favor, insira valores numéricos válidos")
 
 def create_widget_temperatura(df):
     try:
@@ -194,37 +182,127 @@ def create_widget_temperatura(df):
     except Exception as e:
         st.error(f'Erro ao criar widget de temperatura: {e}')
 
+def carregar_logo(usina):
+    with open(f'assets/logo.png', 'rb') as file:
+        logo_bytes = file.read()
+        return logo_bytes
+    
+# def menu_principal(config, usina):
+#     import base64
+    
+#     logo_bytes = carregar_logo(usina)
+#     logo_html = f'<img src="data:image/png;base64,{base64.b64encode(logo_bytes).decode()}" alt="Logo" width="45" height="45" class="d-inline-block align-text-top"'
+#     menu_html = f"""
+#         <nav class="navbar">
+#             <div class="container-fluid">
+#                 <a class="navbar-brand" href="#">
+#                 {logo_html}
+#                 </a>
+#                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
+#                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+#                         <li class="nav-item">
+#                             <a class="nav-link active" aria-current="page" href="#">{usina['tabela'].replace('_', ' ').capitalize()}</a>
+#                         </li>
+#                     </ul>
+#                 </div>
+#             </div>
+#         </nav>
+#     """
+#     # components.html(menu_html, height=50)
+#     st.markdown(menu_html, unsafe_allow_html=True)
+
 def menu_principal(config, usina):
-    col1, col2, col3, col4 = st.columns([1, 6, 1, 4])
+    import base64
+    logo_bytes = carregar_logo(usina)
+    logo_html = f'<img src="data:image/png;base64,{base64.b64encode(logo_bytes).decode()}" alt="Logo" style="height:60px;border-radius:50px;background:#fff;padding:2px;">'
+
+    col1, col2 = st.columns([8, 1])
     with col1:
-        st.markdown(f"<div style='width: 15%;'>", unsafe_allow_html=True)
-        st.image("assets/logo.png", width=80)
-        st.markdown(f"</div>", unsafe_allow_html=True)
+        st.markdown(f"""
+            <div style="display: flex; align-items: center; gap: 10px; background-color: #2c2c2c; border-radius: 15px; padding: 7px; margin: 2px;">
+                {logo_html}
+                <span style="font-family: 'Inter', system-ui, Arial, sans-serif; font-size: 24px; font-weight: 400; color: white;">
+                    Dashboard {usina['tabela'].replace('_', ' ').upper()}
+                </span>
+            </div>
+        """, unsafe_allow_html=True)
     with col2:
-        st.markdown(f"<h2 style='text-align: left; margin-top: 0;'>Dashboard {st.session_state['usina']['tabela'].replace('_', ' ').capitalize()}</h2>", unsafe_allow_html=True)
-    with col3:
-        st.write(" ")
-        logout_btn = st.button("Logout", use_container_width=True)
-        if logout_btn:
+        st.markdown("""
+        <style>
+        div[data-testid="stButton"] > button {
+            background-color: #2c2c2c;
+            color: #00e1ff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: 'Inter', system-ui, Arial, sans-serif;
+            font-size: 14px;
+            font-weight: 400;
+            cursor: pointer;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        if st.button("Logout", use_container_width=True):
             st.session_state.clear()
             st.rerun()
 
 def create_grafico_producao_energia(df):
-    colunas_prod = [col for col in st.session_state.ultimos_30_dias.columns if col.startswith('prod_')]
-    fig = px.bar(
-        st.session_state.ultimos_30_dias,
-        x='data_hora',
-        y=colunas_prod,
-        title='Produção de Energia',
-        barmode='group',
-        height=500
-    )
-    fig.update_layout(
-        xaxis_title='Data/Hora',
-        yaxis_title='Energia (MWh)',
-        legend_title='Unidades Geradoras'
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    from datetime import datetime, timedelta
+    st.divider()
+    # Crie todas as colunas no mesmo nível
+    col1, col2, col3 = st.columns([0.15, 1, 0.3])
+    with col1:
+        data_hora_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
+        data_hora_final = st.date_input('Data final', value=datetime.now())
+        periodo = st.selectbox('Período', ['Diário', 'Mensal'])
+        if 'periodo' not in st.session_state:
+            st.session_state['periodo'] = periodo
+        if 'data_inicial' not in st.session_state:
+            st.session_state['data_inicial'] = data_hora_inicial
+        if 'data_final' not in st.session_state:
+            st.session_state['data_final'] = data_hora_final
+        btn_grafico = st.button('Carregar gráfico')
+        if btn_grafico:
+            periodos = {
+                'Diário': 'D',
+                'Mensal': 'M'
+            }
+            st.session_state['periodo'] = periodos.get(periodo)
+            st.session_state['data_inicial'] = data_hora_inicial
+            st.session_state['data_final'] = data_hora_final
+            st.session_state.load_data = False
+            st.rerun()
+    with col2:
+        # O gráfico pode ficar abaixo das colunas de filtro
+        colunas_prod = [col for col in df.columns if col.startswith('prod_')]
+        fig = px.bar(
+            df,
+            x=df.index,
+            y=colunas_prod,
+            title='Geração de Energia',
+            barmode='group',
+            height=500
+        )
+        fig.update_layout(
+            yaxis_title='Energia (MWh)',
+            xaxis_title='Data',
+            legend_title='Unidades Geradoras',
+            legend=dict(
+                x=0.98,
+                y=0.98,
+                xanchor='right',
+                yanchor='top',
+                bgcolor='rgba(30,30,30,0.7)',
+                bordercolor='rgba(200,200,200,0.2)',
+                borderwidth=1,
+                font=dict(size=12, color='white')
+            )
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    with col3:
+        with st.container(height=500, border=False):
+            st.write('Tabela de Dados')
+            st.dataframe(df)
 
 def create_grafico_nivel(df):
     colunas_nivel = [col for col in df.columns if 'niv' in col]
@@ -234,6 +312,73 @@ def create_grafico_nivel(df):
                   annotation_text="Nível de Vertimento", annotation_position="right")
     fig.update_layout(
         yaxis_title='Nível (m)',
-        showlegend=True
+        showlegend=True,
+        legend=dict(
+            x=0.98,
+            y=0.98,
+            xanchor='right',
+            yanchor='top',
+            bgcolor='rgba(30,30,30,0.7)',
+            bordercolor='rgba(200,200,200,0.2)',
+            borderwidth=1,
+            font=dict(size=12, color='white')
+        )
     )
     st.plotly_chart(fig, use_container_width=True)
+
+
+def login_ui():
+    st.title('Login')
+    usinas = list(st.session_state['usinas'].keys())
+    usina_nome = st.selectbox('Selecione a usina', usinas)
+    usuario = st.text_input('Usuário', value='admin')
+    senha = st.text_input('Senha', type='password', value='admin')
+    if st.button('Entrar'):
+        print(usina_nome)
+        print(usinas)
+        usina = st.session_state['usinas'][usina_nome]
+        if usuario == 'admin' and senha == 'admin':
+            st.session_state['logado'] = True
+            st.session_state['usina'] = usina
+            if 'db' not in st.session_state:
+                st.session_state['db'] = Database()
+            st.success('Login realizado com sucesso!')
+            st.rerun()
+        else:
+            st.error('Usuário ou senha inválidos para esta usina.')
+
+def footer(usina):
+    st.divider()
+    st.write(f'Usina: {usina}')
+    st.write('EngeSEP - Engenharia integrada de sistemas')
+    st.write(f'Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
+
+
+def render_graficos_dados(usina, colunas):
+    from libs.models.datas import fetch_dados_graficos
+    from datetime import datetime, timedelta
+
+    cols1, cols2, col3, col4 = st.columns(4)
+    with cols1:
+        colunas_selecionadas = st.multiselect('Selecione as colunas', colunas['COLUMN_NAME'].tolist(), default=colunas['COLUMN_NAME'].tolist()[1])
+    with cols2:
+        data_hora_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
+    with col3:
+        data_hora_final = st.date_input('Data final', value=datetime.now())
+    with col4:
+        st.write('')
+        st.write('')
+        btn_grafico = st.button('Carregar gráficos')
+    if btn_grafico:
+        df_original, df_normalized = fetch_dados_graficos(usina, colunas_selecionadas, data_hora_inicial, data_hora_final)
+        tab1, tab2 = st.tabs(["Dados Originais", "Dados Normalizados"])
+        with tab1:
+            st.subheader("Gráfico de Dados Originais")
+            st.line_chart(df_original[colunas_selecionadas])
+            with st.expander('Informações dos Dados Originais'):
+                st.write(df_original)
+        with tab2:
+            st.subheader("Gráfico de Dados Normalizados")
+            st.line_chart(df_normalized[colunas_selecionadas])
+            with st.expander('Informações dos Dados Normalizados'):
+                st.write(df_normalized)

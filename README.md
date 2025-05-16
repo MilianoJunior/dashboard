@@ -171,3 +171,33 @@ class AuthManager:
 ```
 
 Esta abordagem tornará o código mais manutenível, testável e extensível para funcionalidades futuras.
+
+## Como Executar
+
+1. Instale as dependências:
+   ```
+   pip install -r requirements.txt
+   ```
+2. Configure as variáveis de ambiente (.env) e o arquivo `config/usuarios_usinas.yaml`.
+3. Execute o dashboard:
+   ```
+   streamlit run main.py
+   ```
+
+---
+
+## Análise Crítica
+
+A estrutura atual funciona para um MVP, mas não escala bem para múltiplas usinas, novos recursos ou equipe maior. A ausência de separação de responsabilidades dificulta a manutenção e a evolução do sistema. Recomenda-se fortemente a refatoração para um padrão MVC, centralização de configuração, uso de variáveis de ambiente para dados sensíveis e maior modularização dos componentes de UI e lógica de dados.
+
+**Próximos Passos Sugeridos:**
+- Refatorar para MVC, começando pela separação de lógica de dados e UI.
+- Implementar autenticação segura.
+- Criar testes unitários para funções críticas.
+- Documentar endpoints, fluxos e dependências.
+
+---
+
+## Créditos
+
+Desenvolvido por EngeGOM.
