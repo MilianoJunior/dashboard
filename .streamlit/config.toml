@@ -7,3 +7,11 @@ enableXsrfProtection = true
 
 [browser]
 gatherUsageStats = false
+serverAddress = "0.0.0.0"
+serverPort = 8501
+
+[ui]
+# Título da aba do navegador
+title = "Dashboard EngeSEP"
+# Caminho para o favicon personalizado (coloque o arquivo em /assets ou /.streamlit)
+favicon = "assets/logo.png"
