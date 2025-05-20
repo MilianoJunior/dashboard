@@ -114,20 +114,11 @@ def layout(usina):
     if not st.session_state.load_data:
         if 'periodo' in st.session_state:
             from libs.models.datas import  get_periodo, get_ultimos_1_hora_nivel
-            # carregar_dados(usina, st.session_state.periodo, st.session_state.data_inicial, st.session_state.data_final)
             st.session_state.ultimos_30_dias = get_periodo(st.session_state.periodo, st.session_state.data_inicial, st.session_state.data_final)
             st.session_state.ultimos_1_hora_nivel = get_ultimos_1_hora_nivel(st.session_state.data_inicial, st.session_state.data_final)
         else:
             carregar_dados(usina)
         st.session_state.load_data = True
-        # st.sidebar.write('1 Atualizado em: ', st.session_state.last_update)
-    # else:
-    #     carregar_dados(usina, st.session_state.periodo, st.session_state.num_dias)
-    # else:
-    #     if 'stado' not in st.session_state:
-    #         st.session_state.stado = f"1 -Dados carregados com período: {periodo} e janela: {janela}"
-    #         carregar_dados(usina, periodo, janela)
-    #         st.sidebar.write('2 Atualizado em: ', st.session_state.last_update)
     col1, col2 = st.columns([5, 1])
     with col1:
         create_grafico_producao_energia(st.session_state.ultimos_30_dias)

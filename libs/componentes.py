@@ -265,7 +265,7 @@ def create_grafico_nivel(df):
             mode='lines',
             name=col.replace('_', ' ').capitalize().replace('Nivel', 'Nível'),
             line=dict(color=azul_tons[idx], width=2, shape='spline'),
-            hovertemplate=f'<b>{col.replace('_', ' ').capitalize()}</b><br>Nível: %{{y:.2f}}m<br>Data: %{{x|%d/%m/%Y %H:%M}}'
+            hovertemplate=f"<b>{col.replace('_', ' ').capitalize()}</b><br>Nível: %{{y:.2f}}m<br>Data: %{{x|%d/%m/%Y %H:%M}}"
         ))
 
     # Linha de vertimento
@@ -345,7 +345,7 @@ def footer(usina):
     st.divider()
     st.write(f'Usina: {usina}')
     st.write('EngeSEP - Engenharia integrada de sistemas')
-    st.write(f'Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
+    # st.write(f'Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
 
 
 # def render_graficos_dados(usina, colunas):
