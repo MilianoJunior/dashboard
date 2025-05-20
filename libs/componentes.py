@@ -33,7 +33,7 @@ def render_percentual_icon(percentual, medida='MWh'):
     unidade = '%' if medida == 'MWh' else 'm'
     return f"<span style='color:{color}; font-size: 0.98em; display: flex; align-items: center;'>{svg} {percentual} {unidade}</span>"
 
-def create_energy_card(description, value, data_hora, medida, percentual, value_max=None, value_min=None, valor_real=None):
+def create_energy_card(description, value, data_hora, medida, percentual, value_max=None, value_min=None, valor_real=None, valor_Mwh=None, percentual_participacao=None):
     card_style = """
         <style>
         .energy-card {
@@ -90,9 +90,11 @@ def create_energy_card(description, value, data_hora, medida, percentual, value_
         }
         </style>
     """
-    
+    valor_percentual = round(float(value) * valor_Mwh * (percentual_participacao/100), 2)
+    valor_total = round(float(value) * valor_Mwh, 2)
+
     if value_max is not None and value_min is not None:
-        max_min = f"Máx: {value_max} - Mín: {value_min}"
+        max_min = f"Percentual: ${percentual}"
     else:
         max_min = ""
     if percentual is not None:
@@ -100,10 +102,12 @@ def create_energy_card(description, value, data_hora, medida, percentual, value_
     else:
         percentual_html = ""
 
-    if valor_real is not None:
-        valor_real = f"R$ {valor_real:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
+    if valor_total is not None:
+        valor_total = f"R$ {valor_total:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
+        valor_percentual = f"R$ {valor_percentual:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
     else:
-        valor_real = ""
+        valor_total = ""
+        valor_percentual = ""
 
     card_html = f"""
         <div class="energy-card">
@@ -113,103 +117,19 @@ def create_energy_card(description, value, data_hora, medida, percentual, value_
                 <span class="unit">{medida}</span>
                 <span class="percentual">{percentual_html}</span>
             </div>
-            <div class="valor_real">{valor_real}</div>
-            <div class="maxmin">{max_min}</div>
+            <div class="value-row">
+                <div class="valor_real">Total: {valor_total}</div>
+                <div class="maxmin">Percentual: {valor_percentual}</div>
+            </div>
         </div>
     """
     return st.markdown(card_style + card_html, unsafe_allow_html=True)
 
 
-def create_widget_temperatura(df):
-    try:
-        cols = st.columns(5)
-        icons = {
-            'oleo_uhlm': '🔥',
-            'oleo_uhrv': '🔥',
-            'casq_comb': '⚙️',
-            'manc_casq_esc': '⚙️',
-            'enrol_a': '⚡',
-            'enrol_b': '⚡',
-            'enrol_c': '⚡',
-            'nucleo_estator_01': '🧲',
-            'nucleo_estator_02': '🧲',
-            'nucleo_estator_03': '🧲'
-        }
-        for i, col in enumerate(df.columns):
-            with cols[i % 5]:
-                mean_value = round(float(df.loc['mean', col]), 2)
-                min_value = round(float(df.loc['min', col]), 2)
-                max_value = round(float(df.loc['max', col]), 2)
-                icon = icons.get(col, '🌡️')
-                st.markdown(
-                    f"""
-                    <div style="
-                        background-color: #1E1E1E; 
-                        border-radius: 10px; 
-                        padding: 10px; 
-                        margin-bottom: 10px;
-                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                    ">
-                        <div style="font-size: 12px; color: #CCCCCC; margin-bottom: 5px;">
-                            Temp {col.replace('_', ' ')}
-                        </div>
-                        <div style="
-                            display: flex; 
-                            justify-content: space-between; 
-                            align-items: center;
-                        ">
-                            <span style="font-size: 28px; font-weight: bold; color: white;">
-                                {mean_value}°
-                            </span>
-                            <span style="font-size: 24px;">
-                                {icon}
-                            </span>
-                        </div>
-                        <div style="
-                            font-size: 11px;
-                            color: #AAAAAA;
-                            margin-top: 5px;
-                            display: flex;
-                            justify-content: space-between;
-                        ">
-                            <span>Min: {min_value}°</span>
-                            <span>Max: {max_value}°</span>
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-    except Exception as e:
-        st.error(f'Erro ao criar widget de temperatura: {e}')
-
 def carregar_logo(usina):
     with open(f'assets/logo.png', 'rb') as file:
         logo_bytes = file.read()
         return logo_bytes
-    
-# def menu_principal(config, usina):
-#     import base64
-    
-#     logo_bytes = carregar_logo(usina)
-#     logo_html = f'<img src="data:image/png;base64,{base64.b64encode(logo_bytes).decode()}" alt="Logo" width="45" height="45" class="d-inline-block align-text-top"'
-#     menu_html = f"""
-#         <nav class="navbar">
-#             <div class="container-fluid">
-#                 <a class="navbar-brand" href="#">
-#                 {logo_html}
-#                 </a>
-#                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
-#                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-#                         <li class="nav-item">
-#                             <a class="nav-link active" aria-current="page" href="#">{usina['tabela'].replace('_', ' ').capitalize()}</a>
-#                         </li>
-#                     </ul>
-#                 </div>
-#             </div>
-#         </nav>
-#     """
-#     # components.html(menu_html, height=50)
-#     st.markdown(menu_html, unsafe_allow_html=True)
 
 def menu_principal(config, usina):
     import base64
@@ -275,15 +195,33 @@ def create_grafico_producao_energia(df):
     with col2:
         # O gráfico pode ficar abaixo das colunas de filtro
         colunas_prod = [col for col in df.columns if col.startswith('prod_')]
+
+        # Paleta de cores pastel confiáveis
+        cores = ['#7ED6A5', '#6EC1E4', '#FFD580', '#FFB6B9', '#B5EAD7', '#C7CEEA']
+        color_sequence = cores[:len(colunas_prod)]
+
         fig = px.bar(
             df,
             x=df.index,
             y=colunas_prod,
             title='Geração de Energia',
             barmode='group',
-            height=500
+            height=500,
+            color_discrete_sequence=color_sequence
+        )
+        fig.update_traces(
+            marker=dict(
+                line=dict(width=2, color='rgba(30,30,30,0.18)'),  # Sombra sutil
+            ),
         )
         fig.update_layout(
+            title={
+                'text': 'Geração de Energia',
+                'x': 0.01,  # Alinha à esquerda
+                'xanchor': 'left',
+                'yanchor': 'top',
+                'pad': {'t': 10, 'b': 0}  # Reduz o padding superior
+            },
             yaxis_title='Energia (MWh)',
             xaxis_title='Data',
             legend_title='Unidades Geradoras',
@@ -296,7 +234,9 @@ def create_grafico_producao_energia(df):
                 bordercolor='rgba(200,200,200,0.2)',
                 borderwidth=1,
                 font=dict(size=12, color='white')
-            )
+            ),
+            # plot_bgcolor='#232326',  # Fundo igual ao do card
+            # paper_bgcolor='#232326'
         )
         st.plotly_chart(fig, use_container_width=True)
     with col3:
@@ -304,15 +244,48 @@ def create_grafico_producao_energia(df):
             st.write('Tabela de Dados')
             st.dataframe(df)
 
+
+
 def create_grafico_nivel(df):
     colunas_nivel = [col for col in df.columns if 'niv' in col]
-    fig = px.line(df, x='data_hora', y=colunas_nivel, title='Nível')
     nivel_vertimento = float(st.session_state['usina']['nivel_vertimento'])
-    fig.add_hline(y=nivel_vertimento, line_dash="dash", line_color="red", 
-                  annotation_text="Nível de Vertimento", annotation_position="right")
+
+    # Nova paleta de tons de azul para maior distinção
+    azul_tons = [
+        '#3A80EF', '#315C8D', '#1D63BF', '#348293',
+        '#5B9BFF', '#7EC8E3', '#4F8FC9', '#1B4F72', '#2980B9', '#85C1E9', '#154360'
+    ]
+    azul_tons = azul_tons[:len(colunas_nivel)]
+
+    fig = go.Figure()
+    for idx, col in enumerate(colunas_nivel):
+        fig.add_trace(go.Scatter(
+            x=df['data_hora'],
+            y=df[col],
+            mode='lines',
+            name=col.replace('_', ' ').capitalize().replace('Nivel', 'Nível'),
+            line=dict(color=azul_tons[idx], width=2, shape='spline'),
+            hovertemplate=f'<b>{col.replace('_', ' ').capitalize()}</b><br>Nível: %{{y:.2f}}m<br>Data: %{{x|%d/%m/%Y %H:%M}}'
+        ))
+
+    # Linha de vertimento
+    fig.add_hline(
+        y=nivel_vertimento,
+        line_dash="dash",
+        line_color="#AE5454",
+        line_width=2,
+        annotation_text="<b>Nível de Vertimento</b>",
+        annotation_position="top left",
+        annotation_font_color="#AE5454",
+        annotation_bgcolor="rgba(30,30,30,0.85)"
+    )
+
     fig.update_layout(
-        yaxis_title='Nível (m)',
-        showlegend=True,
+        title='<b>Nível do reservatório</b>',
+        yaxis_title='<b>Nível do reservatório (m)</b>',
+        xaxis_title='<b>Data/hora</b>',
+        font=dict(family="Inter, Arial", size=13, color='white'),
+        hovermode='x unified',
         legend=dict(
             x=0.98,
             y=0.98,
@@ -321,14 +294,35 @@ def create_grafico_nivel(df):
             bgcolor='rgba(30,30,30,0.7)',
             bordercolor='rgba(200,200,200,0.2)',
             borderwidth=1,
-            font=dict(size=12, color='white')
-        )
+            font=dict(size=14, color='white')
+        ),
+        margin=dict(l=40, r=30, t=60, b=40),
+        title_x=0.02,
+        title_y=0.97
     )
+    fig.update_xaxes(
+        showgrid=True, gridwidth=0.5, gridcolor='rgba(255,255,255,0.07)',
+        tickformat='%b %d\n%H:%M',
+        ticks="outside"
+    )
+    fig.update_yaxes(
+        showgrid=True, gridwidth=0.5, gridcolor='rgba(255,255,255,0.07)',
+        zeroline=False
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 
-
 def login_ui():
-    st.title('Login')
+    # col1, col2, col3, col4 = st.columns([1, .2, .2, 1])
+    # with col1:
+    #     st.write('')
+    # with col2:
+    #     st.image('assets/logo.png', width=60)
+    # with col3:
+    #     st.title('Login')
+    # with col4:
+    #     st.write('')
+    st.image('assets/login.png', width=300)
     usinas = list(st.session_state['usinas'].keys())
     usina_nome = st.selectbox('Selecione a usina', usinas)
     usuario = st.text_input('Usuário', value='admin')
@@ -354,31 +348,93 @@ def footer(usina):
     st.write(f'Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
 
 
-def render_graficos_dados(usina, colunas):
-    from libs.models.datas import fetch_dados_graficos
-    from datetime import datetime, timedelta
+# def render_graficos_dados(usina, colunas):
+#     from libs.models.datas import fetch_dados_graficos
+#     from datetime import datetime, timedelta
 
-    cols1, cols2, col3, col4 = st.columns(4)
-    with cols1:
-        colunas_selecionadas = st.multiselect('Selecione as colunas', colunas['COLUMN_NAME'].tolist(), default=colunas['COLUMN_NAME'].tolist()[1])
-    with cols2:
-        data_hora_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
-    with col3:
-        data_hora_final = st.date_input('Data final', value=datetime.now())
-    with col4:
-        st.write('')
-        st.write('')
-        btn_grafico = st.button('Carregar gráficos')
-    if btn_grafico:
-        df_original, df_normalized = fetch_dados_graficos(usina, colunas_selecionadas, data_hora_inicial, data_hora_final)
-        tab1, tab2 = st.tabs(["Dados Originais", "Dados Normalizados"])
-        with tab1:
-            st.subheader("Gráfico de Dados Originais")
-            st.line_chart(df_original[colunas_selecionadas])
-            with st.expander('Informações dos Dados Originais'):
-                st.write(df_original)
-        with tab2:
-            st.subheader("Gráfico de Dados Normalizados")
-            st.line_chart(df_normalized[colunas_selecionadas])
-            with st.expander('Informações dos Dados Normalizados'):
-                st.write(df_normalized)
+#     cols1, cols2, col3, col4 = st.columns(4)
+#     with cols1:
+#         colunas_selecionadas = st.multiselect('Selecione as colunas', colunas['COLUMN_NAME'].tolist(), default=colunas['COLUMN_NAME'].tolist()[1])
+#     with cols2:
+#         data_hora_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
+#     with col3:
+#         data_hora_final = st.date_input('Data final', value=datetime.now())
+#     with col4:
+#         st.write('')
+#         st.write('')
+#         btn_grafico = st.button('Carregar gráficos')
+#     if btn_grafico:
+#         df_original, df_normalized = fetch_dados_graficos(usina, colunas_selecionadas, data_hora_inicial, data_hora_final)
+#         tab1, tab2 = st.tabs(["Dados Originais", "Dados Normalizados"])
+#         with tab1:
+#             st.subheader("Gráfico de Dados Originais")
+#             st.line_chart(df_original[colunas_selecionadas])
+#             with st.expander('Informações dos Dados Originais'):
+#                 st.write(df_original)
+#         with tab2:
+#             st.subheader("Gráfico de Dados Normalizados")
+#             st.line_chart(df_normalized[colunas_selecionadas])
+#             with st.expander('Informações dos Dados Normalizados'):
+#                 st.write(df_normalized)
+
+# def create_widget_temperatura(df):
+#     try:
+#         cols = st.columns(5)
+#         icons = {
+#             'oleo_uhlm': '🔥',
+#             'oleo_uhrv': '🔥',
+#             'casq_comb': '⚙️',
+#             'manc_casq_esc': '⚙️',
+#             'enrol_a': '⚡',
+#             'enrol_b': '⚡',
+#             'enrol_c': '⚡',
+#             'nucleo_estator_01': '🧲',
+#             'nucleo_estator_02': '🧲',
+#             'nucleo_estator_03': '🧲'
+#         }
+#         for i, col in enumerate(df.columns):
+#             with cols[i % 5]:
+#                 mean_value = round(float(df.loc['mean', col]), 2)
+#                 min_value = round(float(df.loc['min', col]), 2)
+#                 max_value = round(float(df.loc['max', col]), 2)
+#                 icon = icons.get(col, '🌡️')
+#                 st.markdown(
+#                     f"""
+#                     <div style="
+#                         background-color: #1E1E1E; 
+#                         border-radius: 10px; 
+#                         padding: 10px; 
+#                         margin-bottom: 10px;
+#                         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+#                     ">
+#                         <div style="font-size: 12px; color: #CCCCCC; margin-bottom: 5px;">
+#                             Temp {col.replace('_', ' ')}
+#                         </div>
+#                         <div style="
+#                             display: flex; 
+#                             justify-content: space-between; 
+#                             align-items: center;
+#                         ">
+#                             <span style="font-size: 28px; font-weight: bold; color: white;">
+#                                 {mean_value}°
+#                             </span>
+#                             <span style="font-size: 24px;">
+#                                 {icon}
+#                             </span>
+#                         </div>
+#                         <div style="
+#                             font-size: 11px;
+#                             color: #AAAAAA;
+#                             margin-top: 5px;
+#                             display: flex;
+#                             justify-content: space-between;
+#                         ">
+#                             <span>Min: {min_value}°</span>
+#                             <span>Max: {max_value}°</span>
+#                         </div>
+#                     </div>
+#                     """,
+#                     unsafe_allow_html=True
+#                 )
+#     except Exception as e:
+#         st.error(f'Erro ao criar widget de temperatura: {e}')

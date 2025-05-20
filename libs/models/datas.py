@@ -163,10 +163,16 @@ def get_periodo(periodo, data_inicial, data_final) -> pd.DataFrame:
         get_error('get_periodo, ln 200', e)
 
 @desempenho
-def get_ultimos_1_hora_nivel() -> pd.DataFrame:
+def get_ultimos_1_hora_nivel(data_hora_inicial, data_hora_final) -> pd.DataFrame:
     try:
-        query = get_info_usina('describe nivel')
+        nivel = ', '.join(st.session_state['usina']['nivel'].values())
+        query = f"SELECT {nivel} FROM {st.session_state['usina']['tabela']} WHERE data_hora BETWEEN '{data_hora_inicial}' AND '{data_hora_final}'"
         df = get_db_data(query)
+        dif_tempo = (data_hora_final - data_hora_inicial)
+        #  se o tempo for maior que 1 dia, calcular a media movel de 10 minutos diminuindo a quantidade de linhas
+        if dif_tempo.total_seconds() > 86400:
+            df = df.resample('60min', on='data_hora').mean()
+            df = df.reset_index()
         return df
     except Exception as e:
         get_error('get_ultimos_1_hora_nivel, ln 235', e)
