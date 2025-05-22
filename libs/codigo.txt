@@ -1,0 +1,1132 @@
+(amb) C:\projetos\ENGEGOM\7_dashboards>python prompt.py
+.streamlit/
+assets/
+config/
+    ├── usuarios_usinas.yaml
+libs/
+    ├── componentes.py
+    ├── controllers/
+    ├──     ├── auth.py
+    ├── models/
+    ├──     ├── calculos.py
+    ├──     ├── datas.py
+    ├──     ├── db.py
+    ├── utils/
+    ├──     ├── decorators.py
+main.py
+--------------------------------------------------
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+1 - Conteúdo do arquivo usuarios_usinas.yaml:
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+usinas:
+  CGH-APARECIDA:
+    users: "aparecida"
+    password: "Apa654123@"
+    ip: "100.110.212.125"
+    port: "3306"
+    database: "engesepdb"
+    usuario: "engegom"
+    senha: "654123"
+    tabela: "cgh_aparecida"
+    nivel_vertimento: "405.30"
+    energia:
+      data_hora: "data_hora"
+      energia_ug01: "acumulador_energia"
+    nivel:
+      data_hora: "data_hora"
+      nivel_montante: "nivel_montante"
+      nivel_jusante: "nivel_jusante"
+
+  CGH-FAE:
+    users: "fae"
+    password: "Fae654123@"
+    ip: "100.106.33.66"
+    port: "3306"
+    database: "engesepdb"
+    usuario: "engesep"
+    senha: "654123"
+    nivel_vertimento: "701.27"
+    tabela: "cgh_fae"
+    energia:
+      data_hora: "data_hora"
+      energia_ug01: "ug01_acumulador_energia"
+      energia_ug02: "ug02_acumulador_energia"
+    nivel:
+      data_hora: "data_hora"
+      nivel_montante: "ug01_nivel_agua"
+      nivel_jusante_ug01: "ug01_nivel_jusante"
+      nivel_jusante_ug02: "ug02_nivel_jusante"
+
+  PCH-PEDRAS:
+    users: "pedras"
+    password: "Pedras654123@"
+    ip: "100.93.237.40"
+    port: "3306"
+    database: "engesepdb"
+    usuario: "engesep"
+    senha: "654123"
+    nivel_vertimento: "1099.0"
+    tabela: "pch_pedras_ug01"
+    energia:
+      data_hora: "data_hora"
+      energia_ug01: "acum_energia"
+    nivel:
+      data_hora: "data_hora"
+      nivel_montante: "niv_mont_grade"
+      nivel_jusante: "niv_jus_grade"
+
+  CGH-PICADAS-ALTAS:
+    users: "picadas_altas"
+    password: "PicadasAltas654123@"
+    ip: "100.79.241.13"
+    port: "3306"
+    database: "engesepdb"
+    usuario: "engesep"
+    senha: "654123"
+    nivel_vertimento: "416.50"
+    tabela: "cgh_picadas_altas"
+    energia:
+      data_hora: "data_hora"
+      energia_ug01: "ug01_acumulador_energia"
+      energia_ug02: "ug02_acumulador_energia"
+    nivel:
+      data_hora: "data_hora"
+      nivel_montante: "nivel_montante"
+      nivel_jusante: "nivel_jusante"
+
+
+
+
+Quantidade de linhas do arquivo usuarios_usinas.yaml: 78 totalizando 78 linhas.
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+2 - Conteúdo do arquivo componentes.py:
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+import base64
+from typing import Dict
+import streamlit as st
+from datetime import datetime
+import plotly.graph_objects as go
+import pandas as pd
+import numpy as np
+import plotly.express as px
+from libs.models.db import Database
+import streamlit.components.v1 as components
+
+
+def render_percentual_icon(percentual, medida='MWh'):
+    """
+    Renderiza o ícone de percentual com SVG colorido: azul para positivo, vermelho para negativo.
+    """
+    if percentual is None:
+        return ""
+    if percentual > 0:
+        svg = """
+        <svg width='11' height='11' style='vertical-align:middle'>
+            <polygon points='5.5,2 10,9 1,9' style='fill:#3A80EF'/>
+        </svg>
+        """
+        color = "#3A80EF"
+    else:
+        svg = """
+        <svg width='11' height='11' style='vertical-align:middle'>
+            <polygon points='1,2 10,2 5.5,9' style='fill:#EF6A6A'/>
+        </svg>
+        """
+        color = "#EF6A6A"
+    unidade = '%' if medida == 'MWh' else 'm'
+    return f"<span style='color:{color}; font-size: 0.98em; display: flex; align-items: center;'>{svg} {percentual} {unidade}</span>"
+
+def create_energy_card(description, value, data_hora, medida, percentual, value_max=None, value_min=None, valor_real=None, valor_Mwh=None, percentual_participacao=None):
+    card_style = """
+        <style>
+        .energy-card {
+            background: linear-gradient(135deg, #232526 0%, #414345 100%);
+            color: #F3F6F9;
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin: 8px 0px;
+            max-width: 400px;
+            min-width: 220px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .description {
+            font-size: 0.98rem;
+            font-weight: 500;
+            color: #A0AEC0;
+            margin-bottom: 0;
+        }
+        .value-row {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+        .value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #F3F6F9;
+        }
+        .unit {
+            font-size: 0.95rem;
+            color: #A0AEC0;
+            margin-left: 1px;
+        }
+        .percentual {
+            margin-left: 6px;
+            display: flex;
+            align-items: center;
+            font-size: 0.98rem;
+            font-weight: 500;
+        }
+        .valor_real {
+            font-size: 0.95rem;
+            color: #A8EF6A;
+            font-weight: 500;
+            margin-top: 0;
+        }
+        .maxmin {
+            font-size: 0.90rem;
+            color: #808495;
+            margin-top: 0;
+        }
+        </style>
+    """
+    valor_percentual = round(float(value) * valor_Mwh * (percentual_participacao/100), 2)
+    valor_total = round(float(value) * valor_Mwh, 2)
+
+    if value_max is not None and value_min is not None:
+        max_min = f"Percentual: ${percentual}"
+    else:
+        max_min = ""
+    if percentual is not None:
+        percentual_html = render_percentual_icon(percentual, medida)
+    else:
+        percentual_html = ""
+
+    if valor_total is not None:
+        valor_total = f"R$ {valor_total:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
+        valor_percentual = f"R$ {valor_percentual:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
+    else:
+        valor_total = ""
+        valor_percentual = ""
+
+    card_html = f"""
+        <div class="energy-card">
+            <div class="description">{description}</div>
+            <div class="value-row">
+                <span class="value">{str(value).replace('.', ',')}</span>
+                <span class="unit">{medida}</span>
+                <span class="percentual">{percentual_html}</span>
+            </div>
+            <div class="value-row">
+                <div class="valor_real">Total: {valor_total}</div>
+                <div class="maxmin">Percentual: {valor_percentual}</div>
+            </div>
+        </div>
+    """
+    return st.markdown(card_style + card_html, unsafe_allow_html=True)
+
+
+def carregar_logo(usina):
+    with open(f'assets/logo.png', 'rb') as file:
+        logo_bytes = file.read()
+        return logo_bytes
+
+def menu_principal(config, usina):
+    import base64
+    logo_bytes = carregar_logo(usina)
+    logo_html = f'<img src="data:image/png;base64,{base64.b64encode(logo_bytes).decode()}" alt="Logo" style="height:60px;border-radius:50px;background:#fff;padding:2px;">'
+
+    col1, col2 = st.columns([8, 1])
+    with col1:
+        st.markdown(f"""
+            <div style="display: flex; align-items: center; gap: 10px; background-color: #2c2c2c; border-radius: 15px; padding: 7px; margin: 2px;">
+                {logo_html}
+                <span style="font-family: 'Inter', system-ui, Arial, sans-serif; font-size: 24px; font-weight: 400; color: white;">
+                    Dashboard {usina['tabela'].replace('_', ' ').upper()}
+                </span>
+            </div>
+        """, unsafe_allow_html=True)
+    with col2:
+        st.markdown("""
+        <style>
+        div[data-testid="stButton"] > button {
+            background-color: #2c2c2c;
+            color: #00e1ff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: 'Inter', system-ui, Arial, sans-serif;
+            font-size: 14px;
+            font-weight: 400;
+            cursor: pointer;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        if st.button("Logout", use_container_width=True):
+            st.session_state.clear()
+            st.rerun()
+
+def create_grafico_producao_energia(df):
+    from datetime import datetime, timedelta
+    st.divider()
+    # Crie todas as colunas no mesmo nível
+    col1, col2, col3 = st.columns([0.15, 1, 0.3])
+    with col1:
+        data_hora_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
+        data_hora_final = st.date_input('Data final', value=datetime.now())
+        periodo = st.selectbox('Período', ['Diário', 'Mensal'])
+        if 'periodo' not in st.session_state:
+            st.session_state['periodo'] = periodo
+        if 'data_inicial' not in st.session_state:
+            st.session_state['data_inicial'] = data_hora_inicial
+        if 'data_final' not in st.session_state:
+            st.session_state['data_final'] = data_hora_final
+        btn_grafico = st.button('Carregar gráfico')
+        if btn_grafico:
+            periodos = {
+                'Diário': 'D',
+                'Mensal': 'M'
+            }
+            st.session_state['periodo'] = periodos.get(periodo)
+            st.session_state['data_inicial'] = data_hora_inicial
+            st.session_state['data_final'] = data_hora_final
+            st.session_state.load_data = False
+            st.rerun()
+    with col2:
+        # O gráfico pode ficar abaixo das colunas de filtro
+        colunas_prod = [col for col in df.columns if col.startswith('prod_')]
+
+        # Paleta de cores pastel confiáveis
+        cores = ['#7ED6A5', '#6EC1E4', '#FFD580', '#FFB6B9', '#B5EAD7', '#C7CEEA']
+        color_sequence = cores[:len(colunas_prod)]
+
+        fig = px.bar(
+            df,
+            x=df.index,
+            y=colunas_prod,
+            title='Geração de Energia',
+            barmode='group',
+            height=500,
+            color_discrete_sequence=color_sequence
+        )
+        fig.update_traces(
+            marker=dict(
+                line=dict(width=2, color='rgba(30,30,30,0.18)'),  # Sombra sutil
+            ),
+        )
+        fig.update_layout(
+            title={
+                'text': 'Geração de Energia',
+                'x': 0.01,  # Alinha à esquerda
+                'xanchor': 'left',
+                'yanchor': 'top',
+                'pad': {'t': 10, 'b': 0}  # Reduz o padding superior
+            },
+            yaxis_title='Energia (MWh)',
+            xaxis_title='Data',
+            legend_title='Unidades Geradoras',
+            legend=dict(
+                x=0.98,
+                y=0.98,
+                xanchor='right',
+                yanchor='top',
+                bgcolor='rgba(30,30,30,0.7)',
+                bordercolor='rgba(200,200,200,0.2)',
+                borderwidth=1,
+                font=dict(size=12, color='white')
+            ),
+            # plot_bgcolor='#232326',  # Fundo igual ao do card
+            # paper_bgcolor='#232326'
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    with col3:
+        with st.container(height=500, border=False):
+            st.write('Tabela de Dados')
+            st.dataframe(df)
+
+
+
+def create_grafico_nivel(df):
+    colunas_nivel = [col for col in df.columns if 'niv' in col]
+    nivel_vertimento = float(st.session_state['usina']['nivel_vertimento'])
+
+    # Nova paleta de tons de azul para maior distinção
+    azul_tons = [
+        '#3A80EF', '#315C8D', '#1D63BF', '#348293',
+        '#5B9BFF', '#7EC8E3', '#4F8FC9', '#1B4F72', '#2980B9', '#85C1E9', '#154360'
+    ]
+    azul_tons = azul_tons[:len(colunas_nivel)]
+
+    fig = go.Figure()
+    for idx, col in enumerate(colunas_nivel):
+        fig.add_trace(go.Scatter(
+            x=df['data_hora'],
+            y=df[col],
+            mode='lines',
+            name=col.replace('_', ' ').capitalize().replace('Nivel', 'Nível'),
+            line=dict(color=azul_tons[idx], width=2, shape='spline'),
+            hovertemplate=f"<b>{col.replace('_', ' ').capitalize()}</b><br>Nível: %{{y:.2f}}m<br>Data: %{{x|%d/%m/%Y %H:%M}}"
+        ))
+
+    # Linha de vertimento
+    fig.add_hline(
+        y=nivel_vertimento,
+        line_dash="dash",
+        line_color="#AE5454",
+        line_width=2,
+        annotation_text="<b>Nível de Vertimento</b>",
+        annotation_position="top left",
+        annotation_font_color="#AE5454",
+        annotation_bgcolor="rgba(30,30,30,0.85)"
+    )
+
+    fig.update_layout(
+        title='<b>Nível do reservatório</b>',
+        yaxis_title='<b>Nível do reservatório (m)</b>',
+        xaxis_title='<b>Data/hora</b>',
+        font=dict(family="Inter, Arial", size=13, color='white'),
+        hovermode='x unified',
+        legend=dict(
+            x=0.98,
+            y=0.98,
+            xanchor='right',
+            yanchor='top',
+            bgcolor='rgba(30,30,30,0.7)',
+            bordercolor='rgba(200,200,200,0.2)',
+            borderwidth=1,
+            font=dict(size=14, color='white')
+        ),
+        margin=dict(l=40, r=30, t=60, b=40),
+        title_x=0.02,
+        title_y=0.97
+    )
+    fig.update_xaxes(
+        showgrid=True, gridwidth=0.5, gridcolor='rgba(255,255,255,0.07)',
+        tickformat='%b %d\n%H:%M',
+        ticks="outside"
+    )
+    fig.update_yaxes(
+        showgrid=True, gridwidth=0.5, gridcolor='rgba(255,255,255,0.07)',
+        zeroline=False
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+def login_ui():
+    # col1, col2, col3, col4 = st.columns([1, .2, .2, 1])
+    # with col1:
+    #     st.write('')
+    # with col2:
+    #     st.image('assets/logo.png', width=60)
+    # with col3:
+    #     st.title('Login')
+    # with col4:
+    #     st.write('')
+    st.image('assets/login.png', width=300)
+    usinas = list(st.session_state['usinas'].keys())
+    usina_nome = st.selectbox('Selecione a usina', usinas)
+    usuario = st.text_input('Usuário', value='admin')
+    senha = st.text_input('Senha', type='password', value='admin')
+    if st.button('Entrar'):
+        print(usina_nome)
+        print(usinas)
+        usina = st.session_state['usinas'][usina_nome]
+        if usuario == 'admin' and senha == 'admin':
+            st.session_state['logado'] = True
+            st.session_state['usina'] = usina
+            if 'db' not in st.session_state:
+                st.session_state['db'] = Database()
+            st.success('Login realizado com sucesso!')
+            st.rerun()
+        else:
+            st.error('Usuário ou senha inválidos para esta usina.')
+
+def footer(usina):
+    st.divider()
+    st.write(f'Usina: {usina}')
+    st.write('EngeSEP - Engenharia integrada de sistemas')
+    # st.write(f'Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
+
+
+# def render_graficos_dados(usina, colunas):
+#     from libs.models.datas import fetch_dados_graficos
+#     from datetime import datetime, timedelta
+
+#     cols1, cols2, col3, col4 = st.columns(4)
+#     with cols1:
+#         colunas_selecionadas = st.multiselect('Selecione as colunas', colunas['COLUMN_NAME'].tolist(), default=colunas['COLUMN_NAME'].tolist()[1])
+#     with cols2:
+#         data_hora_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
+#     with col3:
+#         data_hora_final = st.date_input('Data final', value=datetime.now())
+#     with col4:
+#         st.write('')
+#         st.write('')
+#         btn_grafico = st.button('Carregar gráficos')
+#     if btn_grafico:
+#         df_original, df_normalized = fetch_dados_graficos(usina, colunas_selecionadas, data_hora_inicial, data_hora_final)
+#         tab1, tab2 = st.tabs(["Dados Originais", "Dados Normalizados"])
+#         with tab1:
+#             st.subheader("Gráfico de Dados Originais")
+#             st.line_chart(df_original[colunas_selecionadas])
+#             with st.expander('Informações dos Dados Originais'):
+#                 st.write(df_original)
+#         with tab2:
+#             st.subheader("Gráfico de Dados Normalizados")
+#             st.line_chart(df_normalized[colunas_selecionadas])
+#             with st.expander('Informações dos Dados Normalizados'):
+#                 st.write(df_normalized)
+
+# def create_widget_temperatura(df):
+#     try:
+#         cols = st.columns(5)
+#         icons = {
+#             'oleo_uhlm': '🔥',
+#             'oleo_uhrv': '🔥',
+#             'casq_comb': '⚙️',
+#             'manc_casq_esc': '⚙️',
+#             'enrol_a': '⚡',
+#             'enrol_b': '⚡',
+#             'enrol_c': '⚡',
+#             'nucleo_estator_01': '🧲',
+#             'nucleo_estator_02': '🧲',
+#             'nucleo_estator_03': '🧲'
+#         }
+#         for i, col in enumerate(df.columns):
+#             with cols[i % 5]:
+#                 mean_value = round(float(df.loc['mean', col]), 2)
+#                 min_value = round(float(df.loc['min', col]), 2)
+#                 max_value = round(float(df.loc['max', col]), 2)
+#                 icon = icons.get(col, '🌡️')
+#                 st.markdown(
+#                     f"""
+#                     <div style="
+#                         background-color: #1E1E1E;
+#                         border-radius: 10px;
+#                         padding: 10px;
+#                         margin-bottom: 10px;
+#                         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+#                     ">
+#                         <div style="font-size: 12px; color: #CCCCCC; margin-bottom: 5px;">
+#                             Temp {col.replace('_', ' ')}
+#                         </div>
+#                         <div style="
+#                             display: flex;
+#                             justify-content: space-between;
+#                             align-items: center;
+#                         ">
+#                             <span style="font-size: 28px; font-weight: bold; color: white;">
+#                                 {mean_value}°
+#                             </span>
+#                             <span style="font-size: 24px;">
+#                                 {icon}
+#                             </span>
+#                         </div>
+#                         <div style="
+#                             font-size: 11px;
+#                             color: #AAAAAA;
+#                             margin-top: 5px;
+#                             display: flex;
+#                             justify-content: space-between;
+#                         ">
+#                             <span>Min: {min_value}°</span>
+#                             <span>Max: {max_value}°</span>
+#                         </div>
+#                     </div>
+#                     """,
+#                     unsafe_allow_html=True
+#                 )
+#     except Exception as e:
+#         st.error(f'Erro ao criar widget de temperatura: {e}')
+Quantidade de linhas do arquivo componentes.py: 440 totalizando 518 linhas.
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+3 - Conteúdo do arquivo auth.py:
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+import os
+import hashlib
+from dotenv import load_dotenv
+from libs.utils.decorators import desempenho
+
+load_dotenv()
+
+class AuthManager:
+    @staticmethod
+    @desempenho
+    def login(username, password):
+        env_user = os.getenv('DASH_USER')
+        env_pass_hash = os.getenv('DASH_PASS_HASH')
+        if not env_user or not env_pass_hash:
+            raise Exception('Credenciais não configuradas no .env')
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        env_pass_hash = hashlib.sha256(env_pass_hash.encode()).hexdigest()
+        if username == env_user and password_hash == env_pass_hash:
+            return True
+        return False
+
+    @staticmethod
+    @desempenho
+    def logout():
+        # Apenas um placeholder, pois o controle de sessão será feito na camada de apresentação
+        return True
+Quantidade de linhas do arquivo auth.py: 26 totalizando 544 linhas.
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+4 - Conteúdo do arquivo calculos.py:
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+from libs.utils.decorators import desempenho, get_error
+import pandas as pd
+from datetime import datetime, timedelta
+# from libs.models.datas import get_db_data, get_info_usina
+
+@desempenho
+def calcular_energia_acumulada(df, colunas, periodo):
+    if periodo == 'D':
+        # Agrupa por dia e pega o último valor de cada dia para cada coluna
+        colunas_energia = [col for col in colunas if 'energia' in col]
+        df_diario = df.groupby(df['data_hora'].dt.date).last()
+        # Converter para float
+        for col in colunas_energia:
+            if col in df_diario.columns:
+                df_diario[col] = pd.to_numeric(df_diario[col], errors='coerce').astype(float)
+        # Calcular a diferença para cada coluna de energia
+        for col in colunas_energia:
+            for i in range(1, len(df_diario)):
+                df_diario.loc[df_diario.index[i], f'prod_{col}'] = df_diario[col].values[i] - df_diario[col].values[i-1]
+
+        # eliminar as linhas que tem None
+        df_diario = df_diario.dropna(axis=0)
+
+        # # transformar a coluna data_hora para datetime
+        # df_diario['data_hora'] = pd.to_datetime(df_diario['data_hora'])
+        # # ordenar a coluna data_hora
+        # df_diario = df_diario.sort_values(by='data_hora')
+        # colocar coluna data_hora como index
+        # df_diario.index
+        # eliminar a coluna data_hora
+        df_diario = df_diario.drop(columns=['data_hora'])
+        df_diario = df_diario.drop(columns=colunas_energia)
+        return df_diario
+    if periodo == 'M':
+        colunas_energia = [col for col in colunas if 'energia' in col]
+        # Criar chave ano-mês para agrupar corretamente pelos meses
+        df['ano_mes'] = df['data_hora'].dt.strftime('%Y-%m')
+        # Agrupar pela chave ano-mês e pegar o último registro de cada mês
+        df_mensal = df.groupby('ano_mes').last()
+        # Converter para float
+        for col in colunas_energia:
+            if col in df_mensal.columns:
+                df_mensal[col] = pd.to_numeric(df_mensal[col], errors='coerce').astype(float)
+        # Calcular a diferença para cada coluna de energia
+        if len(df_mensal) < 6:
+            # registrar o mês anterior com o valor 0
+            last_month = df_mensal.index[0]
+            after_last_month = datetime.strptime(last_month, '%Y-%m') - timedelta(days=30)
+            after_last_month = after_last_month.strftime('%Y-%m')
+            for col in colunas_energia:
+                df_mensal.loc[after_last_month, col] = 0
+            df_mensal = df_mensal.sort_index()
+        for col in colunas_energia:
+            for i in range(1, len(df_mensal)):
+                df_mensal.loc[df_mensal.index[i], f'prod_{col}'] = df_mensal[col].values[i] - df_mensal[col].values[i-1]
+        # eliminar as linhas que tem None
+        df_mensal = df_mensal.dropna(axis=0)
+        return df_mensal
+    return df
+
+
+@desempenho
+def get_total_gerado() -> pd.DataFrame:
+    try:
+        # colunas_energia = list(st.session_state['usina']['energia'].values())
+        # query_energia = get_info_usina('energia total')
+        # data = get_db_data(query_energia)
+        # if data.empty:
+        #     return pd.DataFrame(columns=['total'])
+        # data['total'] = data[[col for col in colunas_energia if 'energia' in col]].sum(axis=1)
+        return pd.DataFrame(columns=['total'])
+    except Exception as e:
+        get_error('get_total_gerado, ln 160', e)
+Quantidade de linhas do arquivo calculos.py: 73 totalizando 617 linhas.
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+5 - Conteúdo do arquivo datas.py:
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+from libs.utils.decorators import desempenho, get_error
+from libs.models.db import Database
+from libs.models.calculos import calcular_energia_acumulada
+import pandas as pd
+import streamlit as st
+from datetime import datetime, timedelta
+import numpy as np
+
+@desempenho
+def get_db_data(query: str, verify_type: bool = True) -> pd.DataFrame:
+    try:
+        result = st.session_state['db'].fetch_data(query)
+        if not result:
+            return pd.DataFrame()
+        df_ = pd.DataFrame(result)
+        if not verify_type:
+            return df_
+        for col in df_.dtypes.index:
+            if df_[col].dtype != 'int64' and df_[col].dtype != 'float64' and col != 'data_hora':
+                if pd.to_numeric(df_[col], errors='coerce').notna().all():
+                    df_[col] = df_[col].astype(float)
+                    df_[col] = df_[col].fillna(0)
+        colunas_numericas = df_.select_dtypes(include=[np.number]).columns
+        mask = (df_[colunas_numericas] >= 0).all(axis=1)
+        df_ = df_[mask]
+        if df_.empty:
+            return df_
+        return df_
+    except Exception as e:
+        print(e)
+        get_error('get_db_data', e)
+
+@desempenho
+def get_info_usina(comando: str) -> str:
+    try:
+        energia = ', '.join(st.session_state['usina']['energia'].values())
+        nivel = ', '.join(st.session_state['usina']['nivel'].values())
+        data_inicial = datetime.now() - timedelta(days=30)
+        data_inicial_180 = datetime.now() - timedelta(days=180)
+        data_final = datetime.now()
+        data_inicial_nivel = datetime.now() - timedelta(hours=1)
+        data_final_nivel = datetime.now()
+        # f"SELECT {', '.join(colunas_selecionadas)} FROM {usina['tabela']} WHERE data_hora BETWEEN '{data_hora_inicial}' AND '{data_hora_final}'"
+        comandos = {
+            'energia total': f"SELECT {energia} FROM {st.session_state['usina']['tabela']} ORDER BY data_hora DESC LIMIT 1",
+            'energia total 30 dias': f"SELECT {energia} FROM {st.session_state['usina']['tabela']} WHERE data_hora BETWEEN '{data_inicial}' AND '{data_final}'",
+            'energia total 180 dias': f"SELECT {energia} FROM {st.session_state['usina']['tabela']} WHERE data_hora BETWEEN '{data_inicial_180}' AND '{data_final}'",
+            'describe nivel': f"SELECT {nivel} FROM {st.session_state['usina']['tabela']} ORDER BY data_hora DESC LIMIT 60",
+            'nivel': f"SELECT {nivel} FROM {st.session_state['usina']['tabela']} WHERE data_hora BETWEEN '{data_inicial_nivel}' AND '{data_final_nivel}'",
+            'nome colunas': f"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{st.session_state['usina']['tabela']}'",
+            'describe temperatura': f"SELECT * FROM {st.session_state['usina']['tabela']} ORDER BY data_hora DESC LIMIT 120",
+        }
+        if comando not in comandos:
+            raise ValueError(f"Comando '{comando}' não encontrado")
+        return comandos[comando]
+    except Exception as e:
+        get_error('get_info_usina, ln 155', e)
+
+@desempenho
+def get_ultimos_180_dias_mensal() -> pd.DataFrame:
+    try:
+        query = get_info_usina('energia total 180 dias')
+        df = get_db_data(query)
+        data = calcular_energia_acumulada(df, list(st.session_state['usina']['energia'].values()), 'M')
+        cols_energia = list(st.session_state['usina']['energia'].values())
+        # data[cols_energia] = data[cols_energia].apply(pd.to_numeric, errors='coerce').clip(lower=0)
+        # if not pd.api.types.is_datetime64_any_dtype(data['data_hora']):
+        #     data['data_hora'] = pd.to_datetime(data['data_hora'], errors='coerce')
+        meses_pt = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+        data['data_hora'] = data['data_hora'].dt.month.apply(lambda x: meses_pt[x-1])
+        return data
+    except Exception as e:
+        get_error('get_ultimos_180_dias_mensal, ln 205', e)
+
+
+@desempenho
+def get_data_card_energia() -> dict:
+    try:
+        # energia_total = get_total_gerado()
+        # describe_nivel = get_describe_nivel()
+        ultimos_180_dias = get_ultimos_180_dias_mensal()
+        colunas_mensal = [col for col in ultimos_180_dias.columns if 'prod_' in col]
+        ultimos_180_dias['total'] = ultimos_180_dias[colunas_mensal].sum(axis=1)
+        ultimos_180_dias['percentual'] = ultimos_180_dias['total'].pct_change(periods=1) * 100
+        ultimos_180_dias = ultimos_180_dias[::-1]
+        # print('#####'*10)
+        # print('ultimos_180_dias')
+        # print(ultimos_180_dias)
+        # print('#####'*10)
+        ultima_atualizacao = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+        if 'last_update' not in st.session_state:
+            st.session_state.last_update = ultima_atualizacao
+        list_cards = {}
+        # list_cards['Produção total'] = {
+        #     'value': round(float(energia_total['total'].values[0]), 2),
+        #     'value_max': None,
+        #     'value_min': None,
+        #     'percentual': None,
+        #     'description': 'Produção total',
+        #     'data_hora': energia_total['data_hora'][0].strftime('%d/%m/%Y %H:%M:%S'),
+        #     'medida': 'MWh',
+        # }
+        # for col in describe_nivel.columns:
+        #     list_cards[col.replace("_", " ").capitalize()] = {
+        #         'value': round(float(describe_nivel.loc['mean', col]), 2),
+        #         'value_max': round(float(describe_nivel.loc['max', col]), 2),
+        #         'value_min': round(float(describe_nivel.loc['min', col]), 2),
+        #         'percentual': round(float(describe_nivel.loc['std', col]), 2),
+        #         'description': f'{col.replace("_", " ").capitalize()}',
+        #         'data_hora': energia_total['data_hora'][0].strftime('%d/%m/%Y %H:%M:%S'),
+        #         'medida': 'm',
+        #     }
+        for index, linha in ultimos_180_dias.iterrows():
+            name_col = f'Geração - {linha["data_hora"]}/2025'
+            list_cards[name_col] = {
+                'value': round(float(linha['total']), 2),
+                'value_max': None,
+                'value_min': None,
+                'valor_real': None,
+                'percentual': round(float(linha['percentual']), 2) if pd.notnull(linha['percentual']) else None,
+                'description': f'Mês {linha["data_hora"]}',
+                'data_hora': ultima_atualizacao,
+                'medida': 'MWh',
+            }
+        return list_cards
+    except Exception as e:
+        get_error('get_data_card_energia, ln 295', e)
+
+@desempenho
+def get_temperatura() -> pd.DataFrame:
+    try:
+        query = get_info_usina('describe temperatura')
+        df = get_db_data(query)
+        colunas_temp = [col for col in df.columns if 'temp' in col or 'enrol' in col]
+        df = df[colunas_temp]
+        df = df.describe()
+        return df
+    except Exception as e:
+        get_error('get_temperatura, ln 301', e)
+
+@desempenho
+def get_ultimos_30_dias(periodo='D', janela=30) -> pd.DataFrame:
+    try:
+        query = get_info_usina('energia total 30 dias')
+        df = get_db_data(query)
+        data = calcular_energia_acumulada(df, list(st.session_state['usina']['energia'].values()), periodo)
+        return data
+    except Exception as e:
+        get_error('get_ultimos_30_dias, ln 190', e)
+
+def get_periodo(periodo, data_inicial, data_final) -> pd.DataFrame:
+    try:
+        energia = ', '.join(st.session_state['usina']['energia'].values())
+        tabela = st.session_state['usina']['tabela']
+        query = f"SELECT {energia} FROM {tabela} WHERE data_hora BETWEEN '{data_inicial}' AND '{data_final}'"
+        df = get_db_data(query)
+        data = calcular_energia_acumulada(df, list(st.session_state['usina']['energia'].values()), periodo)
+        if periodo == 'M':
+            # remove a primeira linha
+            data = data.iloc[1:]
+        return data
+    except Exception as e:
+        get_error('get_periodo, ln 200', e)
+
+@desempenho
+def get_ultimos_1_hora_nivel(data_hora_inicial, data_hora_final) -> pd.DataFrame:
+    try:
+        nivel = ', '.join(st.session_state['usina']['nivel'].values())
+        query = f"SELECT {nivel} FROM {st.session_state['usina']['tabela']} WHERE data_hora BETWEEN '{data_hora_inicial}' AND '{data_hora_final}'"
+        df = get_db_data(query)
+        dif_tempo = (data_hora_final - data_hora_inicial)
+        #  se o tempo for maior que 1 dia, calcular a media movel de 10 minutos diminuindo a quantidade de linhas
+        if dif_tempo.total_seconds() > 86400:
+            df = df.resample('60min', on='data_hora').mean()
+            df = df.reset_index()
+        return df
+    except Exception as e:
+        get_error('get_ultimos_1_hora_nivel, ln 235', e)
+
+@desempenho
+def get_names_all_columns() -> pd.DataFrame:
+    try:
+        query = get_info_usina('nome colunas')
+        df = get_db_data(query, verify_type=False)
+        return df
+    except Exception as e:
+        get_error('get_names_all_columns, ln 210', e)
+
+@desempenho
+def fetch_dados_graficos(usina, colunas_selecionadas, data_hora_inicial, data_hora_final):
+    try:
+        query = f"SELECT {', '.join(colunas_selecionadas)} FROM {usina['tabela']} WHERE data_hora BETWEEN '{data_hora_inicial}' AND '{data_hora_final}'"
+        df = get_db_data(query)
+        return df
+    except Exception as e:
+        get_error('fetch_dados_graficos, ln 220', e)
+
+@desempenho
+def converter_colunas_para_numerico(df, colunas):
+    try:
+        for col in colunas:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+        return df
+    except Exception as e:
+        get_error('converter_colunas_para_numerico, ln 215', e)
+
+@desempenho
+def get_describe_nivel() -> pd.DataFrame:
+    try:
+        query = get_info_usina('describe nivel')
+        df = get_db_data(query)
+        colunas_nivel = [col for col in df.columns if 'niv' in col]
+        df = df[colunas_nivel].describe()
+        return df
+    except Exception as e:
+        get_error('get_describe_nivel, ln 224', e)
+Quantidade de linhas do arquivo datas.py: 217 totalizando 834 linhas.
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+6 - Conteúdo do arquivo db.py:
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+import mysql.connector
+from mysql.connector import Error
+import os
+from dotenv import load_dotenv
+from libs.utils.decorators import desempenho
+
+load_dotenv()
+
+class Database:
+    def __init__(self):
+        self.host = os.getenv('MYSQLHOST')
+        self.user = os.getenv('MYSQLUSER')
+        self.password = os.getenv('MYSQLPASSWORD')
+        self.database = os.getenv('MYSQLDATABASE')
+        self.port = os.getenv('MYSQLPORT')
+        self.connection = None
+
+    @desempenho
+    def connect(self):
+        try:
+            self.connection = mysql.connector.connect(
+                host=self.host,
+                user=self.user,
+                password=self.password,
+                database=self.database,
+                port=self.port
+            )
+            return self.connection
+        except Error as e:
+            raise Exception(f"Erro ao conectar ao banco de dados: {e}")
+
+    @desempenho
+    def execute_query(self, query, params=None):
+        if self.connection is None:
+            self.connect()
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute(query, params or ())
+            self.connection.commit()
+            return cursor
+        except Error as e:
+            self.connection.rollback()
+            raise Exception(f"Erro ao executar query: {e}")
+        finally:
+            cursor.close()
+
+    @desempenho
+    def fetch_data(self, query, params=None):
+        if self.connection is None:
+            self.connect()
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute(query, params or ())
+            result = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            return [dict(zip(columns, row)) for row in result]
+        except Error as e:
+            raise Exception(f"Erro ao buscar dados: {e}")
+        finally:
+            cursor.close()
+Quantidade de linhas do arquivo db.py: 60 totalizando 894 linhas.
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+7 - Conteúdo do arquivo decorators.py:
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+import time
+import streamlit as st
+
+cont = 0
+def desempenho(funcao):
+    def wrapper(*args, **kwargs):
+        global cont
+        cont += 1
+        # print(' '*10,f"Iniciando: {funcao.__name__}")
+        inicio = time.time()
+        resultado = funcao(*args, **kwargs)
+        fim = time.time()
+        # print(' '*10,f"{cont} - Finalizado: {funcao.__name__} | Tempo: {fim - inicio:.4f} s")
+        # print('-'*40)
+        return resultado
+    return wrapper
+
+def get_error(name, e: Exception) -> str:
+    import traceback
+    error_info = traceback.extract_tb(e.__traceback__)[-1]
+    file_name = error_info.filename.split('/')[-1]
+    function_name = error_info.name
+    st.error(f"Erro na função {name} - {function_name} no arquivo {file_name}, linha {error_info.lineno}: {str(e)}")
+    if st.button('Voltar'):
+        st.session_state.clear()
+        st.rerun()
+    st.stop()
+Quantidade de linhas do arquivo decorators.py: 27 totalizando 921 linhas.
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+8 - Conteúdo do arquivo main.py:
+¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+import streamlit as st
+import yaml
+from dotenv import load_dotenv
+import pandas as pd
+from libs.componentes import (create_energy_card,
+                              menu_principal,
+                              create_grafico_producao_energia,
+                              create_grafico_nivel,
+                              login_ui,
+                              footer)
+import os
+from libs.utils.decorators import desempenho, get_error
+# from libs.models.db import Database
+from datetime import datetime, timedelta
+
+deploy = True
+
+if 'logado' not in st.session_state:
+    st.session_state['logado'] = False
+if 'load_data' not in st.session_state:
+    st.session_state['load_data'] = False
+if 'usina' not in st.session_state:
+    st.session_state['usina'] = None
+
+st.set_page_config(
+    page_title="EngeGOM",
+    page_icon="🧊",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+st.markdown("""
+    <style>
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+        .block-container {
+            padding-top: 1rem !important;
+            padding-bottom: 0rem !important;
+        }
+        [data-testid="stHeader"] {
+            padding-top: 0rem !important;
+            padding-bottom: 0rem !important;
+        }
+        .main > div {
+            padding-top: 0rem !important;
+        }
+        .stTitle, .stHeader {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+        [data-testid="stSidebar"] {
+            padding-top: 0rem !important;
+        }
+        .css-1dp5vir {
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+        .main-container {
+            border: 2px solid #00e1ff;
+            border-radius: 15px;
+            padding: 10px;
+            margin: 5px;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+load_dotenv()
+
+if not deploy:
+    with open("config/usuarios_usinas.yaml", "r") as file:
+        config = yaml.safe_load(file)
+else:
+    url = os.getenv('MYSQLHOST')
+    user = os.getenv('MYSQLUSER')
+    password = os.getenv('MYSQLPASSWORD')
+    database = os.getenv('MYSQLDATABASE')
+    port = os.getenv('MYSQLPORT')
+    with open("config/usuarios_usinas.yaml", "r") as file:
+        config = yaml.safe_load(file)
+    for usina in config['usinas']:
+        config['usinas'][usina]['ip'] = url
+        config['usinas'][usina]['usuario'] = user
+        config['usinas'][usina]['senha'] = password
+        config['usinas'][usina]['database'] = database
+        config['usinas'][usina]['port'] = port
+
+st.session_state['usinas'] = config['usinas']
+
+def logout():
+    st.session_state.clear()
+    st.rerun()
+
+@desempenho
+def carregar_dados(usina, periodo='M', data_inicial=datetime.now() - timedelta(days=30), data_final=datetime.now()):
+    from libs.models.datas import get_data_card_energia, get_ultimos_30_dias, get_ultimos_1_hora_nivel, get_names_all_columns, get_periodo
+    try:
+        if periodo == 'Mensal':
+            periodo = 'M'
+        else:
+            periodo = 'D'
+        st.session_state.list_cards = get_data_card_energia()
+        st.session_state.ultimos_30_dias = get_ultimos_30_dias(periodo, 30)
+        st.session_state.ultimos_1_hora_nivel = get_ultimos_1_hora_nivel(data_inicial, data_final)
+        # st.session_state.names_all_columns = get_names_all_columns()
+        # st.session_state.temperatura = get_temperatura()
+    except Exception as e:
+        get_error('carregar_dados, ln 313', e)
+
+@desempenho
+def set_load_data():
+    st.session_state.load_data = False
+
+@desempenho
+def layout(usina):
+    if not st.session_state.load_data:
+        if 'periodo' in st.session_state:
+            from libs.models.datas import  get_periodo, get_ultimos_1_hora_nivel
+            st.session_state.ultimos_30_dias = get_periodo(st.session_state.periodo, st.session_state.data_inicial, st.session_state.data_final)
+            st.session_state.ultimos_1_hora_nivel = get_ultimos_1_hora_nivel(st.session_state.data_inicial, st.session_state.data_final)
+        else:
+            carregar_dados(usina)
+        st.session_state.load_data = True
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        create_grafico_producao_energia(st.session_state.ultimos_30_dias)
+        # st.divider()
+        create_grafico_nivel(st.session_state.ultimos_1_hora_nivel)
+    with col2:
+        st.divider()
+        col2_1, col2_2 = st.columns([1, 1])
+
+        with col2_1:
+            valor_Mwh = st.number_input('Valor do MWh R$', value=450.00, format='%0.2f')
+        with col2_2:
+            percentual_participacao = st.number_input('Participação %', value=100.00,  min_value=0.00, max_value=100.00, format='%0.2f')
+        for i, (key, value) in enumerate(st.session_state.list_cards.items()):
+            create_energy_card(description=key,
+                               value=value['value'],
+                               data_hora=value['data_hora'],
+                               medida=value['medida'],
+                               percentual=value['percentual'],
+                               value_max=value['value_max'],
+                               value_min=value['value_min'],
+                               valor_real=value['valor_real'],
+                               valor_Mwh=valor_Mwh,
+                               percentual_participacao=percentual_participacao)
+    footer(usina["tabela"].replace("_", " ").capitalize())
+
+
+if not st.session_state['logado']:
+    login_ui()
+    st.stop()
+
+if st.session_state['logado']:
+    menu_principal(config, st.session_state['usina'])
+    layout(st.session_state['usina'])
+# 281 linhas - 160 linhas
+
+Quantidade de linhas do arquivo main.py: 156 totalizando 1077 linhas.
+'''
+
+
+  '''

@@ -119,15 +119,12 @@ def layout(usina):
         else:
             carregar_dados(usina)
         st.session_state.load_data = True
-    col1, col2 = st.columns([5, 1])
+    col1, col2 = st.columns([1, 5])
+    
     with col1:
-        create_grafico_producao_energia(st.session_state.ultimos_30_dias)
-        # st.divider()
-        create_grafico_nivel(st.session_state.ultimos_1_hora_nivel)
-    with col2:
         st.divider()
+        st.markdown('##### Calculadora de receita')
         col2_1, col2_2 = st.columns([1, 1])
-        
         with col2_1:
             valor_Mwh = st.number_input('Valor do MWh R$', value=450.00, format='%0.2f')
         with col2_2:
@@ -143,6 +140,10 @@ def layout(usina):
                                valor_real=value['valor_real'],
                                valor_Mwh=valor_Mwh,
                                percentual_participacao=percentual_participacao)
+    with col2:
+        create_grafico_producao_energia(st.session_state.ultimos_30_dias)
+        # st.divider()
+        create_grafico_nivel(st.session_state.ultimos_1_hora_nivel)
     footer(usina["tabela"].replace("_", " ").capitalize())
 
 

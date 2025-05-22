@@ -169,9 +169,11 @@ def menu_principal(config, usina):
 def create_grafico_producao_energia(df):
     from datetime import datetime, timedelta
     st.divider()
+    st.markdown('##### Gráfico de produção de energia')
     # Crie todas as colunas no mesmo nível
     col1, col2, col3 = st.columns([0.15, 1, 0.3])
     with col1:
+        st.write('Selecione o período')
         data_hora_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
         data_hora_final = st.date_input('Data final', value=datetime.now())
         periodo = st.selectbox('Período', ['Diário', 'Mensal'])
