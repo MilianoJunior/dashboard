@@ -1,14 +1,50 @@
 import base64
 from typing import Dict
-import streamlit as st
+import streamlit as st # Added import
 from datetime import datetime
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from libs.models.db import Database
+from libs.controllers.auth import authenticate_user # ADDED
 import streamlit.components.v1 as components
 
+def apply_custom_css():
+    st.markdown("""
+        <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            .block-container {
+                padding-top: 1rem !important;
+                padding-bottom: 0rem !important;
+            }
+            [data-testid="stHeader"] {
+                padding-top: 0rem !important;
+                padding-bottom: 0rem !important;
+            }
+            .main > div {
+                padding-top: 0rem !important;
+            }
+            .stTitle, .stHeader {
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+            }
+            [data-testid="stSidebar"] {
+                padding-top: 0rem !important;
+            }
+            .css-1dp5vir {
+                padding-top: 0 !important;
+                margin-top: 0 !important;
+            } 
+            .main-container {
+                border: 2px solid #00e1ff;
+                border-radius: 15px;
+                padding: 10px;
+                margin: 5px;
+            }    
+        </style>
+    """, unsafe_allow_html=True)
 
 def render_percentual_icon(percentual, medida='MWh'):
     """
@@ -315,29 +351,20 @@ def create_grafico_nivel(df):
     st.plotly_chart(fig, use_container_width=True)
 
 def login_ui():
-    # col1, col2, col3, col4 = st.columns([1, .2, .2, 1])
-    # with col1:
-    #     st.write('')
-    # with col2:
-    #     st.image('assets/logo.png', width=60)
-    # with col3:
-    #     st.title('Login')
-    # with col4:
-    #     st.write('')
     st.image('assets/login.png', width=300)
     usinas = list(st.session_state['usinas'].keys())
     usina_nome = st.selectbox('Selecione a usina', usinas)
     usuario = st.text_input('Usuário', value='admin')
     senha = st.text_input('Senha', type='password', value='admin')
+    
     if st.button('Entrar'):
-        print(usina_nome)
-        print(usinas)
-        usina = st.session_state['usinas'][usina_nome]
-        if usuario == 'admin' and senha == 'admin':
+        # Autenticação agora é feita pela função no controller
+        autenticado, usina_obj = authenticate_user(usuario, senha, usina_nome, st.session_state['usinas'])
+        
+        if autenticado:
             st.session_state['logado'] = True
-            st.session_state['usina'] = usina
-            if 'db' not in st.session_state:
-                st.session_state['db'] = Database()
+            st.session_state['usina'] = usina_obj # usina_obj é o dicionário da usina selecionada
+            # st.session_state['db'] = Database() # Removido conforme instrução
             st.success('Login realizado com sucesso!')
             st.rerun()
         else:
