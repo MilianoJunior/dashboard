@@ -1,26 +1,33 @@
 import streamlit as st
-import yaml
+# import yaml # No longer used directly
 from dotenv import load_dotenv
-import pandas as pd
-from libs.componentes import (create_energy_card, 
-                              menu_principal, 
-                              create_grafico_producao_energia, 
-                              create_grafico_nivel,
-                              login_ui,
-                              footer)
-import os
-from libs.utils.decorators import desempenho, get_error
-# from libs.models.db import Database
-from datetime import datetime, timedelta
+# import pandas as pd # No longer used directly
+from libs.views.componentes import menu_principal, login_ui, apply_custom_css # Adjusted imports
+# import os # No longer used directly
+from libs.utils.decorators import desempenho # get_error is no longer used directly here
+from datetime import datetime, timedelta # Still used for default dates in layout
+from libs.controllers.auth import logout
+from libs.controllers.data_controller import carregar_dados, set_load_data # set_load_data might not be explicitly called
+from libs.controllers.config_controller import load_app_config
+from libs.views.pages import render_main_dashboard # Added import
+from libs.models.datas import get_periodo, get_ultimos_1_hora_nivel # Added for data loading logic in layout
 
 deploy = True
 
 if 'logado' not in st.session_state:
     st.session_state['logado'] = False
-if 'load_data' not in st.session_state:
+if 'load_data' not in st.session_state: # This flag is managed by the layout function
     st.session_state['load_data'] = False
 if 'usina' not in st.session_state:
     st.session_state['usina'] = None
+# Initialize session state for data if not present, to avoid errors in render_main_dashboard if layout isn't called first
+if 'list_cards' not in st.session_state:
+    st.session_state.list_cards = None
+if 'ultimos_30_dias' not in st.session_state:
+    st.session_state.ultimos_30_dias = None
+if 'ultimos_1_hora_nivel' not in st.session_state:
+    st.session_state.ultimos_1_hora_nivel = None
+
 
 st.set_page_config(
     page_title="EngeGOM",
@@ -28,130 +35,47 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-st.markdown("""
-    <style>
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        header {visibility: hidden;}
-        .block-container {
-            padding-top: 1rem !important;
-            padding-bottom: 0rem !important;
-        }
-        [data-testid="stHeader"] {
-            padding-top: 0rem !important;
-            padding-bottom: 0rem !important;
-        }
-        .main > div {
-            padding-top: 0rem !important;
-        }
-        .stTitle, .stHeader {
-            margin-top: 0 !important;
-            padding-top: 0 !important;
-        }
-        [data-testid="stSidebar"] {
-            padding-top: 0rem !important;
-        }
-        .css-1dp5vir {
-            padding-top: 0 !important;
-            margin-top: 0 !important;
-        .main-container {
-            border: 2px solid #00e1ff;
-            border-radius: 15px;
-            padding: 10px;
-            margin: 5px;
-        }    
-    </style>
-""", unsafe_allow_html=True)
 
-load_dotenv()
+apply_custom_css() # Moved CSS application here
 
-if not deploy:
-    with open("config/usuarios_usinas.yaml", "r") as file:
-        config = yaml.safe_load(file)
-else:
-    url = os.getenv('MYSQLHOST')
-    user = os.getenv('MYSQLUSER')
-    password = os.getenv('MYSQLPASSWORD')
-    database = os.getenv('MYSQLDATABASE')
-    port = os.getenv('MYSQLPORT')
-    with open("config/usuarios_usinas.yaml", "r") as file:
-        config = yaml.safe_load(file)
-    for usina in config['usinas']:
-        config['usinas'][usina]['ip'] = url
-        config['usinas'][usina]['usuario'] = user
-        config['usinas'][usina]['senha'] = password
-        config['usinas'][usina]['database'] = database
-        config['usinas'][usina]['port'] = port
+load_dotenv() 
 
+config = load_app_config(deploy) 
 st.session_state['usinas'] = config['usinas']
 
-def logout():
-    st.session_state.clear()
-    st.rerun()
-
-@desempenho
-def carregar_dados(usina, periodo='M', data_inicial=datetime.now() - timedelta(days=30), data_final=datetime.now()):
-    from libs.models.datas import get_data_card_energia, get_ultimos_30_dias, get_ultimos_1_hora_nivel, get_names_all_columns, get_periodo
-    try:
-        if periodo == 'Mensal':
-            periodo = 'M'
-        else:
-            periodo = 'D'
-        st.session_state.list_cards = get_data_card_energia()
-        st.session_state.ultimos_30_dias = get_ultimos_30_dias(periodo, 30)
-        st.session_state.ultimos_1_hora_nivel = get_ultimos_1_hora_nivel(data_inicial, data_final)
-        # st.session_state.names_all_columns = get_names_all_columns()
-        # st.session_state.temperatura = get_temperatura()
-    except Exception as e:
-        get_error('carregar_dados, ln 313', e)
-
-@desempenho
-def set_load_data():
-    st.session_state.load_data = False
-
-@desempenho
-def layout(usina):
+# @desempenho # Decorator removed as per instruction
+def layout(usina): # `usina` is the selected usina config dict
+    # Data loading orchestration
     if not st.session_state.load_data:
-        if 'periodo' in st.session_state:
-            from libs.models.datas import  get_periodo, get_ultimos_1_hora_nivel
+        if 'periodo' in st.session_state and 'data_inicial' in st.session_state and 'data_final' in st.session_state:
+            # This part implies that period, data_inicial, data_final are set by another component (e.g., create_grafico_producao_energia's date pickers)
+            # And that st.session_state.load_data = False was triggered by that component.
             st.session_state.ultimos_30_dias = get_periodo(st.session_state.periodo, st.session_state.data_inicial, st.session_state.data_final)
+            # Assuming get_ultimos_1_hora_nivel also needs to be reloaded if date_inicial/final change
             st.session_state.ultimos_1_hora_nivel = get_ultimos_1_hora_nivel(st.session_state.data_inicial, st.session_state.data_final)
+            # list_cards might not be reloaded here, depends on desired behavior.
+            # If list_cards depends on the date range, it should be reloaded.
+            # For now, assuming carregar_dados (which loads list_cards) is for initial load or full refresh.
         else:
-            carregar_dados(usina)
-        st.session_state.load_data = True
-    col1, col2 = st.columns([1, 5])
-    
-    with col1:
-        st.divider()
-        st.markdown('##### Calculadora de receita')
-        col2_1, col2_2 = st.columns([1, 1])
-        with col2_1:
-            valor_Mwh = st.number_input('Valor do MWh R$', value=450.00, format='%0.2f')
-        with col2_2:
-            percentual_participacao = st.number_input('Participação %', value=100.00,  min_value=0.00, max_value=100.00, format='%0.2f')
-        for i, (key, value) in enumerate(st.session_state.list_cards.items()):
-            create_energy_card(description=key, 
-                               value=value['value'], 
-                               data_hora=value['data_hora'], 
-                               medida=value['medida'], 
-                               percentual=value['percentual'], 
-                               value_max=value['value_max'], 
-                               value_min=value['value_min'], 
-                               valor_real=value['valor_real'],
-                               valor_Mwh=valor_Mwh,
-                               percentual_participacao=percentual_participacao)
-    with col2:
-        create_grafico_producao_energia(st.session_state.ultimos_30_dias)
-        # st.divider()
-        create_grafico_nivel(st.session_state.ultimos_1_hora_nivel)
-    footer(usina["tabela"].replace("_", " ").capitalize())
+            # Default data loading when page is first loaded or no specific period is set by user interaction
+            default_data_inicial = datetime.now() - timedelta(days=30)
+            default_data_final = datetime.now()
+            # carregar_dados loads list_cards, ultimos_30_dias (default 30 days, M), and ultimos_1_hora_nivel
+            carregar_dados(usina, periodo='M', data_inicial=default_data_inicial, data_final=default_data_final) 
+        st.session_state.load_data = True # Mark data as loaded
 
+    # Call the rendering function from pages.py with data from session_state
+    render_main_dashboard(
+        usina_selecionada=usina, 
+        list_cards_data=st.session_state.get('list_cards'), 
+        ultimos_30_dias_data=st.session_state.get('ultimos_30_dias'), 
+        ultimos_1_hora_nivel_data=st.session_state.get('ultimos_1_hora_nivel')
+    )
 
 if not st.session_state['logado']:
     login_ui()
     st.stop()
 
 if st.session_state['logado']:
-    menu_principal(config, st.session_state['usina'])
+    menu_principal(config, st.session_state['usina']) 
     layout(st.session_state['usina'])
-# 281 linhas - 160 linhas
