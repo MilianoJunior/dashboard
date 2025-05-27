@@ -48,13 +48,6 @@ def authenticate_user(username, password, selected_usina_nome, usinas_config):
     if isinstance(env_pass_hash_stored_value, str):
         env_pass_hash_stored_value = env_pass_hash_stored_value.strip()
 
-
-    print(f'username: {username}, type: {type(username)}, user_value: {env_user_value}, type: {type(env_user_value)}, {username == env_user_value}')
-    print(f'password: {password}, type: {type(password)}, pass_hash_value: {env_pass_hash_stored_value}, type: {type(env_pass_hash_stored_value)}, {password_hashed == env_pass_hash_stored_value}')
-
-    # print(f'password_hashed: {password_hashed}')
-    # print(f'env_pass_hash_stored_value: {env_pass_hash_stored_value}')
-    # Comparar usando env_user_value e env_pass_hash_stored_value
     if username == env_user_value:
         if selected_usina_nome in usinas_config:
             usina_obj = usinas_config[selected_usina_nome]
