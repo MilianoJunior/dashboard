@@ -68,15 +68,6 @@ def authenticate_user(username, password, selected_usina_nome, usinas_config):
         return False, None
     
 '''
-O parâmetro do TON_VerificacaoEncoder foi alterado de T#5s para T#10s, no entanto, 
-o ALARME e TRIP da falha de sensor de velocidade Encoder/Pick-UP ficaram ativos no supervisório.
 
-Identifiquei que esse ALARME e TRIP tem 3 condições de ativação:
-
-    1. Operação modo auto;
-    2. Enconder em Falha;
-    3. Regulador de velocidade Habilitado.
-
-A primeira condição, operação modo auto, é atendida mesmo desativando 
-
+refactor/initial-mvc-structure
 '''
