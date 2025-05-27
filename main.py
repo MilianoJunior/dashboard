@@ -6,12 +6,9 @@ from datetime import datetime, timedelta
 from libs.controllers.auth import logout
 from libs.controllers.data_controller import carregar_dados, set_load_data 
 from libs.controllers.config_controller import load_app_config
-from libs.views.pages import render_main_dashboard 
-from libs.models.datas import get_periodo, get_ultimos_1_hora_nivel
-from libs.models.db import Database # Added
-import logging # Added
-
-logger = logging.getLogger(__name__) # Added
+from libs.views.pages import render_main_dashboard # Added import
+from libs.models.datas import get_periodo, get_ultimos_1_hora_nivel # Added for data loading logic in layout
+from libs.utils.db_utils import init_db_connection  # Adicionado para garantir inicialização do db
 
 deploy = True
 
@@ -27,8 +24,9 @@ if 'ultimos_30_dias' not in st.session_state:
     st.session_state.ultimos_30_dias = None
 if 'ultimos_1_hora_nivel' not in st.session_state:
     st.session_state.ultimos_1_hora_nivel = None
-# Removed: 'db' initialization here, will be handled after login
 
+# Inicializa a conexão com o banco de dados
+init_db_connection()
 
 st.set_page_config(
     page_title="EngeGOM",
