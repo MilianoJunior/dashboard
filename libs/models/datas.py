@@ -5,10 +5,16 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime, timedelta
 import numpy as np
+from libs.utils.db_utils import init_db_connection
 
 @desempenho
 def get_db_data(query: str, verify_type: bool = True) -> pd.DataFrame:
     try:
+        # Garante que a conexão está inicializada
+        if 'db' not in st.session_state or st.session_state['db'] is None:
+            init_db_connection()
+        if st.session_state['db'] is None:
+            raise Exception('Conexão com o banco de dados não inicializada.')
         result = st.session_state['db'].fetch_data(query)
         if not result:
             return pd.DataFrame()

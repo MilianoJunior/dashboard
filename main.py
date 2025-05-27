@@ -11,6 +11,7 @@ from libs.controllers.data_controller import carregar_dados, set_load_data # set
 from libs.controllers.config_controller import load_app_config
 from libs.views.pages import render_main_dashboard # Added import
 from libs.models.datas import get_periodo, get_ultimos_1_hora_nivel # Added for data loading logic in layout
+from libs.utils.db_utils import init_db_connection  # Adicionado para garantir inicialização do db
 
 deploy = True
 
@@ -27,7 +28,11 @@ if 'ultimos_30_dias' not in st.session_state:
     st.session_state.ultimos_30_dias = None
 if 'ultimos_1_hora_nivel' not in st.session_state:
     st.session_state.ultimos_1_hora_nivel = None
+if "db" not in st.session_state:
+    st.session_state["db"] = None  # ou algum valor padrão apropriado
 
+# Inicializa a conexão com o banco de dados
+init_db_connection()
 
 st.set_page_config(
     page_title="EngeGOM",
