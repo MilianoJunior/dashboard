@@ -1,6 +1,6 @@
 import streamlit as st
 from dotenv import load_dotenv
-from libs.views.componentes import menu_principal, login_ui, apply_custom_css 
+from libs.views.componentes import menu_principal, login_ui, apply_custom_css
 # from libs.utils.decorators import desempenho # REMOVED as it's no longer used in main.py
 from datetime import datetime, timedelta 
 from libs.controllers.auth import logout
@@ -71,6 +71,6 @@ if st.session_state['logado']:
         st.session_state['db'] = Database()
     # else: # Optional: log if it already existed
         # logger.debug("Instância Database já existe em st.session_state['db']")
-        
+    print('Executando passo 1')
     menu_principal(config, st.session_state['usina']) 
     layout(st.session_state['usina'])

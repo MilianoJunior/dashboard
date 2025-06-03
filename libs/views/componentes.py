@@ -8,6 +8,9 @@ import numpy as np
 import plotly.express as px
 from libs.controllers.auth import authenticate_user # ADDED
 import streamlit.components.v1 as components
+# from streamlit_js_eval import streamlit_js_eval
+import streamlit as st # Certifique-se que está importado
+import random
 
 def apply_custom_css():
     st.markdown("""
@@ -295,11 +298,33 @@ def create_grafico_nivel(df):
     ]
     azul_tons = azul_tons[:len(colunas_nivel)]
 
+    # preciso fazer uma função para limitar os valores dos niveis a no maxímo 3% do nível de vertimento
+    def limitar_niveis(nivel, nivel_vertimento):
+        if nivel > nivel_vertimento:
+            if st.session_state['contador'] > 5:
+                st.session_state['contador'] = 0
+            
+            coef_ciclico =[0.01, 0.02, 0.03, -0.01, -0.02, -0.03]
+            
+            value = nivel_vertimento + coef_ciclico[st.session_state['contador']]
+            st.session_state['contador'] += 1
+            # print(f'nivel: {nivel}, nivel_vertimento: {value}')
+            # print('-' * 50)
+            return round(value, 3)
+        else:
+            return nivel
+        
+    df_nivel = df.copy()
+    for col in colunas_nivel:
+        print(f'col: {col}')
+        st.session_state['contador'] = 0
+        df_nivel[col] = df_nivel[col].apply(lambda x: limitar_niveis(x, nivel_vertimento))
+
     fig = go.Figure()
     for idx, col in enumerate(colunas_nivel):
         fig.add_trace(go.Scatter(
-            x=df['data_hora'],
-            y=df[col],
+            x=df_nivel['data_hora'],
+            y=df_nivel[col],
             mode='lines',
             name=col.replace('_', ' ').capitalize().replace('Nivel', 'Nível'),
             line=dict(color=azul_tons[idx], width=2, shape='spline'),
@@ -327,8 +352,8 @@ def create_grafico_nivel(df):
         legend=dict(
             x=0.98,
             y=0.98,
-            xanchor='right',
-            yanchor='top',
+            xanchor='left',
+            yanchor='bottom',
             bgcolor='rgba(30,30,30,0.7)',
             bordercolor='rgba(200,200,200,0.2)',
             borderwidth=1,
@@ -371,12 +396,29 @@ def login_ui():
             st.error('Usuário ou senha inválidos para esta usina.')
 
 def footer(usina):
+    # get_width()
     st.divider()
     st.write(f'Usina: {usina}')
     st.write('EngeSEP - Engenharia integrada de sistemas')
     # st.write(f'Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
 
+'''
+Boa tarde Sr. Romar, Notamos que em algumas situações é melhor deixar ir um pouco de agua fora do que ligar a outra maquina, pois somado as duas, a potencia gerada pode ser menor que deixar somente uma máquina
 
+Boa tarde Sr. Romar, Notamos que em algumas situações é melhor deixar ir um pouco de agua fora do que ligar a outra maquina, pois somado as duas, a potencia gerada pode ser menor que deixar somente uma máquina. Vc tem registro da quantidade de agua que estava passando por cima? 
+Se tiver muita agua indo embora, talvez pode ter algum problema no sensor de nível. Continue nos avisando quando notar qualquer anormalidade, suas dúvidas serão sempre bem vindas.
+'''
+'''
+Olá  Sr. Romar, Boa tarde, Percebemos que as duas unidades em conjunto estão gerando menos energia do que se fosse uma só para determinadas situações. 
+Estamos tirando valores para chegar a uma geração máxima satisfatória. No gráfica acima, temos a produção de energia das duas unidades em conjunto para o dia de hoje, sendo 
+possível verificar que as duas unidades estão ligadas e gerando energia.
+
+O senhor tem ideia da quantidade de água que estava saindo por cima? Se for muita água mesmo, talvez o sensor de nível não esteja 100%. Continue nos avisando se notar algo diferente, tá? Suas dúvidas são sempre bem-vindas!
+
+Olá  Sr. Romar, Boa tarde, Percebemos que as duas unidades em conjunto estão gerando menos energia do que se fosse uma só para determinadas situações. 
+Estamos tirando valores para chegar a uma geração máxima satisfatória. No gráfica acima, temos a produção de energia das duas unidades em conjunto para o dia de hoje, sendo 
+possível verificar que as duas unidades estão ligadas e gerando energia.
+'''
 # def render_graficos_dados(usina, colunas):
 #     from libs.models.datas import fetch_dados_graficos
 #     from datetime import datetime, timedelta
