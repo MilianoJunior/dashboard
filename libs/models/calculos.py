@@ -4,11 +4,44 @@ from datetime import datetime, timedelta
 import streamlit as st
 # from libs.models.datas import get_db_data, get_info_usina
 
+def retira_outliers(df, colunas):
+    for col in colunas:
+        if col == 'data_hora':
+            continue
+        print(f'Coluna: {col}')
+        print(df[col].describe())
+        df[col] = df[col].clip(lower=df[col].quantile(0.01), upper=df[col].quantile(0.99))
+    return df
+
 @desempenho
 def calcular_energia_acumulada(df, colunas, periodo):
+    # print(f'Periodo: {periodo}')
+    # print(df.shape)
+    # print('--'*10)
+    # df = retira_outliers(df, colunas)
+    # print(df.shape)
     if periodo == 'D':
         # Agrupa por dia e pega o último valor de cada dia para cada coluna
         colunas_energia = [col for col in colunas if 'energia' in col]
+        # df['data_hora'] = df['data_hora'].dt.date
+        # excluir valores iguais a 103.00
+        mask = (df[colunas_energia] == 103.00).any(axis=1)
+        df = df[~mask]
+
+        # def ultimo_valor_diferente_zero(grupo):
+        #     resultado = {}
+        #     print(grupo)
+        #     # for coluna in colunas_energia:
+        #     #     grupo_filtrado = grupo[grupo[coluna] != 0]
+        #     #     if not grupo_filtrado.empty:
+        #     #         resultado[coluna] = grupo_filtrado.iloc[-1][coluna]
+        #     #     else:
+        #     #         resultado[coluna] = grupo.iloc[-1][coluna]
+        #     # # Mantém a data_hora do último registro do grupo (pode ajustar se quiser a do grupo_filtrado)
+        #     # resultado['data_hora'] = grupo.iloc[-1]['data_hora']
+        #     # return pd.Series(resultado)
+
+        # df_diario = df.groupby('data_hora').apply(ultimo_valor_diferente_zero).reset_index()
         df_diario = df.groupby(df['data_hora'].dt.date).last()
         # Converter para float
         for col in colunas_energia:
@@ -31,6 +64,7 @@ def calcular_energia_acumulada(df, colunas, periodo):
         # eliminar a coluna data_hora
         df_diario = df_diario.drop(columns=['data_hora'])
         df_diario = df_diario.drop(columns=colunas_energia)
+        
         return df_diario
     if periodo == 'M':
         
@@ -58,6 +92,8 @@ def calcular_energia_acumulada(df, colunas, periodo):
         # eliminar as linhas que tem None
         df_mensal = df_mensal.dropna(axis=0)
         return df_mensal
+    
+    
     return df
 
 

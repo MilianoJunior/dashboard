@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 import numpy as np
 from libs.utils.db_utils import init_db_connection
 
+
+
 @desempenho
 def get_db_data(query: str, verify_type: bool = True) -> pd.DataFrame:
     try:
@@ -17,12 +19,13 @@ def get_db_data(query: str, verify_type: bool = True) -> pd.DataFrame:
             raise Exception('Conexão com o banco de dados não inicializada.')
         result = st.session_state['db'].fetch_data(query)
         # salvar todos os dados em um arquivo csv
-        df_ = st.session_state['db'].fetch_data('select * from cgh_picadas_altas')
-        df1 = pd.DataFrame(df_)
+        # df_ = st.session_state['db'].fetch_data('select * from cgh_picadas_altas')
+        # df1 = pd.DataFrame(df_)
         # df1.to_csv('cgh_picadas_altas.csv', index=False)
         # print('salvo')
         # print('#####'*20)
         df_ = pd.DataFrame(result)
+        
         if not verify_type:
             return df_
         for col in df_.dtypes.index:
@@ -32,6 +35,7 @@ def get_db_data(query: str, verify_type: bool = True) -> pd.DataFrame:
                     df_[col] = df_[col].fillna(0)
         colunas_numericas = df_.select_dtypes(include=[np.number]).columns
         mask = (df_[colunas_numericas] >= 0).all(axis=1)
+ 
         df_ = df_[mask]
         if df_.empty:
             return df_
