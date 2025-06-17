@@ -116,7 +116,7 @@ def get_data_card_energia() -> dict:
             'Fevereiro/2025': None,
         }
         for index, linha in ultimos_180_dias.iterrows():
-            mes = f'{linha['data_hora']}'
+            mes = f'{linha["data_hora"]}'
             name_col = f'Geração - {mes}/2025'
             mes_anterior = f'{mes}/2024'
             list_cards[name_col] = {
