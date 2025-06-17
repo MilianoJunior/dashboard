@@ -16,8 +16,12 @@ def get_db_data(query: str, verify_type: bool = True) -> pd.DataFrame:
         if st.session_state['db'] is None:
             raise Exception('Conexão com o banco de dados não inicializada.')
         result = st.session_state['db'].fetch_data(query)
-        if not result:
-            return pd.DataFrame()
+        # salvar todos os dados em um arquivo csv
+        df_ = st.session_state['db'].fetch_data('select * from cgh_picadas_altas')
+        df1 = pd.DataFrame(df_)
+        # df1.to_csv('cgh_picadas_altas.csv', index=False)
+        # print('salvo')
+        # print('#####'*20)
         df_ = pd.DataFrame(result)
         if not verify_type:
             return df_
@@ -33,7 +37,7 @@ def get_db_data(query: str, verify_type: bool = True) -> pd.DataFrame:
             return df_
         return df_
     except Exception as e:
-        print(e)
+        # print(e)
         get_error('get_db_data', e)
 
 @desempenho
@@ -82,47 +86,41 @@ def get_ultimos_180_dias_mensal() -> pd.DataFrame:
 @desempenho
 def get_data_card_energia() -> dict:
     try:
-        # energia_total = get_total_gerado()
-        # describe_nivel = get_describe_nivel()
         ultimos_180_dias = get_ultimos_180_dias_mensal()
         colunas_mensal = [col for col in ultimos_180_dias.columns if 'prod_' in col]
         ultimos_180_dias['total'] = ultimos_180_dias[colunas_mensal].sum(axis=1)
         ultimos_180_dias['percentual'] = ultimos_180_dias['total'].pct_change(periods=1) * 100
         ultimos_180_dias = ultimos_180_dias[::-1]
-        # print('#####'*10)
-        # print('ultimos_180_dias')
-        # print(ultimos_180_dias)
-        # print('#####'*10)
         ultima_atualizacao = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         if 'last_update' not in st.session_state:
             st.session_state.last_update = ultima_atualizacao
         list_cards = {}
-        # list_cards['Produção total'] = {
-        #     'value': round(float(energia_total['total'].values[0]), 2),
-        #     'value_max': None,
-        #     'value_min': None,
-        #     'percentual': None,
-        #     'description': 'Produção total',
-        #     'data_hora': energia_total['data_hora'][0].strftime('%d/%m/%Y %H:%M:%S'),
-        #     'medida': 'MWh',
-        # }
-        # for col in describe_nivel.columns:
-        #     list_cards[col.replace("_", " ").capitalize()] = {
-        #         'value': round(float(describe_nivel.loc['mean', col]), 2),
-        #         'value_max': round(float(describe_nivel.loc['max', col]), 2),
-        #         'value_min': round(float(describe_nivel.loc['min', col]), 2),
-        #         'percentual': round(float(describe_nivel.loc['std', col]), 2),
-        #         'description': f'{col.replace("_", " ").capitalize()}',
-        #         'data_hora': energia_total['data_hora'][0].strftime('%d/%m/%Y %H:%M:%S'),
-        #         'medida': 'm',
-        #     }
+        valores_fae = {
+            'Janeiro/2025': 4.95,
+            'Janeiro/2024': 208.65,
+            'Fevereiro/2024': None,
+            'Março/2024': None,
+            'Abril/2024': 2.879,
+            'Maio/2024': 3.052,
+            'Junho/2024': 1.111,
+            'Julho/2024': 0.764,
+            'Agosto/2024': 0.524,
+            'Setembro/2024': 1.954,
+            'Outubro/2024': 4.764,
+            'Novembro/2024': None,
+            'Dezembro/2024': None,
+            'Fevereiro/2025': None,
+        }
         for index, linha in ultimos_180_dias.iterrows():
-            name_col = f'Geração - {linha["data_hora"]}/2025'
+            mes = f'{linha['data_hora']}'
+            name_col = f'Geração - {mes}/2025'
+            mes_anterior = f'{mes}/2024'
             list_cards[name_col] = {
                 'value': round(float(linha['total']), 2),
                 'value_max': None,
                 'value_min': None,
                 'valor_real': None,
+                'ano_anterior': None,
                 'percentual': round(float(linha['percentual']), 2) if pd.notnull(linha['percentual']) else None,
                 'description': f'Mês {linha["data_hora"]}',
                 'data_hora': ultima_atualizacao,

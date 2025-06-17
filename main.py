@@ -71,6 +71,5 @@ if st.session_state['logado']:
         st.session_state['db'] = Database()
     # else: # Optional: log if it already existed
         # logger.debug("Instância Database já existe em st.session_state['db']")
-    print('Executando passo 1')
     menu_principal(config, st.session_state['usina']) 
     layout(st.session_state['usina'])

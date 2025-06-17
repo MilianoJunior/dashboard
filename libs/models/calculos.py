@@ -1,6 +1,7 @@
 from libs.utils.decorators import desempenho, get_error
 import pandas as pd
 from datetime import datetime, timedelta
+import streamlit as st
 # from libs.models.datas import get_db_data, get_info_usina
 
 @desempenho
@@ -32,6 +33,7 @@ def calcular_energia_acumulada(df, colunas, periodo):
         df_diario = df_diario.drop(columns=colunas_energia)
         return df_diario
     if periodo == 'M':
+        
         colunas_energia = [col for col in colunas if 'energia' in col]
         # Criar chave ano-mês para agrupar corretamente pelos meses
         df['ano_mes'] = df['data_hora'].dt.strftime('%Y-%m')

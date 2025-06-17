@@ -1,0 +1,11 @@
+usinas:
+  CGH-APARECIDA:
+    acesso: 5
+  CGH-FAE:
+    acesso: 2
+  CGH-HOPPEN:
+    acesso: 1
+  CGH-PICADAS-ALTAS:
+    acesso: 1
+  PCH-PEDRAS:
+    acesso: 3

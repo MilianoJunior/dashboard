@@ -29,7 +29,8 @@ def render_main_dashboard(usina_selecionada, list_cards_data, ultimos_30_dias_da
                                    value_min=value['value_min'], 
                                    valor_real=value['valor_real'],
                                    valor_Mwh=valor_Mwh,
-                                   percentual_participacao=percentual_participacao)
+                                   percentual_participacao=percentual_participacao,
+                                   valor_ano_anterior=value['ano_anterior'])
         else:
             st.write("Dados dos cards de energia não disponíveis.") # Placeholder if data is None
 

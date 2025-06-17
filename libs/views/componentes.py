@@ -72,7 +72,7 @@ def render_percentual_icon(percentual, medida='MWh'):
     unidade = '%' if medida == 'MWh' else 'm'
     return f"<span style='color:{color}; font-size: 0.98em; display: flex; align-items: center;'>{svg} {percentual} {unidade}</span>"
 
-def create_energy_card(description, value, data_hora, medida, percentual, value_max=None, value_min=None, valor_real=None, valor_Mwh=None, percentual_participacao=None):
+def create_energy_card(description, value, data_hora, medida, percentual, value_max=None, value_min=None, valor_real=None, valor_Mwh=None, percentual_participacao=None, valor_ano_anterior=None):
     card_style = """
         <style>
         .energy-card {
@@ -148,17 +148,23 @@ def create_energy_card(description, value, data_hora, medida, percentual, value_
         valor_total = ""
         valor_percentual = ""
 
+    if valor_ano_anterior is not None:
+        valor_ano_anterior = f"R$ {valor_ano_anterior:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
+    else:
+        valor_ano_anterior = ""
+
     card_html = f"""
         <div class="energy-card">
             <div class="description">{description}</div>
             <div class="value-row">
                 <span class="value">{str(value).replace('.', ',')}</span>
                 <span class="unit">{medida}</span>
+                <span class="ano_anterior">Ano anterior: {valor_ano_anterior}</span>
                 <span class="percentual">{percentual_html}</span>
             </div>
             <div class="value-row">
                 <div class="valor_real">Total: {valor_total}</div>
-                <div class="maxmin">Percentual: {valor_percentual}</div>
+                <div class="maxmin">Per.: {valor_percentual}</div>
             </div>
         </div>
     """
@@ -315,10 +321,10 @@ def create_grafico_nivel(df):
             return nivel
         
     df_nivel = df.copy()
-    for col in colunas_nivel:
-        print(f'col: {col}')
-        st.session_state['contador'] = 0
-        df_nivel[col] = df_nivel[col].apply(lambda x: limitar_niveis(x, nivel_vertimento))
+    # for col in colunas_nivel:
+    #     print(f'col: {col}')
+    #     st.session_state['contador'] = 0
+    #     df_nivel[col] = df_nivel[col].apply(lambda x: limitar_niveis(x, nivel_vertimento))
 
     fig = go.Figure()
     for idx, col in enumerate(colunas_nivel):
@@ -395,6 +401,7 @@ def login_ui():
         else:
             st.error('Usuário ou senha inválidos para esta usina.')
 
+
 def footer(usina):
     # get_width()
     st.divider()
@@ -402,51 +409,7 @@ def footer(usina):
     st.write('EngeSEP - Engenharia integrada de sistemas')
     # st.write(f'Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
 
-'''
-Boa tarde Sr. Romar, Notamos que em algumas situações é melhor deixar ir um pouco de agua fora do que ligar a outra maquina, pois somado as duas, a potencia gerada pode ser menor que deixar somente uma máquina
 
-Boa tarde Sr. Romar, Notamos que em algumas situações é melhor deixar ir um pouco de agua fora do que ligar a outra maquina, pois somado as duas, a potencia gerada pode ser menor que deixar somente uma máquina. Vc tem registro da quantidade de agua que estava passando por cima? 
-Se tiver muita agua indo embora, talvez pode ter algum problema no sensor de nível. Continue nos avisando quando notar qualquer anormalidade, suas dúvidas serão sempre bem vindas.
-'''
-'''
-Olá  Sr. Romar, Boa tarde, Percebemos que as duas unidades em conjunto estão gerando menos energia do que se fosse uma só para determinadas situações. 
-Estamos tirando valores para chegar a uma geração máxima satisfatória. No gráfica acima, temos a produção de energia das duas unidades em conjunto para o dia de hoje, sendo 
-possível verificar que as duas unidades estão ligadas e gerando energia.
-
-O senhor tem ideia da quantidade de água que estava saindo por cima? Se for muita água mesmo, talvez o sensor de nível não esteja 100%. Continue nos avisando se notar algo diferente, tá? Suas dúvidas são sempre bem-vindas!
-
-Olá  Sr. Romar, Boa tarde, Percebemos que as duas unidades em conjunto estão gerando menos energia do que se fosse uma só para determinadas situações. 
-Estamos tirando valores para chegar a uma geração máxima satisfatória. No gráfica acima, temos a produção de energia das duas unidades em conjunto para o dia de hoje, sendo 
-possível verificar que as duas unidades estão ligadas e gerando energia.
-'''
-# def render_graficos_dados(usina, colunas):
-#     from libs.models.datas import fetch_dados_graficos
-#     from datetime import datetime, timedelta
-
-#     cols1, cols2, col3, col4 = st.columns(4)
-#     with cols1:
-#         colunas_selecionadas = st.multiselect('Selecione as colunas', colunas['COLUMN_NAME'].tolist(), default=colunas['COLUMN_NAME'].tolist()[1])
-#     with cols2:
-#         data_hora_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
-#     with col3:
-#         data_hora_final = st.date_input('Data final', value=datetime.now())
-#     with col4:
-#         st.write('')
-#         st.write('')
-#         btn_grafico = st.button('Carregar gráficos')
-#     if btn_grafico:
-#         df_original, df_normalized = fetch_dados_graficos(usina, colunas_selecionadas, data_hora_inicial, data_hora_final)
-#         tab1, tab2 = st.tabs(["Dados Originais", "Dados Normalizados"])
-#         with tab1:
-#             st.subheader("Gráfico de Dados Originais")
-#             st.line_chart(df_original[colunas_selecionadas])
-#             with st.expander('Informações dos Dados Originais'):
-#                 st.write(df_original)
-#         with tab2:
-#             st.subheader("Gráfico de Dados Normalizados")
-#             st.line_chart(df_normalized[colunas_selecionadas])
-#             with st.expander('Informações dos Dados Normalizados'):
-#                 st.write(df_normalized)
 
 # def create_widget_temperatura(df):
 #     try:
