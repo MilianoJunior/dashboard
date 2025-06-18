@@ -212,21 +212,25 @@ def menu_principal(config, usina):
 
 def create_grafico_producao_energia(df):
     from datetime import datetime, timedelta
-    # trocar nos nomes das colunas 
+    # Refatoração: renomear colunas de uma vez só para evitar duplicidade
+    mapeamento = {}
     for col in df.columns:
-        if 'prod_' in col or 'ug' in col:
-            if 'ug01' in col:
-                df.rename(columns={col: 'UG-01 (MWh)'}, inplace=True)
-            elif 'ug02' in col:
-                df.rename(columns={col: 'UG-02 (MWh)'}, inplace=True)
-            elif 'ug03' in col:
-                df.rename(columns={col: 'UG-03 (MWh)'}, inplace=True)
-            elif 'ug04' in col:
-                df.rename(columns={col: 'UG-04 (MWh)'}, inplace=True)
-            elif 'ug05' in col:
-                df.rename(columns={col: 'UG-05 (MWh)'}, inplace=True)
-            elif 'prod' in col:
-                df.rename(columns={col: 'Produção (MWh)'}, inplace=True)
+        col_lower = col.lower()
+        if 'prod_' in col_lower or 'ug' in col_lower:
+            if 'ug01' in col_lower:
+                mapeamento[col] = 'UG-01 (MWh)'
+            elif 'ug02' in col_lower:
+                mapeamento[col] = 'UG-02 (MWh)'
+            elif 'ug03' in col_lower:
+                mapeamento[col] = 'UG-03 (MWh)'
+            elif 'ug04' in col_lower:
+                mapeamento[col] = 'UG-04 (MWh)'
+            elif 'ug05' in col_lower:
+                mapeamento[col] = 'UG-05 (MWh)'
+            elif 'prod' in col_lower:
+                mapeamento[col] = 'Produção (MWh)'
+    # Renomeia todas de uma vez
+    df = df.rename(columns=mapeamento)
     st.divider()
     # st.markdown('##### Gráfico de produção de energia')
        
@@ -253,20 +257,38 @@ def create_grafico_producao_energia(df):
         ),
     )
     # Adiciona anotação na última barra com o valor de produção do dia
-    ultima_data = df.index[-1]
     # coluna_prod pode ser uma string ou lista de colunas
-    if isinstance(colunas_prod, list):
+    if isinstance(colunas_prod, list) and len(colunas_prod) > 1:
         valor_ultimo = df.iloc[-1][colunas_prod].sum()
     else:
         valor_ultimo = df.iloc[-1][colunas_prod]
+        # Se vier como Series de uma coluna só, pega o valor escalar
+        if hasattr(valor_ultimo, 'item'):
+            valor_ultimo = valor_ultimo.item()
+    # Garante que valor_ultimo é float
+    try:
+        valor_ultimo = float(valor_ultimo)
+    except Exception:
+        valor_ultimo = 0.0
+    x_coord = df.index[-1]
+    y_coord = valor_ultimo
     cor_anotacao = '#f1f1f1'  # cinza
-    prod_dia = f"<b>{valor_ultimo:.1f} MWh</b><br>{ultima_data.strftime('%d/%m/%Y')}"
+    # Garante que a data será exibida corretamente, seja diária ou mensal
+    if hasattr(x_coord, 'strftime'):
+        # Period ou datetime
+        if hasattr(x_coord, 'freqstr') and 'M' in str(x_coord.freqstr):
+            data_str = x_coord.strftime('%m/%Y')
+        else:
+            data_str = x_coord.strftime('%d/%m/%Y')
+    else:
+        data_str = str(x_coord)
+    prod_dia = f"<b>{valor_ultimo:.1f} MWh</b><br>{data_str}"
     fig.add_annotation(
-        x=ultima_data,
-        y=valor_ultimo,
+        x=x_coord,
+        y=y_coord,
         text=prod_dia,
         showarrow=False,
-        font=dict(color=cor_anotacao, size=12),  # Fonte menor
+        font=dict(color=cor_anotacao, size=12),
         bgcolor="rgba(0,0,0,0.75)",
         bordercolor=cor_anotacao,
         borderwidth=1,
@@ -301,34 +323,34 @@ def create_grafico_producao_energia(df):
 
     with st.expander("Selecione outros períodos"):
         # Crie todas as colunas no mesmo nível
-        col11, col12 = st.columns([0.15, 0.85])
+        # col11, col12 = st.columns([0.15, 0.85])
 
-        with col11:
-            st.write('Selecione o período')
-            data_hora_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
-            data_hora_final = st.date_input('Data final', value=datetime.now())
-            periodo = st.selectbox('Período', ['Diário', 'Mensal'])
-            if 'periodo' not in st.session_state:
-                st.session_state['periodo'] = periodo
-            if 'data_inicial' not in st.session_state:
-                st.session_state['data_inicial'] = data_hora_inicial
-            if 'data_final' not in st.session_state:
-                st.session_state['data_final'] = data_hora_final
-            btn_grafico = st.button('Atualizar gráfico')
-            if btn_grafico:
-                periodos = {
-                    'Diário': 'D',
-                    'Mensal': 'M'
-                }
-                st.session_state['periodo'] = periodos.get(periodo)
-                st.session_state['data_inicial'] = data_hora_inicial
-                st.session_state['data_final'] = data_hora_final
-                st.session_state.load_data = False
-                st.rerun()
-        with col12:
-            with st.container(height=500, border=False):
-                st.write('Tabela de Dados')
-                st.dataframe(df)
+        # with col11:
+        #     st.write('Selecione o período')
+        #     data_hora_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
+        #     data_hora_final = st.date_input('Data final', value=datetime.now())
+        #     periodo = st.selectbox('Período', ['Diário', 'Mensal'])
+        #     if 'periodo' not in st.session_state:
+        #         st.session_state['periodo'] = periodo
+        #     if 'data_inicial' not in st.session_state:
+        #         st.session_state['data_inicial'] = data_hora_inicial
+        #     if 'data_final' not in st.session_state:
+        #         st.session_state['data_final'] = data_hora_final
+        #     btn_grafico = st.button('Atualizar gráfico')
+        #     if btn_grafico:
+        #         periodos = {
+        #             'Diário': 'D',
+        #             'Mensal': 'M'
+        #         }
+        #         st.session_state['periodo'] = periodos.get(periodo)
+        #         st.session_state['data_inicial'] = data_hora_inicial
+        #         st.session_state['data_final'] = data_hora_final
+        #         st.session_state.load_data = False
+        #         st.rerun()
+        # with col12:
+        with st.container(height=500, border=False):
+            st.write('Tabela de Dados')
+            st.dataframe(df)
 
 
 
@@ -360,10 +382,10 @@ def create_grafico_nivel(df):
             return nivel
         
     df_nivel = df.copy()
-    # for col in colunas_nivel:
-    #     print(f'col: {col}')
-    #     st.session_state['contador'] = 0
-    #     df_nivel[col] = df_nivel[col].apply(lambda x: limitar_niveis(x, nivel_vertimento))
+    for col in colunas_nivel:
+        # print(f'col: {col}')
+        st.session_state['contador'] = 0
+        df_nivel[col] = df_nivel[col].apply(lambda x: limitar_niveis(x, nivel_vertimento))
 
     fig = go.Figure()
     for idx, col in enumerate(colunas_nivel):
@@ -397,7 +419,7 @@ def create_grafico_nivel(df):
         legend=dict(
             x=0.98,
             y=0.98,
-            xanchor='left',
+            xanchor='right',
             yanchor='bottom',
             bgcolor='rgba(30,30,30,0.7)',
             bordercolor='rgba(200,200,200,0.2)',
