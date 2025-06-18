@@ -212,83 +212,123 @@ def menu_principal(config, usina):
 
 def create_grafico_producao_energia(df):
     from datetime import datetime, timedelta
+    # trocar nos nomes das colunas 
+    for col in df.columns:
+        if 'prod_' in col or 'ug' in col:
+            if 'ug01' in col:
+                df.rename(columns={col: 'UG-01 (MWh)'}, inplace=True)
+            elif 'ug02' in col:
+                df.rename(columns={col: 'UG-02 (MWh)'}, inplace=True)
+            elif 'ug03' in col:
+                df.rename(columns={col: 'UG-03 (MWh)'}, inplace=True)
+            elif 'ug04' in col:
+                df.rename(columns={col: 'UG-04 (MWh)'}, inplace=True)
+            elif 'ug05' in col:
+                df.rename(columns={col: 'UG-05 (MWh)'}, inplace=True)
+            elif 'prod' in col:
+                df.rename(columns={col: 'Produção (MWh)'}, inplace=True)
     st.divider()
-    st.markdown('##### Gráfico de produção de energia')
-    # Crie todas as colunas no mesmo nível
-    col1, col2, col3 = st.columns([0.15, 1, 0.3])
-    with col1:
-        st.write('Selecione o período')
-        data_hora_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
-        data_hora_final = st.date_input('Data final', value=datetime.now())
-        periodo = st.selectbox('Período', ['Diário', 'Mensal'])
-        if 'periodo' not in st.session_state:
-            st.session_state['periodo'] = periodo
-        if 'data_inicial' not in st.session_state:
-            st.session_state['data_inicial'] = data_hora_inicial
-        if 'data_final' not in st.session_state:
-            st.session_state['data_final'] = data_hora_final
-        btn_grafico = st.button('Carregar gráfico')
-        if btn_grafico:
-            periodos = {
-                'Diário': 'D',
-                'Mensal': 'M'
-            }
-            st.session_state['periodo'] = periodos.get(periodo)
-            st.session_state['data_inicial'] = data_hora_inicial
-            st.session_state['data_final'] = data_hora_final
-            st.session_state.load_data = False
-            st.rerun()
-    with col2:
+    # st.markdown('##### Gráfico de produção de energia')
+       
+    # with col1:
         # O gráfico pode ficar abaixo das colunas de filtro
-        colunas_prod = [col for col in df.columns if col.startswith('prod_')]
+    colunas_prod = [col for col in df.columns if col.startswith('UG-') or col.startswith('Produção')]
 
-        # Paleta de cores pastel confiáveis
-        cores = ['#7ED6A5', '#6EC1E4', '#FFD580', '#FFB6B9', '#B5EAD7', '#C7CEEA']
-        color_sequence = cores[:len(colunas_prod)]
+    # Paleta de cores pastel confiáveis
+    cores = ['#7ED6A5', '#6EC1E4', '#FFD580', '#FFB6B9', '#B5EAD7', '#C7CEEA']
+    color_sequence = cores[:len(colunas_prod)]
 
-        fig = px.bar(
-            df,
-            x=df.index,
-            y=colunas_prod,
-            title='Geração de Energia',
-            barmode='group',
-            height=500,
-            color_discrete_sequence=color_sequence
-        )
-        fig.update_traces(
-            marker=dict(
-                line=dict(width=2, color='rgba(30,30,30,0.18)'),  # Sombra sutil
-            ),
-        )
-        fig.update_layout(
-            title={
-                'text': 'Geração de Energia',
-                'x': 0.01,  # Alinha à esquerda
-                'xanchor': 'left',
-                'yanchor': 'top',
-                'pad': {'t': 10, 'b': 0}  # Reduz o padding superior
-            },
-            yaxis_title='Energia (MWh)',
-            xaxis_title='Data',
-            legend_title='Unidades Geradoras',
-            legend=dict(
-                x=0.98,
-                y=0.98,
-                xanchor='right',
-                yanchor='top',
-                bgcolor='rgba(30,30,30,0.7)',
-                bordercolor='rgba(200,200,200,0.2)',
-                borderwidth=1,
-                font=dict(size=12, color='white')
-            ),
-            # plot_bgcolor='#232326',  # Fundo igual ao do card
-            # paper_bgcolor='#232326'
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    with col3:
-        with st.container(height=500, border=False):
-            st.write('Tabela de Dados')
-            st.dataframe(df)
+    fig = px.bar(
+        df,
+        x=df.index,
+        y=colunas_prod,
+        title='Geração de Energia',
+        barmode='group',
+        height=500,
+        color_discrete_sequence=color_sequence
+    )
+    fig.update_traces(
+        marker=dict(
+            line=dict(width=2, color='rgba(30,30,30,0.18)'),  # Sombra sutil
+        ),
+    )
+    # Adiciona anotação na última barra com o valor de produção do dia
+    ultima_data = df.index[-1]
+    # coluna_prod pode ser uma string ou lista de colunas
+    if isinstance(colunas_prod, list):
+        valor_ultimo = df.iloc[-1][colunas_prod].sum()
+    else:
+        valor_ultimo = df.iloc[-1][colunas_prod]
+    cor_anotacao = '#f1f1f1'  # cinza
+    prod_dia = f"<b>{valor_ultimo:.1f} MWh</b><br>{ultima_data.strftime('%d/%m/%Y')}"
+    fig.add_annotation(
+        x=ultima_data,
+        y=valor_ultimo,
+        text=prod_dia,
+        showarrow=False,
+        font=dict(color=cor_anotacao, size=12),  # Fonte menor
+        bgcolor="rgba(0,0,0,0.75)",
+        bordercolor=cor_anotacao,
+        borderwidth=1,
+    )
+    fig.update_layout(
+        title={
+            'text': 'Geração de Energia',
+            'x': 0.01,  # Alinha à esquerda
+            'xanchor': 'left',
+            'yanchor': 'top',
+            'pad': {'t': 10, 'b': 0}  # Reduz o padding superior
+        },
+        yaxis_title='Energia (MWh)',
+        xaxis_title='',  # Remove o texto do eixo X
+        legend_title='Unidades Geradoras',
+        legend=dict(
+            x=0.68,  # Mais à esquerda, dentro do gráfico
+            y=1.0,   # Centralizado verticalmente
+            xanchor='right',
+            yanchor='top',
+            bgcolor='rgba(30,30,30,0.7)',
+            bordercolor='rgba(200,200,200,0.2)',
+            borderwidth=1,
+            font=dict(size=14, color='white'),
+            orientation='v'
+        ),
+        margin=dict(l=10, r=10, t=0, b=0),  # Espaço extra à direita para legenda
+        # plot_bgcolor='#232326',  # Fundo igual ao do card
+        # paper_bgcolor='#232326'
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    with st.expander("Selecione outros períodos"):
+        # Crie todas as colunas no mesmo nível
+        col11, col12 = st.columns([0.15, 0.85])
+
+        with col11:
+            st.write('Selecione o período')
+            data_hora_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
+            data_hora_final = st.date_input('Data final', value=datetime.now())
+            periodo = st.selectbox('Período', ['Diário', 'Mensal'])
+            if 'periodo' not in st.session_state:
+                st.session_state['periodo'] = periodo
+            if 'data_inicial' not in st.session_state:
+                st.session_state['data_inicial'] = data_hora_inicial
+            if 'data_final' not in st.session_state:
+                st.session_state['data_final'] = data_hora_final
+            btn_grafico = st.button('Atualizar gráfico')
+            if btn_grafico:
+                periodos = {
+                    'Diário': 'D',
+                    'Mensal': 'M'
+                }
+                st.session_state['periodo'] = periodos.get(periodo)
+                st.session_state['data_inicial'] = data_hora_inicial
+                st.session_state['data_final'] = data_hora_final
+                st.session_state.load_data = False
+                st.rerun()
+        with col12:
+            with st.container(height=500, border=False):
+                st.write('Tabela de Dados')
+                st.dataframe(df)
 
 
 
