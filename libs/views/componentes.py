@@ -159,7 +159,6 @@ def create_energy_card(description, value, data_hora, medida, percentual, value_
             <div class="value-row">
                 <span class="value">{str(value).replace('.', ',')}</span>
                 <span class="unit">{medida}</span>
-                <span class="ano_anterior">Ano anterior: {valor_ano_anterior}</span>
                 <span class="percentual">{percentual_html}</span>
             </div>
             <div class="value-row">
