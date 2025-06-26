@@ -1,5 +1,6 @@
 import streamlit as st
 from dotenv import load_dotenv
+import pdfkit
 from libs.views.componentes import menu_principal, login_ui, apply_custom_css
 # from libs.utils.decorators import desempenho # REMOVED as it's no longer used in main.py
 from datetime import datetime, timedelta 
@@ -9,6 +10,7 @@ from libs.controllers.config_controller import load_app_config
 from libs.views.pages import render_main_dashboard # Added import
 from libs.models.datas import get_periodo, get_ultimos_1_hora_nivel # Added for data loading logic in layout
 from libs.utils.db_utils import init_db_connection  # Adicionado para garantir inicialização do db
+from libs.models.db import Database
 
 deploy = True
 
@@ -25,8 +27,8 @@ if 'ultimos_30_dias' not in st.session_state:
 if 'ultimos_1_hora_nivel' not in st.session_state:
     st.session_state.ultimos_1_hora_nivel = None
 
-# Inicializa a conexão com o banco de dados
-init_db_connection()
+# # Inicializa a conexão com o banco de dados
+# init_db_connection()
 
 st.set_page_config(
     page_title="EngeGOM",
@@ -65,11 +67,33 @@ if not st.session_state['logado']:
     st.stop()
 
 if st.session_state['logado']:
+    print('logado')
     # Manage Database instance in session_state
     if 'db' not in st.session_state or st.session_state.get('db') is None: 
-        logger.info("Inicializando instância Database em st.session_state['db']")
+        # logger.info("Inicializando instância Database em st.session_state['db']")
+        print('inicializando db')
         st.session_state['db'] = Database()
     # else: # Optional: log if it already existed
         # logger.debug("Instância Database já existe em st.session_state['db']")
     menu_principal(config, st.session_state['usina']) 
     layout(st.session_state['usina'])
+    
+
+    # # Caminho para o HTML (ajuste conforme necessário)
+    # html_path = 'libs/utils/fatura.html'
+
+    # # Lê o HTML
+    # with open(html_path, 'r', encoding='utf-8') as f:
+    #     html_content = f.read()
+
+    # # Botão para gerar e baixar o PDF
+    # if st.button('Baixar PDF'):
+    #     # Gera o PDF em memória
+    #     pdf_bytes = pdfkit.from_string(html_content, False)
+    #     # Oferece para download
+    #     st.download_button(
+    #         label="Clique aqui para baixar o PDF",
+    #         data=pdf_bytes,
+    #         file_name="fatura.pdf",
+    #         mime="application/pdf"
+    #     )

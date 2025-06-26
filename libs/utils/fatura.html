@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demonstrativo CGH Picadas Altas</title>
+    
+    <!-- Bibliotecas para gerar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        @page {
+            size: A4;
+            margin: 5mm;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background: white;
+            font-size: 9px;
+            line-height: 1.2;
+        }
+        
+        .container {
+            max-width: 210mm;
+            margin: 0 auto;
+            background: white;
+        }
+        
+        /* Botão de download */
+        .download-button-container {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .download-button {
+            background: #4A7FDB;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .download-button:hover {
+            background: #3A6FCA;
+        }
+        
+        .download-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        @media print {
+            .download-button-container {
+                display: none !important;
+            }
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 15px;
+        }
+        
+        .logo-space {
+            width: 100px;
+            height: 45px;
+            border: 1px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 8px;
+        }
+        
+        .header-info {
+            flex: 1;
+            background: #4A7FDB;
+            color: white;
+            padding: 10px;
+            border-radius: 3px;
+            position: relative;
+        }
+        
+        .header-info h2 {
+            margin: 0;
+            font-size: 13px;
+            font-weight: normal;
+        }
+        
+        .contact-info {
+            position: absolute;
+            bottom: 3px;
+            right: 10px;
+            font-size: 7px;
+            opacity: 0.9;
+        }
+        
+        /* Main content grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        
+        /* Info boxes */
+        .info-box {
+            border: 1px solid #ddd;
+            padding: 5px;
+        }
+        
+        .info-box h3 {
+            background: #E8E8E8;
+            margin: -5px -5px 5px -5px;
+            padding: 3px 8px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .info-box.consumidora {
+            background: #FDB913;
+            color: black;
+        }
+        
+        .info-box.consumidora h3 {
+            background: #FDB913;
+            margin: -5px -5px 3px -5px;
+        }
+        
+        .info-line {
+            margin-bottom: 2px;
+            font-size: 9px;
+        }
+        
+        .info-line strong {
+            display: inline-block;
+            min-width: 100px;
+        }
+        
+        /* Results section */
+        .results-section {
+            margin-bottom: 8px;
+        }
+        
+        .section-header {
+            background: #4A9B5F;
+            color: white;
+            padding: 5px 10px;
+            font-weight: bold;
+            font-size: 11px;
+        }
+        
+        .results-content {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+            padding: 8px;
+            background: #f9f9f9;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .results-table th {
+            background: #4A7FDB;
+            color: white;
+            padding: 4px 6px;
+            text-align: left;
+            font-size: 9px;
+        }
+        
+        .results-table td {
+            padding: 2px 6px;
+            border-bottom: 1px solid #e0e0e0;
+            text-align: right;
+            font-size: 8px;
+        }
+        
+        .results-table td:first-child {
+            text-align: left;
+        }
+        
+        /* Chart placeholder */
+        .chart-container {
+            position: relative;
+            height: 120px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            padding: 10px 20px;
+        }
+        
+        .bar {
+            width: 40px;
+            background: #4A7FDB;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 8px;
+            padding-bottom: 3px;
+        }
+        
+        .bar-label {
+            position: absolute;
+            bottom: -15px;
+            font-size: 8px;
+            color: #333;
+        }
+        
+        .year-summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        .year-summary div {
+            padding: 4px;
+            background: #E8E8E8;
+            border: 1px solid #ddd;
+            font-size: 8px;
+        }
+        
+        .year-summary .header {
+            background: #4A7FDB;
+            color: white;
+            font-weight: bold;
+        }
+        
+        /* Technical section */
+        .technical-section {
+            margin-bottom: 8px;
+        }
+        
+        .technical-content {
+            padding: 8px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-top: none;
+            font-size: 9px;
+        }
+        
+        /* Financial section */
+        .financial-section {
+            margin-bottom: 8px;
+        }
+        
+        .financial-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .financial-table th {
+            background: #4A7FDB;
+            color: white;
+            padding: 4px 6px;
+            text-align: left;
+            font-size: 9px;
+            border-right: 1px solid #3A6FCA;
+        }
+        
+        .financial-table td {
+            padding: 3px 6px;
+            border-bottom: 1px solid #e0e0e0;
+            border-right: 1px solid #e0e0e0;
+            font-size: 8px;
+        }
+        
+        /* Footer */
+        .footer {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+        }
+        
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 180px 1fr 180px;
+            gap: 15px;
+            align-items: start;
+        }
+        
+        .deposit-info {
+            font-size: 8px;
+        }
+        
+        .deposit-info h4 {
+            margin: 0 0 5px 0;
+            font-size: 10px;
+        }
+        
+        .qr-placeholder {
+            width: 70px;
+            height: 70px;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0f0f0;
+            margin-top: 5px;
+            font-size: 7px;
+        }
+        
+        .contract-info {
+            font-size: 8px;
+            line-height: 1.4;
+        }
+        
+        .total-box {
+            background: #f0f0f0;
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .total-box table {
+            width: 100%;
+            font-size: 9px;
+        }
+        
+        .total-box td {
+            padding: 2px 0;
+        }
+        
+        .total-box .total-row {
+            font-weight: bold;
+            font-size: 11px;
+            border-top: 1px solid #333;
+            padding-top: 3px;
+        }
+        
+        .emission-date {
+            text-align: right;
+            margin-top: 5px;
+            font-size: 8px;
+            color: #666;
+        }
+        
+        /* Compactar tabela de resultados */
+        .compact-layout .results-table tr {
+            display: inline-block;
+            margin-right: 15px;
+        }
+        
+        .compact-layout .results-table td {
+            border: none;
+            padding: 1px 4px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Botão de Download -->
+    <div class="download-button-container">
+        <button class="download-button" onclick="gerarPDF()" id="downloadBtn">
+            📥 Baixar PDF
+        </button>
+    </div>
+    
+    <div class="container" id="pdfContent">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-space">
+                <img src="/assets/login.png" alt="Logo" style="max-width: 90px; max-height: 40px;">
+            </div>
+            <div class="header-info">
+                <h2>O&M 1A Sua usina em Novos 1º do Brasil</h2>
+                <div class="contact-info">
+                    48 991879998 | www.engesep.com.br | om@engesep.com.br
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <div class="info-box consumidora">
+                <h3>UNIDADE CONSUMIDORA</h3>
+                <div>NÃO INFORMADO</div>
+            </div>
+            <div class="info-box">
+                <h3>DEMONSTRATIVO</h3>
+                <div class="info-line"><strong>Nº DA FATURA:</strong> 2025-6</div>
+                <div class="info-line"><strong>Data de Vencimento:</strong> 19/07/2025</div>
+                <div class="info-line"><strong>Referência:</strong> jun/25</div>
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 8px;">
+            <div class="info-line"><strong>Empreendimento:</strong> CGH PICADAS ALTAS</div>
+        </div>
+        
+        <!-- Results Section -->
+        <div class="results-section">
+            <div class="section-header">Resultados de Produção</div>
+            <div class="results-content">
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Referência</th>
+                            <th>Geração - MWh</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>jun/25</td><td>149</td></tr>
+                        <tr><td>mai/25</td><td>88,88</td></tr>
+                        <tr><td>abr/25</td><td>36,91</td></tr>
+                        <tr><td>mar/25</td><td>-</td></tr>
+                        <tr><td>fev/25</td><td>-</td></tr>
+                        <tr><td>jan/25</td><td>-</td></tr>
+                        <tr><td>dez/24</td><td>-</td></tr>
+                        <tr><td>nov/24</td><td>-</td></tr>
+                        <tr><td>out/24</td><td>-</td></tr>
+                        <tr><td>set/24</td><td>-</td></tr>
+                        <tr><td>ago/24</td><td>-</td></tr>
+                        <tr><td>jul/24</td><td>-</td></tr>
+                    </tbody>
+                </table>
+                
+                <div>
+                    <div class="chart-container">
+                        <div class="bar" style="height: 25px;">
+                            <span>36,91</span>
+                            <span class="bar-label">abr/25</span>
+                        </div>
+                        <div class="bar" style="height: 55px;">
+                            <span>88,88</span>
+                            <span class="bar-label">mai/25</span>
+                        </div>
+                        <div class="bar" style="height: 90px;">
+                            <span>149</span>
+                            <span class="bar-label">jun/25</span>
+                        </div>
+                    </div>
+                    
+                    <div class="year-summary">
+                        <div class="header">Ano</div>
+                        <div>2023</div>
+                        <div>2024</div>
+                        <div>2025</div>
+                        <div class="header">Acumulado (MWh)</div>
+                        <div>-</div>
+                        <div>-</div>
+                        <div>275</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Technical Section -->
+        <div class="technical-section">
+            <div class="section-header">Orientações Técnicas/ Melhorias para aumentar desempenho do Empreendimento</div>
+            <div class="technical-content">
+                1º - Reforço contra enchentes - Conforme eventos ocorridos em 19/06/2025 - Risco de Alagamento Casa de Força e demais estruturas
+            </div>
+        </div>
+        
+        <!-- Financial Section -->
+        <div class="financial-section">
+            <div class="section-header">Financeiro</div>
+            <div style="overflow-x: auto;">
+                <table class="financial-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 70px;">Referência</th>
+                            <th>Valor (R$) Mensal</th>
+                            <th>Serviços Extras</th>
+                            <th>Data Vencimento</th>
+                            <th>Status</th>
+                            <th>Total (R$)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>jun/25</td>
+                            <td>R$ 7.000,00</td>
+                            <td>-</td>
+                            <td>10/07/2025</td>
+                            <td>Bônus</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>mai/25</td>
+                            <td>R$ 7.000,00</td>
+                            <td>-</td>
+                            <td>19/06/2025</td>
+                            <td>Bônus</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>abr/25</td>
+                            <td>R$ 7.000,00</td>
+                            <td>-</td>
+                            <td>19/05/2025</td>
+                            <td>Bônus</td>
+                            <td>-</td>
+                        </tr>
+                        <tr><td>mar/25</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                        <tr><td>fev/25</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                        <tr><td>jan/25</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                        <tr><td>dez/24</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                        <tr><td>nov/24</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                        <tr><td>out/24</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-grid">
+                <div class="deposit-info">
+                    <h4>Dados para Depósito</h4>
+                    <div>Banco Sicredi: 756</div>
+                    <div>Ag:0258 / CC 14938-5</div>
+                    <div>PIX: 22.248.519-0001-26</div>
+                    <div class="qr-placeholder">[QR Code]</div>
+                </div>
+                
+                <div class="contract-info">
+                    <div><strong>Contrato Nº:</strong> EGOM-8500-R0A</div>
+                    <div><strong>Início / Fim:</strong> 19/04/2025 - 19/04/2030</div>
+                    <div style="margin-top: 5px;">
+                        <strong>Mensalidade O&M:</strong> R$ 0,00<br>
+                        <strong>Serviços Extras:</strong> R$ 0,00<br>
+                        <strong>Outros:</strong> R$ 0,00
+                    </div>
+                </div>
+                
+                <div class="total-box">
+                    <table>
+                        <tr><td>Mensalidade O&M</td><td style="text-align: right;">R$ 0,00</td></tr>
+                        <tr><td>Serviços Extras</td><td style="text-align: right;">R$ 0,00</td></tr>
+                        <tr><td>Outros</td><td style="text-align: right;">R$ 0,00</td></tr>
+                        <tr class="total-row">
+                            <td>TOTAL</td>
+                            <td style="text-align: right;">R$ 0,00</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="emission-date">
+                Data Emissão: 21/06/2025
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function gerarPDF() {
+            const button = document.getElementById('downloadBtn');
+            const originalText = button.innerHTML;
+            
+            // Desabilita o botão e mostra status
+            button.disabled = true;
+            button.innerHTML = '⏳ Gerando PDF...';
+            
+            // Esconde o botão temporariamente para não aparecer no PDF
+            const buttonContainer = document.querySelector('.download-button-container');
+            buttonContainer.style.display = 'none';
+            
+            const element = document.getElementById('pdfContent');
+            
+            // Configurações do html2canvas com escala reduzida para caber em uma página
+            const opt = {
+                margin: 5,
+                filename: 'demonstrativo-cgh-picadas-altas.pdf',
+                image: { type: 'jpeg', quality: 0.95 },
+                html2canvas: { 
+                    scale: 1.5, // Reduzido de 2 para 1.5
+                    useCORS: true,
+                    logging: false,
+                    letterRendering: true,
+                    backgroundColor: '#ffffff'
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'portrait' 
+                }
+            };
+            
+            // Captura o elemento como imagem
+            html2canvas(element, opt.html2canvas).then(canvas => {
+                const imgData = canvas.toDataURL('image/jpeg', opt.image.quality);
+                
+                // Cria o PDF
+                const pdf = new window.jspdf.jsPDF(opt.jsPDF);
+                
+                // Calcula as dimensões para caber em uma página
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const imgWidth = canvas.width;
+                const imgHeight = canvas.height;
+                
+                // Calcula a proporção para caber na página
+                const ratio = Math.min(
+                    (pdfWidth - 2 * opt.margin) / imgWidth,
+                    (pdfHeight - 2 * opt.margin) / imgHeight
+                );
+                
+                const scaledWidth = imgWidth * ratio;
+                const scaledHeight = imgHeight * ratio;
+                
+                // Centraliza na página
+                const x = (pdfWidth - scaledWidth) / 2;
+                const y = opt.margin;
+                
+                // Adiciona a imagem ao PDF
+                pdf.addImage(imgData, 'JPEG', x, y, scaledWidth, scaledHeight);
+                
+                // Salva o PDF
+                pdf.save(opt.filename);
+                
+                // Restaura o botão
+                setTimeout(() => {
+                    buttonContainer.style.display = 'block';
+                    button.disabled = false;
+                    button.innerHTML = originalText;
+                }, 1000);
+                
+            }).catch(error => {
+                console.error('Erro ao gerar PDF:', error);
+                
+                // Restaura o botão em caso de erro
+                buttonContainer.style.display = 'block';
+                button.disabled = false;
+                button.innerHTML = '❌ Erro - Tente Novamente';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                }, 3000);
+            });
+        }
+        
+        // Função alternativa usando window.print()
+        function imprimirPDF() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
