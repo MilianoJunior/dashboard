@@ -233,7 +233,7 @@ def menu_principal(config, usina):
 
 @desempenho
 def rename_colunas(df: pd.DataFrame) -> pd.DataFrame:
-    def formata_nome(col: str) -> str | None:
+    def formata_nome(col: str):
         m = re.search(r'ug[_\-]?(\d{2})', col.lower())
         if m:
             num = m.group(1)
