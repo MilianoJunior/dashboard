@@ -177,14 +177,15 @@ def get_data_card_energia() -> dict:
         get_error('get_data_card_energia, ln 295', e)
 
 @desempenho
-def get_grafico_nivel(periodo: str | None = 'D') -> pd.DataFrame:
+def get_grafico_nivel(periodo= 'D') -> pd.DataFrame:
     """
     Agrega as colunas de nível por hora ou por dia:
     - periodo == 'M' → média diária
     - periodo == 'D' → média horária
     Retorna um dataframe pronto para plotagem.
     """
-
+    if periodo is None:
+        periodo = 'D'
     # --------------------------- prepara dados brutos
     df = st.session_state["dados"].copy()
     # st.write('1 - df: ',df)
