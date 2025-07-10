@@ -58,12 +58,13 @@ def authenticate_user(username, password, selected_usina_nome, usinas_config):
     if isinstance(password, str):
         password = password.strip()
     senhas = {
-        'CGH-FAE': 'fae654123',
-        'CGH-PICADAS-ALTAS': 'picadas654123',
-        'CGH-PEDRAS': 'pedras654123',
-        'CGH-APARECIDA': 'aparecida654123',
+        'CGH-FAE': 'fae102',
+        'CGH-PICADAS-ALTAS': 'picadas104',
+        'PCH-PEDRAS': 'pedras25',
+        'CGH-APARECIDA': 'aparecida103',
+        'CGH-HOPPEN': 'hoppen80',
     }
-    if (username == env_user_value): # and (password == senhas.get(selected_usina_nome,False)):
+    if (username == env_user_value) and (password == senhas.get(selected_usina_nome,False)):
         # print(f"selected_usina_nome: {selected_usina_nome}")
         register_user(selected_usina_nome)
         if selected_usina_nome in usinas_config:
