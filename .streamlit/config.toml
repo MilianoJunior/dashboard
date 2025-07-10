@@ -7,7 +7,7 @@ enableXsrfProtection = true
 
 [browser]
 gatherUsageStats = false
-serverAddress = "0.0.0.0"
+serverAddress = "localhost"
 serverPort = 8501
 
 [ui]

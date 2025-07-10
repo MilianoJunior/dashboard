@@ -1,6 +1,6 @@
 usinas:
   CGH-APARECIDA:
-    users: "aparecida"
+    users: "cgh-aparecida"
     password: "Apa654123@"
     ip: "100.110.212.125"
     port: "3306"
@@ -13,12 +13,14 @@ usinas:
       data_hora: "data_hora"
       energia_ug01: "acumulador_energia"
     nivel:
-      data_hora: "data_hora"
+      # data_hora: "data_hora"
       nivel_montante: "nivel_montante"
       nivel_jusante: "nivel_jusante"
+    cols_energia: "data_hora,energia_ug01"
+    cols_nivel: "data_hora,nivel_montante,nivel_jusante"
 
   CGH-FAE:
-    users: "fae"
+    users: "cgh-fae"
     password: "Fae654123@"
     ip: "100.106.33.66"
     port: "3306"
@@ -32,13 +34,15 @@ usinas:
       energia_ug01: "ug01_acumulador_energia"
       energia_ug02: "ug02_acumulador_energia"
     nivel:
-      data_hora: "data_hora"
+      # data_hora: "data_hora"
       nivel_montante: "ug01_nivel_agua"
       nivel_jusante_ug01: "ug01_nivel_jusante"
       nivel_jusante_ug02: "ug02_nivel_jusante"
+    cols_energia: "data_hora,energia_ug01,energia_ug02"
+    cols_nivel: "data_hora,nivel_montante,nivel_jusante_ug01,nivel_jusante_ug02"
 
   PCH-PEDRAS:
-    users: "pedras"
+    users: "pch-pedras"
     password: "Pedras654123@"
     ip: "100.93.237.40"
     port: "3306"
@@ -46,17 +50,29 @@ usinas:
     usuario: "engesep"
     senha: "654123"
     nivel_vertimento: "1099.0"
-    tabela: "pch_pedras_ug01"
+    tabela: 
+      ug01: "pch_pedras_ug01"
+      ug02: "pch_pedras_ug02"
     energia:
-      data_hora: "data_hora"
-      energia_ug01: "acum_energia"
+      ug01:
+        data_hora: "data_hora"
+        energia_ug01: "acum_energia"
+      ug02:
+        data_hora: "data_hora"
+        energia_ug02: "acum_energia"
     nivel:
-      data_hora: "data_hora"
-      nivel_montante: "niv_mont_grade"
-      nivel_jusante: "niv_jus_grade"
+      ug01:
+        # data_hora: "data_hora"
+        nivel_montante: "niv_mont_grade"
+        nivel_jusante_ug01: "niv_jus_grade"
+      ug02:
+        # data_hora: "data_hora"
+        nivel_jusante_ug02: "niv_jus_grade"
+    cols_energia: "data_hora,energia_ug01,energia_ug02"
+    cols_nivel: "data_hora,nivel_montante,nivel_jusante_ug01,nivel_jusante_ug02"
 
   CGH-PICADAS-ALTAS:
-    users: "picadas_altas"
+    users: "cgh-picadas-altas"
     password: "PicadasAltas654123@"
     ip: "100.79.241.13"
     port: "3306"
@@ -70,9 +86,74 @@ usinas:
       energia_ug01: "ug01_acumulador_energia"
       energia_ug02: "ug02_acumulador_energia"
     nivel:
-      data_hora: "data_hora"
+      # data_hora: "data_hora"
       nivel_montante: "nivel_montante"
       nivel_jusante: "nivel_jusante"
-    
+    cols_energia: "data_hora,energia_ug01,energia_ug02"
+    cols_nivel: "data_hora,nivel_montante,nivel_jusante"
+
+  # CGH-HOPPEN:
+  #   users: "cgh-hoppen"
+  #   password: "Hoppen654123@"
+  #   ip: "100.73.37.105"
+  #   port: "3306"
+  #   database: "engesepdb"
+  #   usuario: "engesep"
+  #   senha: "654123"
+  #   nivel_vertimento: "872.5"
+  #   tabela: 
+  #     ug01: "cgh_hoppen_ug01"
+  #     ug02: "cgh_hoppen_ug02"
+  #   energia:
+  #     ug01:
+  #       data_hora: "data_hora"
+  #       energia_ug01: "acumulador_energia"
+  #     ug02:
+  #       data_hora: "data_hora"
+  #       energia_ug02: "acumulador_energia"
+  #     # energia_ug02: "ug02_acumulador_energia"
+  #   nivel:
+  #     ug01:
+  #       # data_hora: "data_hora"
+  #       nivel_montante_ug01: "nivel_montante_grade"
+  #       # nivel_jusante_ug01: "nivel_jusante_grade"
+  #     ug02:
+  #       # data_hora: "data_hora"
+  #       # nivel_jusante_ug02: "nivel_jusante_grade"
+  #       nivel_montante_ug02: "nivel_montante_grade"
+  #   cols_energia: "data_hora,energia_ug01,energia_ug02"
+  #   cols_nivel: "data_hora,nivel_montante_ug01,nivel_montante_ug02"
+
+  CGH-HOPPEN:
+    users: "cgh-hoppen"
+    password: "Hoppen654123@"
+    ip: "100.73.37.105"
+    port: "3306"
+    database: "engesepdb"
+    usuario: "engesep"
+    senha: "654123"
+    nivel_vertimento: "872.5"
+    tabela: 
+      ug01: "cgh_hoppen_ug01"
+      ug02: "cgh_hoppen_ug02"
+    energia:
+      ug01:
+        data_hora: "data_hora"
+        energia_ug01: "acumulador_energia"
+      ug02:
+        data_hora: "data_hora"
+        energia_ug02: "acumulador_energia"
+      # energia_ug02: "ug02_acumulador_energia"
+    nivel:
+      ug01:
+        # data_hora: "data_hora"
+        nivel_montante_ug01: "nivel_montante_grade"
+        # nivel_jusante_ug01: "nivel_jusante_grade"
+      ug02:
+        # data_hora: "data_hora"
+        # nivel_jusante_ug02: "nivel_jusante_grade"
+        nivel_montante_ug02: "nivel_montante_grade"
+    cols_energia: "data_hora,energia_ug01,energia_ug02"
+    cols_nivel: "data_hora,nivel_montante_ug01,nivel_montante_ug02"
 
 

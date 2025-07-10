@@ -1,99 +1,140 @@
+import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
-import pdfkit
 from libs.views.componentes import menu_principal, login_ui, apply_custom_css
-# from libs.utils.decorators import desempenho # REMOVED as it's no longer used in main.py
+import time
 from datetime import datetime, timedelta 
-from libs.controllers.auth import logout
-from libs.controllers.data_controller import carregar_dados, set_load_data 
+from libs.controllers.data_controller import carregar_dados
 from libs.controllers.config_controller import load_app_config
-from libs.views.pages import render_main_dashboard # Added import
-from libs.models.datas import get_periodo, get_ultimos_1_hora_nivel # Added for data loading logic in layout
-from libs.utils.db_utils import init_db_connection  # Adicionado para garantir inicialização do db
-from libs.models.db import Database
+from libs.views.pages import render_main_dashboard
+# from libs.models.datas import get_periodo, get_ultimos_1_hora_nivel, get_data_inicial
+# from libs.models.datas import get_data_inicial
+from libs.utils.db_utils import init_db_connection 
 
 deploy = True
 
 if 'logado' not in st.session_state:
     st.session_state['logado'] = False
 if 'load_data' not in st.session_state: 
-    st.session_state['load_data'] = False
+    st.session_state['load_data'] = None
 if 'usina' not in st.session_state:
     st.session_state['usina'] = None
 if 'list_cards' not in st.session_state:
     st.session_state.list_cards = None
-if 'ultimos_30_dias' not in st.session_state:
-    st.session_state.ultimos_30_dias = None
-if 'ultimos_1_hora_nivel' not in st.session_state:
-    st.session_state.ultimos_1_hora_nivel = None
+if 'grafico_energia' not in st.session_state:
+    st.session_state.grafico_energia = None
+if 'grafico_nivel' not in st.session_state:
+    st.session_state.grafico_nivel = None
+if 'periodo' not in st.session_state:
+    st.session_state.periodo = None
+if 'data_inicial' not in st.session_state:
+    st.session_state.data_inicial = None
+if 'data_final' not in st.session_state:
+    st.session_state.data_final = None
 
+# if 'ultimos_30_dias' not in st.session_state:
+#     st.session_state.ultimos_30_dias = None
+# if 'ultimos_1_hora_nivel' not in st.session_state:
+#     st.session_state.ultimos_1_hora_nivel = None
+
+print(' ' *10)
+print(' ' *10)
+print(' ' *10)
+print(' ' *10)
+print('###' *10)
+print('  1 - função principal: init_db_connection')
+inicio = time.time()
 # # Inicializa a conexão com o banco de dados
-# init_db_connection()
+init_db_connection(st)
+fim = time.time()
+print(f'tempo: {fim - inicio:.4f} s')
+print('###' *10)
 
+print('  2 - função principal: set_page_config')
+inicio = time.time()
 st.set_page_config(
     page_title="EngeGOM",
-    page_icon="🧊",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+fim = time.time()
+print(f'tempo: {fim - inicio:.4f} s')
+print('###' *10)
 
+
+print('  3 - função principal: apply_custom_css')
+inicio = time.time()
 apply_custom_css() 
+print(f'tempo: {fim - inicio:.4f} s')
+print('###' *10)
 
 load_dotenv() 
 
-config = load_app_config(deploy) 
+print('  4 - função principal: load_app_config')
+inicio = time.time()
+config = load_app_config(deploy)
 st.session_state['usinas'] = config['usinas']
+print(f'tempo: {fim - inicio:.4f} s')
+print('###' *10)
 
-def layout(usina): 
-    if not st.session_state.load_data:
-        if 'periodo' in st.session_state and 'data_inicial' in st.session_state and 'data_final' in st.session_state:
-            st.session_state.ultimos_30_dias = get_periodo(st.session_state.periodo, st.session_state.data_inicial, st.session_state.data_final)
-            st.session_state.ultimos_1_hora_nivel = get_ultimos_1_hora_nivel(st.session_state.data_inicial, st.session_state.data_final)
-        else:
-            default_data_inicial = datetime.now() - timedelta(days=30)
-            default_data_final = datetime.now()
-            carregar_dados(usina, periodo='M', data_inicial=default_data_inicial, data_final=default_data_final) 
-        st.session_state.load_data = True 
 
-    render_main_dashboard(
-        usina_selecionada=usina, 
-        list_cards_data=st.session_state.get('list_cards'), 
-        ultimos_30_dias_data=st.session_state.get('ultimos_30_dias'), 
-        ultimos_1_hora_nivel_data=st.session_state.get('ultimos_1_hora_nivel')
-    )
 
+def layout(): 
+    # if not st.session_state.load_data:
+    if st.session_state['periodo'] is not None and st.session_state['data_inicial'] is not None and st.session_state['data_final'] is not None and st.session_state['load_data']:
+        # st.session_state.ultimos_30_dias = get_periodo(st.session_state.periodo, st.session_state.data_inicial, st.session_state.data_final)
+        # st.session_state.ultimos_1_hora_nivel = get_ultimos_1_hora_nivel(st.session_state.data_inicial, st.session_state.data_final)
+        # st.write('1 - load_data: ',st.session_state['load_data'])
+        # st.write('periodo: ',st.session_state.periodo)
+        # st.write('data_inicial: ',st.session_state.data_inicial)
+        # st.write('data_final: ',st.session_state.data_final)
+        carregar_dados(periodo=st.session_state.periodo, data_inicial=st.session_state.data_inicial, data_final=st.session_state.data_final)
+        st.session_state['load_data'] = False
+    if st.session_state['load_data'] is None:
+        # st.write('2 - load_data: ',st.session_state['load_data'])
+        # default_data_inicial = datetime.now() - timedelta(days=30)
+        # default_data_final = datetime.now()
+        carregar_dados(periodo=None, data_inicial=None, data_final=None) 
+        st.session_state['load_data'] = False
+        # st.session_state.load_data = True 
+    render_main_dashboard()
+
+    # render_main_dashboard(
+    #     usina_selecionada=usina, 
+    #     list_cards_data=st.session_state.get('list_cards'), 
+    #     ultimos_1_hora_nivel_data=st.session_state.get('ultimos_1_hora_nivel')
+    # )
+print('  5 - função principal: login_ui')
+inicio = time.time()
 if not st.session_state['logado']:
     login_ui()
+    fim = time.time()
+    print(f'tempo: {fim - inicio:.4f} s')
+    print('###' *10)
     st.stop()
 
+
 if st.session_state['logado']:
-    print('logado')
-    # Manage Database instance in session_state
-    if 'db' not in st.session_state or st.session_state.get('db') is None: 
-        # logger.info("Inicializando instância Database em st.session_state['db']")
-        print('inicializando db')
-        st.session_state['db'] = Database()
-    # else: # Optional: log if it already existed
-        # logger.debug("Instância Database já existe em st.session_state['db']")
-    menu_principal(config, st.session_state['usina']) 
-    layout(st.session_state['usina'])
+    # if 'dados' not in st.session_state:
+    #     print('  6 - função principal: get_data_inicial')
+    #     inicio = time.time()
+    #     get_data_inicial()
+    #     fim = time.time()
+    #     print(f'tempo: {fim - inicio:.4f} s')
+    #     print('###' *10)
+
+    print('  7 - função principal: menu_principal')
+    inicio = time.time()
+    menu_principal(config, st.session_state['usina'])
+    # st.write(st.session_state['dados'])
+    fim = time.time()
+    print(f'tempo: {fim - inicio:.4f} s')
+    print('###' *10)
+    print('  8 - função principal: layout')
+    inicio = time.time()
+    layout()
+    fim = time.time()
+    print(f'tempo: {fim - inicio:.4f} s')
+    print('###' *10)
     
-
-    # # Caminho para o HTML (ajuste conforme necessário)
-    # html_path = 'libs/utils/fatura.html'
-
-    # # Lê o HTML
-    # with open(html_path, 'r', encoding='utf-8') as f:
-    #     html_content = f.read()
-
-    # # Botão para gerar e baixar o PDF
-    # if st.button('Baixar PDF'):
-    #     # Gera o PDF em memória
-    #     pdf_bytes = pdfkit.from_string(html_content, False)
-    #     # Oferece para download
-    #     st.download_button(
-    #         label="Clique aqui para baixar o PDF",
-    #         data=pdf_bytes,
-    #         file_name="fatura.pdf",
-    #         mime="application/pdf"
-    #     )

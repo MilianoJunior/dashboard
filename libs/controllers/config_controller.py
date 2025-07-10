@@ -1,7 +1,9 @@
 # Conteúdo inicial
 import yaml
 import os
+from libs.utils.decorators import desempenho
 
+@desempenho 
 def load_app_config(deploy_mode: bool):
     config_file_path = "config/usuarios_usinas.yaml"
 
