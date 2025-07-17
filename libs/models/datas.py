@@ -56,18 +56,18 @@ def get_db_data(data_inicial, data_final):
     def fetch_and_process(table_name, energia, nivel, is_multi=False):
         colunass = build_columns(energia, nivel)
         query = f'select {colunass} from {table_name} where data_hora >= "{data_inicial}" and data_hora <= "{data_final}"'
-        print('query: ', query)
+        # print('query: ', query)
         result = st.session_state['db'].fetch_data(query)
         df = pd.DataFrame(result)
         df = tratamento_df(df)
         if is_multi:
             df['data_hora'] = df['data_hora'].dt.round('min')
-            print('Tabela: ', table_name)
-            print('1 values: ', df.values[0])
-            print('2 values: ', df.values[-1])
-            print('--------------------------------')
-        print('df.columns: ', df.columns)
-        print('df.shape: ', df.shape)
+        #     print('Tabela: ', table_name)
+        #     print('1 values: ', df.values[0])
+        #     print('2 values: ', df.values[-1])
+        #     print('--------------------------------')
+        # print('df.columns: ', df.columns)
+        # print('df.shape: ', df.shape)
         return df
     
     if isinstance(table, str):
@@ -79,8 +79,8 @@ def get_db_data(data_inicial, data_final):
                                      st.session_state['usina']['nivel'][key], is_multi=True)
                    for key in table]
         df_ = pd.merge(df_list[0], df_list[1], on='data_hora', how='outer')
-        print('df_.columns: ', df_.columns)
-        print('df_.shape: ', df_.shape)
+        # print('df_.columns: ', df_.columns)
+        # print('df_.shape: ', df_.shape)
     
     st.session_state['dados'] = df_
     
@@ -119,6 +119,7 @@ def get_ultimos_180_dias_mensal() -> pd.DataFrame:
         # query = get_info_usina('energia total 180 dias')
         get_db_data(data_inicial=None, data_final=None)
         df = st.session_state['dados']
+        st.session_state['ultima_atualizacao'] = df['data_hora'].iloc[-1]
 
 
         cols_energia = st.session_state['usina']['cols_energia'].split(',')

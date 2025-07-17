@@ -6,12 +6,12 @@ def desempenho(funcao):
     def wrapper(*args, **kwargs):
         global cont
         cont += 1
-        print(' '*10,f"Iniciando: {funcao.__name__}")
+        # print(' '*10,f"Iniciando: {funcao.__name__}")
         inicio = time.time()
         resultado = funcao(*args, **kwargs)
         fim = time.time()
-        print(' '*10,f"{cont} - Finalizado: {funcao.__name__} | Tempo: {fim - inicio:.4f} s")
-        print('-'*40)
+        # print(' '*10,f"{cont} - Finalizado: {funcao.__name__} | Tempo: {fim - inicio:.4f} s")
+        # print('-'*40)
         return resultado
     return wrapper 
 

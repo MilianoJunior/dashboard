@@ -625,3 +625,4 @@ def footer(usina):
     st.divider()
     st.write(f'Usina: {usina}')
     st.write('EngeSEP - Engenharia integrada de sistemas')
+    st.write(f'Ultima atualização: {st.session_state['ultima_atualizacao'].strftime('%d/%m/%Y %H:%M:%S')}')

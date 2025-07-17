@@ -31,6 +31,8 @@ if 'data_inicial' not in st.session_state:
     st.session_state.data_inicial = None
 if 'data_final' not in st.session_state:
     st.session_state.data_final = None
+if 'ultima_atualizacao' not in st.session_state:
+    st.session_state.ultima_atualizacao = None
 
 # if 'ultimos_30_dias' not in st.session_state:
 #     st.session_state.ultimos_30_dias = None
