@@ -55,3 +55,4 @@ def render_main_dashboard():
         footer(st.session_state['usina']['users'])
     else:
         footer("Usina não especificada") # Placeholder
+        
