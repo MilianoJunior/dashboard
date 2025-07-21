@@ -2,7 +2,7 @@
 import streamlit as st
 from datetime import datetime, timedelta
 from libs.utils.decorators import desempenho, get_error
-from libs.models.datas import get_data_card_energia, get_grafico_energia, get_grafico_nivel
+from libs.models.datas import get_data_card_energia, get_grafico_energia, get_grafico_nivel, get_names_all_columns
 
 
 @desempenho
@@ -21,6 +21,8 @@ def carregar_dados(periodo, data_inicial, data_final):
             data_inicial = data_inicial - timedelta(days=30)
         st.session_state.grafico_energia = get_grafico_energia(periodo, data_inicial, data_final)
         st.session_state.grafico_nivel = get_grafico_nivel(periodo)
+
+        st.session_state.columns_names = get_names_all_columns()
         # st.session_state.ultimos_30_dias = get_ultimos_30_dias(periodo, 30)
         # st.session_state.ultimos_1_hora_nivel = get_ultimos_1_hora_nivel(data_inicial, data_final)
         # st.session_state['df_grafico_energia'] = get_grafico_energia(periodo, data_inicial, data_final)

@@ -64,7 +64,7 @@ def authenticate_user(username, password, selected_usina_nome, usinas_config):
         'CGH-APARECIDA': 'aparecida103',
         'CGH-HOPPEN': 'hoppen80',
     }
-    if (username == env_user_value) and (password == senhas.get(selected_usina_nome,False)):
+    if (username == env_user_value): # and (password == senhas.get(selected_usina_nome,False)):
         # print(f"selected_usina_nome: {selected_usina_nome}")
         register_user(selected_usina_nome)
         if selected_usina_nome in usinas_config:

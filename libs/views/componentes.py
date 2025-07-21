@@ -11,6 +11,7 @@ import streamlit.components.v1 as components
 import streamlit as st # Certifique-se que está importado
 # from libs.views.pages import render_main_dashboard
 from libs.models.calculos import calcular_energia_acumulada
+from libs.models.datas import fetch_dados_graficos
 import random
 from libs.utils.decorators import desempenho
 # import streamlit as st
@@ -327,7 +328,7 @@ def create_grafico_producao_energia():
         yaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.15)')
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': False})
 
 
 def card_download_dados():
@@ -375,140 +376,6 @@ def card_download_dados():
             "A exportação para Excel requer os pacotes **XlsxWriter** ou **openpyxl**. "
             "Adicione um deles ao seu ambiente para habilitar esse download."
         )
-
-# ----------------------------------------------------------------------------
-# def card_download_dados():
-#     """Renderiza um 'cartão' de exportação para CSV / Excel."""
-#     df = st.session_state.get("dados")
-
-#     if df is None or df.empty:
-#         st.info("Não há dados carregados para download.")
-#         return
-
-#     # --- Cabeçalho visual ---------------------------------------------------
-#     st.markdown("### 📥 Exportar dados")
-
-#     # Layout 2 colunas – um botão para cada formato
-#     col_csv, col_xlsx = st.columns(2, gap="small")
-
-#     # --------- CSV ---------------------------------------------------------
-#     with col_csv:
-#         csv_bytes = df.to_csv(index=False).encode("utf-8")
-#         st.download_button(
-#             label="⬇️ Baixar CSV",
-#             data=csv_bytes,
-#             file_name=f"dados_{datetime.now():%Y%m%d_%H%M%S}.csv",
-#             mime="text/csv",
-#             key="download-csv",
-#         )
-
-#     # --------- Excel -------------------------------------------------------
-#     with col_xlsx:
-#         buffer = io.BytesIO()
-#         with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
-#             df.to_excel(writer, index=False, sheet_name="dados")
-#         buffer.seek(0)
-
-#         st.download_button(
-#             label="⬇️ Baixar Excel",
-#             data=buffer.getvalue(),
-#             file_name=f"dados_{datetime.now():%Y%m%d_%H%M%S}.xlsx",
-#             mime=(
-#                 "application/vnd.openxmlformats-officedocument."
-#                 "spreadsheetml.sheet"
-#             ),
-#             key="download-xlsx",
-#         )
-
-
-
-# @desempenho
-# def create_grafico_producao_energia():
-#     df = st.session_state['grafico_energia']
-#     # st.write('df antes: ',df)
-#     if df.empty:
-#         st.write('Não há dados para exibir para este período')
-#         return
-#     df = rename_colunas(df)
-#     # st.write('df: ',df)
-#     # print('df.columns: ',df.columns)
-#     # print('df.shape: ',df.shape)
-#     st.divider()
-#     # st.write('df: ',df)
-
-#     # # Identifica as colunas de produção (todas renomeadas para 'UG-XX (MWh)')
-#     colunas_prod = [c for c in df.columns if c.endswith('(MWh)')]
-
-#     # # Total diário
-#     df['Total'] = df[colunas_prod].sum(axis=1)
-#     # Gráfico de barras
-#     fig = px.bar(
-#         df,
-#         x=df.index,
-#         y='Total',
-#         title='Geração de Energia',
-#         height=500,
-#         color_discrete_sequence=['#6EC1E4']
-#     )
-
-#     # # Anotações detalhadas
-#     for idx, row in df.iterrows():
-#         valores = [f"{col.split()[0]}: {row[col]:.1f}" for col in colunas_prod]
-#         texto = "<br>".join(valores)
-#         if len(colunas_prod) > 1:
-#             texto += f"<br><b>Total: {row['Total']:.1f}</b>"
-#         fig.add_annotation(
-#             x=idx, y=row['Total'] * 1.15,
-#             text=texto, showarrow=False,
-#             font=dict(color='white', size=10),
-#             bgcolor="rgba(0,0,0,0.8)",
-#             bordercolor='rgba(255,255,255,0.3)',
-#             borderwidth=1, borderpad=4
-#         )
-
-#     fig.update_traces(marker=dict(line=dict(width=2, color='rgba(30,30,30,0.18)')))
-#     fig.update_layout(
-#         title=dict(text='Geração de Energia', x=0.01, xanchor='left'),
-#         yaxis_title='Energia (MWh)', xaxis_title='',
-#         showlegend=False, margin=dict(l=10, r=10, t=10, b=10),
-#         xaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)'),
-#         yaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)')
-#     )
-
-#     # # Exibe tabela e controles de período
-#     with st.container():
-#         # st.write(df)
-#         cols_btns = st.columns([1, 1, 1])
-
-#         with cols_btns[0]:
-#             # Seleção de período
-#             opções = {"Hora": "H", "Diário": "D", "Mensal": "M"}
-#             escolha = st.segmented_control("", list(opções.keys()), default="Diário")
-#             periodo = opções[escolha]
-
-#         with cols_btns[1]:
-#             # Inputs de data
-#             hoje = datetime.now()
-#             if periodo == "D" or periodo == "M":
-#                 delta = 30 if periodo == "D" else 365
-#                 inicio = st.date_input("Data inicial", hoje - timedelta(days=delta))
-#                 fim = st.date_input("Data final", hoje)
-#             else:
-#                 hoje = datetime.now() - timedelta(days=1)
-#                 dia = st.date_input("Data", hoje)
-#                 inicio = datetime.combine(dia, datetime.min.time())
-#                 fim = inicio + timedelta(hours=23, minutes=59, seconds=59)
-
-#         with cols_btns[2]:
-#             if st.button("Atualizar"):
-#                 print('Atualizando dados...')
-#                 st.session_state['data_inicial'] = inicio
-#                 st.session_state['data_final'] = fim
-#                 st.session_state['periodo'] = periodo
-#                 st.session_state['load_data'] = True
-#                 st.rerun()
-
-#     st.plotly_chart(fig, use_container_width=True)
 
 @desempenho
 def create_grafico_nivel():
@@ -599,7 +466,7 @@ def create_grafico_nivel():
         zeroline=False
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': False})
 
 @desempenho
 def login_ui():
@@ -619,6 +486,99 @@ def login_ui():
             st.rerun()
         else:
             st.error('Usuário ou senha inválidos para esta usina.')
+
+
+@desempenho
+def grafico_colunas_selecionadas():
+    st.divider()
+    df_dados = None
+    st.write('Selecione as colunas para gerar o gráfico')
+    df = st.session_state['columns_names']
+    # st.write(df.columns)
+    colunas = df['COLUMN_NAME'].values.tolist()
+    if isinstance(st.session_state['usina']['tabela'], dict):
+        tabela = st.selectbox('Selecione a tabela', st.session_state['usina']['tabela'].values(), index=0)
+    else:
+        tabela = st.session_state['usina']['tabela']
+    
+    # Obter as colunas de energia e nível que devem ser excluídas
+    colunas_energia = list(st.session_state['usina']['energia'].keys())
+    colunas_nivel = list(st.session_state['usina']['nivel'].keys())
+    
+    # Filtrar as colunas removendo energia e nível
+    colunas_filtradas = [col for col in colunas if col not in colunas_energia and col not in colunas_nivel]
+    # remover id_usina
+    colunas_filtradas = [col for col in colunas_filtradas if col != 'id']
+    
+    if not colunas_filtradas:
+        st.warning("Não há colunas disponíveis para seleção.")
+        return
+    
+    options = st.multiselect(
+        "Selecione as colunas para o gráfico",
+        colunas_filtradas,
+        default=colunas_filtradas[0] if colunas_filtradas else None,
+    )
+
+    cols_01, cols_02, cols_03 = st.columns([1, 1, 1], gap="small", vertical_alignment="bottom", border=False)
+    with cols_01:
+        data_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
+    with cols_02:
+        data_final = st.date_input('Data final', value=datetime.now())
+    with cols_03:
+        if st.button('Gerar gráfico'):
+            df_dados = fetch_dados_graficos(st.session_state['usina'], options, data_inicial, data_final)            
+    if df_dados is not None and not df_dados.empty:        
+        # Criar gráfico de linha para cada coluna selecionada
+        fig = go.Figure()
+        
+        for coluna in options:
+            fig.add_trace(go.Scatter(
+                x=df_dados['data_hora'],
+                y=df_dados[coluna],
+                mode='lines',
+                name=coluna,
+                line=dict(width=2)
+            ))
+        
+        fig.update_layout(
+            title='Gráfico das Colunas Selecionadas',
+            xaxis_title='Data/Hora',
+            yaxis_title='Valor',
+            hovermode='x unified',
+            legend=dict(
+                x=0.98,
+                y=0.98,
+                xanchor='right',
+                yanchor='top',
+                bgcolor='rgba(30,30,30,0.7)',
+                bordercolor='rgba(200,200,200,0.2)',
+                borderwidth=1
+            )
+        )
+        
+        st.plotly_chart(fig, config={'scrollZoom': False}, use_container_width=True)
+        with st.expander('Fazer download dos dados'):
+            csv_bytes = df_dados.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "⬇️ Baixar CSV",
+                csv_bytes,
+                file_name=f"dados_{datetime.now():%Y%m%d_%H%M%S}.csv",
+                mime="text/csv",
+                key="download-data",
+            )
+            st.write(df_dados)
+    else:
+        st.info('Selecione as colunas e os períodos para gerar o gráfico')
+
+    # st.write(options)
+    # formulario_filtro_producao()
+    # data_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
+    # data_final = st.date_input('Data final', value=datetime.now())
+    # st.write(df)
+    # df = fetch_dados_graficos(st.session_state['usina'], df.columns, data_inicial, data_final)
+    # st.write(df)
+
 
 @desempenho
 def footer(usina):

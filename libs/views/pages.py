@@ -1,6 +1,6 @@
 # Conteúdo inicial
 import streamlit as st
-from libs.views.componentes import create_energy_card, create_grafico_producao_energia, create_grafico_nivel, footer, card_download_dados
+from libs.views.componentes import create_energy_card, create_grafico_producao_energia, create_grafico_nivel, footer, card_download_dados, grafico_colunas_selecionadas
 from libs.utils.decorators import desempenho
 # Removed: from libs.models.datas import get_data_card_energia, get_ultimos_30_dias, get_ultimos_1_hora_nivel (these are handled in main.py)
 # Removed: from libs.utils.decorators import desempenho, get_error (decorators are not used here directly for now)
@@ -49,6 +49,9 @@ def render_main_dashboard():
             st.write("Dados para o gráfico de nível não disponíveis.") # Placeholder
 
         card_download_dados()
+
+    if st.session_state.get('columns_names') is not None:
+        grafico_colunas_selecionadas()
 
     # Use the passed usina_selecionada argument
     if st.session_state['usina'] and "users" in st.session_state['usina']:
