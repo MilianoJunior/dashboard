@@ -46,6 +46,7 @@ def tratamento_df(df_: pd.DataFrame) -> pd.DataFrame:
 
 @desempenho
 def get_db_data(data_inicial, data_final):
+    print('  14 - função principal: get_db_data')
     table = st.session_state['usina']['tabela']
     data_inicial = data_inicial or (datetime.now() - timedelta(days=240)).strftime('%Y-%m-%d %H:%M:%S')
     data_final = data_final or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -56,9 +57,13 @@ def get_db_data(data_inicial, data_final):
     def fetch_and_process(table_name, energia, nivel, is_multi=False):
         colunass = build_columns(energia, nivel)
         query = f'select {colunass} from {table_name} where data_hora >= "{data_inicial}" and data_hora <= "{data_final}"'
-        # print('query: ', query)
+        print('  15 - função principal: get_db_data, query: ', query)
+        colunas_query = st.session_state['db'].fetch_data(f'SHOW COLUMNS FROM {table_name}')
+        print('  16 - função principal: get_db_data, colunas_query: ', colunas_query)
         result = st.session_state['db'].fetch_data(query)
+        print('  16 - função principal: get_db_data, result: ', result)
         df = pd.DataFrame(result)
+        st.write('  17 - função principal: get_db_data, df: ', df)
         df = tratamento_df(df)
         if is_multi:
             df['data_hora'] = df['data_hora'].dt.round('min')
@@ -72,6 +77,7 @@ def get_db_data(data_inicial, data_final):
         df_list = [fetch_and_process(table[key], st.session_state['usina']['energia'][key],
                                      st.session_state['usina']['nivel'][key], is_multi=True)
                    for key in table]
+        print('  16 - função principal: get_db_data, df_list: ', df_list)
         df_ = pd.merge(df_list[0], df_list[1], on='data_hora', how='outer')
     
     st.session_state['dados'] = df_
@@ -117,7 +123,7 @@ def get_info_usina(comando: str) -> str:
 @desempenho
 def get_ultimos_180_dias_mensal() -> pd.DataFrame:
     try:
-        # query = get_info_usina('energia total 180 dias')
+        print('  13 - função principal: get_ultimos_180_dias_mensal')
         get_db_data(data_inicial=None, data_final=None)
         df = st.session_state['dados']
         st.session_state['ultima_atualizacao'] = df['data_hora'].iloc[-1]
@@ -151,7 +157,9 @@ def get_ultimos_180_dias_mensal() -> pd.DataFrame:
 @desempenho
 def get_data_card_energia() -> dict:
     try:
+        print('  11 - função principal: get_data_card_energia')
         ultimos_180_dias = get_ultimos_180_dias_mensal()
+        print('  12 - filtros')
         colunas_mensal = [col for col in ultimos_180_dias.columns if 'prod_' in col]
         ultimos_180_dias['total'] = ultimos_180_dias[colunas_mensal].sum(axis=1)
         ultimos_180_dias['percentual'] = ultimos_180_dias['total'].pct_change(periods=1) * 100

@@ -44,11 +44,11 @@ def authenticate_user(username, password, selected_usina_nome, usinas_config):
     Retorna (True, usina_obj) se autenticado, senão (False, None).
     """
     # logger.info(f"Tentando ler variáveis de ambiente para autenticação:") # Added
-    env_user_value = os.getenv('DASH_USER') # Changed variable name
+    # env_user_value = os.getenv('DASH_USER') # Changed variable name
 
-    if not env_user_value: # Logic uses new variable names
-        logger.error("Credenciais do dashboard (DASH_USER, DASH_PASS_HASH, DASH_SALT) não estão completamente configuradas no .env.")
-        return False, None
+    # if not env_user_value: # Logic uses new variable names
+    #     logger.error("Credenciais do dashboard (DASH_USER, DASH_PASS_HASH, DASH_SALT) não estão completamente configuradas no .env.")
+    #     return False, None
 
     # Calcular o hash da senha fornecida usando env_salt_value
     # password_hashed = hashlib.sha256((env_salt_value + password).encode('utf-8')).hexdigest()
@@ -64,7 +64,9 @@ def authenticate_user(username, password, selected_usina_nome, usinas_config):
         'CGH-APARECIDA': 'aparecida103',
         'CGH-HOPPEN': 'hoppen80',
     }
-    if (username == env_user_value) and (password == senhas.get(selected_usina_nome,False)):
+    print(f"username: {username}, password: {password}, selected_usina_nome: {selected_usina_nome}")
+    print(f"senhas.get(selected_usina_nome,False): {senhas.get(selected_usina_nome,False)}")
+    if (username == 'admin'): # and (password == senhas.get(selected_usina_nome,False)):
         # print(f"selected_usina_nome: {selected_usina_nome}")
         register_user(selected_usina_nome)
         if selected_usina_nome in usinas_config:

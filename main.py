@@ -83,33 +83,25 @@ print('###' *10)
 
 
 def layout(): 
-    # if not st.session_state.load_data:
     if st.session_state['periodo'] is not None and st.session_state['data_inicial'] is not None and st.session_state['data_final'] is not None and st.session_state['load_data']:
-        # st.session_state.ultimos_30_dias = get_periodo(st.session_state.periodo, st.session_state.data_inicial, st.session_state.data_final)
-        # st.session_state.ultimos_1_hora_nivel = get_ultimos_1_hora_nivel(st.session_state.data_inicial, st.session_state.data_final)
-        # st.write('1 - load_data: ',st.session_state['load_data'])
-        # st.write('periodo: ',st.session_state.periodo)
-        # st.write('data_inicial: ',st.session_state.data_inicial)
-        # st.write('data_final: ',st.session_state.data_final)
+        print('  9 - função principal: carregar_dados, periodo: ',st.session_state.periodo, 'data_inicial: ',st.session_state.data_inicial, 'data_final: ',st.session_state.data_final)
         carregar_dados(periodo=st.session_state.periodo, data_inicial=st.session_state.data_inicial, data_final=st.session_state.data_final)
         st.session_state['load_data'] = False
     if st.session_state['load_data'] is None:
-        # st.write('2 - load_data: ',st.session_state['load_data'])
-        # default_data_inicial = datetime.now() - timedelta(days=30)
-        # default_data_final = datetime.now()
+        print('  9 - função principal: carregar_dados, periodo: None, data_inicial: None, data_final: None')
         carregar_dados(periodo=None, data_inicial=None, data_final=None) 
         st.session_state['load_data'] = False
-        # st.session_state.load_data = True 
-    render_main_dashboard()
+    # render_main_dashboard()
 
     # render_main_dashboard(
     #     usina_selecionada=usina, 
     #     list_cards_data=st.session_state.get('list_cards'), 
     #     ultimos_1_hora_nivel_data=st.session_state.get('ultimos_1_hora_nivel')
     # )
-print('  5 - função principal: login_ui')
+
 inicio = time.time()
 if not st.session_state['logado']:
+    print('  5 - função principal: login_ui')
     login_ui()
     fim = time.time()
     print(f'tempo: {fim - inicio:.4f} s')
@@ -118,14 +110,6 @@ if not st.session_state['logado']:
 
 
 if st.session_state['logado']:
-    # if 'dados' not in st.session_state:
-    #     print('  6 - função principal: get_data_inicial')
-    #     inicio = time.time()
-    #     get_data_inicial()
-    #     fim = time.time()
-    #     print(f'tempo: {fim - inicio:.4f} s')
-    #     print('###' *10)
-
     print('  7 - função principal: menu_principal')
     inicio = time.time()
     menu_principal(config, st.session_state['usina'])
