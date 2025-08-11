@@ -58,12 +58,12 @@ def get_db_data(data_inicial, data_final):
         colunass = build_columns(energia, nivel)
         query = f'select {colunass} from {table_name} where data_hora >= "{data_inicial}" and data_hora <= "{data_final}"'
         print('  15 - função principal: get_db_data, query: ', query)
-        colunas_query = st.session_state['db'].fetch_data(f'SHOW COLUMNS FROM {table_name}')
-        print('  16 - função principal: get_db_data, colunas_query: ', colunas_query)
+        # colunas_query = st.session_state['db'].fetch_data(f'SHOW COLUMNS FROM {table_name}')
+        # print('  16 - função principal: get_db_data, colunas_query: ', colunas_query)
         result = st.session_state['db'].fetch_data(query)
-        print('  16 - função principal: get_db_data, result: ', result)
+        print('  16 - função principal: get_db_data, result: ')
         df = pd.DataFrame(result)
-        st.write('  17 - função principal: get_db_data, df: ', df)
+        # st.write('  17 - função principal: get_db_data, df: ', df)
         df = tratamento_df(df)
         if is_multi:
             df['data_hora'] = df['data_hora'].dt.round('min')
@@ -77,7 +77,7 @@ def get_db_data(data_inicial, data_final):
         df_list = [fetch_and_process(table[key], st.session_state['usina']['energia'][key],
                                      st.session_state['usina']['nivel'][key], is_multi=True)
                    for key in table]
-        print('  16 - função principal: get_db_data, df_list: ', df_list)
+        print('  16 - função principal: get_db_data, df_list: ')
         df_ = pd.merge(df_list[0], df_list[1], on='data_hora', how='outer')
     
     st.session_state['dados'] = df_

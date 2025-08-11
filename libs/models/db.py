@@ -71,38 +71,3 @@ class Database:
             except Error as e:
                 pass 
         self.connection = None # Garante que a conexão seja None após tentar fechar
-
-
-if __name__ == '__main__':
-    try:
-        # print('teste de conexão com o banco de dados')
-        # db = Database()
-        # print('conectando ao banco de dados')
-        # db.connect()
-        # print('executando query')
-        # dados = db.execute_query('SELECT * FROM users')
-        # print(dados)
-        # print('buscando dados')
-        # dados = db.fetch_data('SELECT * FROM users')
-        # print(dados)
-        import pandas as pd
-        from sqlalchemy import create_engine
-
-        # URL de conexão
-        db_url = "mysql+pymysql://root:cgG3hDhhc4GcbhF5d2FBf422C-BHhe35@viaduct.proxy.rlwy.net:29893/railway"
-
-        # Cria o engine SQLAlchemy
-        engine = create_engine(db_url)
-
-        # Exemplo de consulta
-        query = "SELECT * FROM cgh_fae"
-
-        # Lê os dados diretamente para um DataFrame
-        df = pd.read_sql(query, engine)
-
-        print(df.head())
-    except KeyboardInterrupt:
-        print('\nExecução interrompida pelo usuário (Ctrl+C).')
-    finally:
-        print('fechando conexão')
-        # db.close()
