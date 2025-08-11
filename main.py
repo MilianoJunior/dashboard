@@ -91,7 +91,7 @@ def layout():
         print('  9 - função principal: carregar_dados, periodo: None, data_inicial: None, data_final: None')
         carregar_dados(periodo=None, data_inicial=None, data_final=None) 
         st.session_state['load_data'] = False
-    # render_main_dashboard()
+    render_main_dashboard()
 
     # render_main_dashboard(
     #     usina_selecionada=usina, 

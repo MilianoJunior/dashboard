@@ -8,7 +8,7 @@ usinas:
     usuario: "engegom"
     senha: "654123"
     tabela: "cgh_aparecida"
-    nivel_vertimento: "405.30"
+    nivel_vertimento: "405.28"
     energia:
       data_hora: "data_hora"
       energia_ug01: "acumulador_energia"
@@ -27,7 +27,7 @@ usinas:
     database: "engesepdb"
     usuario: "engesep"
     senha: "654123"
-    nivel_vertimento: "701.27"
+    nivel_vertimento: "701.15"
     tabela: "cgh_fae"
     energia:
       data_hora: "data_hora"
@@ -49,7 +49,7 @@ usinas:
     database: "engesepdb"
     usuario: "engesep"
     senha: "654123"
-    nivel_vertimento: "1099.0"
+    nivel_vertimento: "1097.5"
     tabela: 
       ug01: "pch_pedras_ug01"
       ug02: "pch_pedras_ug02"
@@ -100,7 +100,7 @@ usinas:
     database: "engesepdb"
     usuario: "engesep"
     senha: "654123"
-    nivel_vertimento: "872.5"
+    nivel_vertimento: "869.9"
     tabela: 
       ug01: "cgh_hoppen_ug01"
       ug02: "cgh_hoppen_ug02"

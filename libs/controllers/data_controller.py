@@ -16,11 +16,13 @@ def carregar_dados(periodo, data_inicial, data_final):
             data_inicial = data_inicial - timedelta(days=30)
         # st.write('st.session_state.list_cards: ',st.session_state.list_cards)
         st.session_state.grafico_energia = get_grafico_energia(periodo, data_inicial, data_final)
-        st.write('st.session_state.grafico_energia: ',st.session_state.grafico_energia)
+        # st.write('QTD valores None: ',st.session_state.grafico_energia.isna().sum().sum())
+        # st.write('st.session_state.grafico_energia: ',st.session_state.grafico_energia)
         st.session_state.grafico_nivel = get_grafico_nivel(periodo)
-        st.write('st.session_state.grafico_nivel: ',st.session_state.grafico_nivel)
+        # st.write('QTD valores None: ',st.session_state.grafico_nivel.isna().sum().sum())
+        # st.write('st.session_state.grafico_nivel: ',st.session_state.grafico_nivel)
         st.session_state.columns_names = get_names_all_columns()
-        st.write('st.session_state.columns_names: ',st.session_state.columns_names)
+        # st.write('st.session_state.columns_names: ',st.session_state.columns_names)
 
     except Exception as e:
         get_error('carregar_dados, ln 313', e) # The line number here will be incorrect after moving

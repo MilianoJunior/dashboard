@@ -211,6 +211,9 @@ def get_grafico_nivel(periodo= 'D') -> pd.DataFrame:
     # --------------------------- resample + média
     df_out = df[cols_nivel].resample(freq).mean().reset_index()
 
+    # quando tiver valores None, substituir pelo valor anterior diferente de None
+    df_out = df_out.ffill()
+
     return df_out
 
 @desempenho
