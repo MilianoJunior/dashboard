@@ -484,39 +484,40 @@ def login_ui():
         print(f'name: {name}, value: {cookie}')
     # print('Cookies: ', todos_cookies)
     
-    st.image('assets/login.png', width=300)
-    usinas = list(st.session_state['usinas'].keys())
-    usina_nome = st.selectbox('Selecione a usina', usinas)
-    # usuario = st.text_input('Usuário', value='admin', label_visibility="collapsed")
+    with st.container(border=True):
+        st.image('assets/login2.png', width=None, clamp=True)
+        usinas = list(st.session_state['usinas'].keys())
+        usina_nome = st.selectbox('Selecione a usina', usinas)
+        # usuario = st.text_input('Usuário', value='admin', label_visibility="collapsed")
     
-    # preencher o usuario e a senha com os valores do cookie
-    if usina_nome in todos_cookies:
-        senha_ = todos_cookies[usina_nome]
-        senha = st.text_input('Senha', type='password', value=senha_)
-    else:
-        senha = st.text_input('Senha', type='password')
-    
-    if st.button('Entrar'):
-        autenticado, usina_obj = authenticate_user('admin', senha, usina_nome, st.session_state['usinas'])
-        print('Autenticado: ', autenticado, usina_obj)
-        if autenticado:
-
-            valor = cookie_manager.get(usina_nome)
-            if valor is not None:
-                st.write(f"O cookie '{usina_nome}' existe e seu valor é: {valor}")
-            else:
-                st.write(f"O cookie '{usina_nome}' não existe ou expirou.")
-                # Calcula a data de expiração: agora + 30 dias
-                expiracao = datetime.now() + timedelta(days=30)
-                cookie_manager.set(usina_nome, senha, expires_at=expiracao)
-                # st.success(f"Cookie '{cookie_name}' registrado com expiração em 30 dias."
-
-            st.session_state['logado'] = True
-            st.session_state['usina'] = usina_obj
-            st.success('Login realizado com sucesso!')
-            st.rerun()
+        # preencher o usuario e a senha com os valores do cookie
+        if usina_nome in todos_cookies:
+            senha_ = todos_cookies[usina_nome]
+            senha = st.text_input('Senha', type='password', value=senha_)
         else:
-            st.error('Usuário ou senha inválidos para esta usina.')
+            senha = st.text_input('Senha', type='password')
+        
+        if st.button('Entrar'):
+            autenticado, usina_obj = authenticate_user('admin', senha, usina_nome, st.session_state['usinas'])
+            print('Autenticado: ', autenticado, usina_obj)
+            if autenticado:
+
+                valor = cookie_manager.get(usina_nome)
+                if valor is not None:
+                    st.write(f"O cookie '{usina_nome}' existe e seu valor é: {valor}")
+                else:
+                    st.write(f"O cookie '{usina_nome}' não existe ou expirou.")
+                    # Calcula a data de expiração: agora + 30 dias
+                    expiracao = datetime.now() + timedelta(days=30)
+                    cookie_manager.set(usina_nome, senha, expires_at=expiracao)
+                    # st.success(f"Cookie '{cookie_name}' registrado com expiração em 30 dias."
+
+                st.session_state['logado'] = True
+                st.session_state['usina'] = usina_obj
+                st.success('Login realizado com sucesso!')
+                st.rerun()
+            else:
+                st.error('Usuário ou senha inválidos para esta usina.')
 
 @desempenho
 def grafico_colunas_selecionadas():
