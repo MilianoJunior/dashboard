@@ -483,9 +483,9 @@ def login_ui():
     for name, cookie in todos_cookies.items():
         print(f'name: {name}, value: {cookie}')
     # print('Cookies: ', todos_cookies)
-    
+    st.image('assets/login2.png', width=350)
     with st.container(border=True):
-        st.image('assets/login2.png', width=None, clamp=True)
+        
         usinas = list(st.session_state['usinas'].keys())
         usina_nome = st.selectbox('Selecione a usina', usinas)
         # usuario = st.text_input('Usuário', value='admin', label_visibility="collapsed")
