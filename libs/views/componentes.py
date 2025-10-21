@@ -303,12 +303,12 @@ def create_grafico_producao_energia():
 
     # ---------- GRÁFICO ----------------------------------------------------
     fig = px.bar(
-        df, x=df.index, y='Total', title='Geração de Energia',
+        df, x=df.index, y='Total', title=f'Geração de Energia - Total:{round(df["Total"].sum(), 2)} MWh',
         height=500, color_discrete_sequence=['#6EC1E4']
     )
-    with st.container(border=False, height=200):
-        st.write(df)
-        st.markdown(f'Total: {round(df["Total"].sum(), 2)} MWh')
+    # with st.container(border=False, height=200):
+    #     st.write(df)
+    #     st.markdown()
     # anotações (mesma lógica) ---------------------------------------------
     for idx, row in df.iterrows():
         linha = "<br>".join(f"{c.split()[0]}: {row[c]:.1f}" for c in col_prod)
