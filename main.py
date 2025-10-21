@@ -13,6 +13,9 @@ from libs.utils.db_utils import init_db_connection
 
 deploy = True
 
+if 'contador' not in st.session_state:
+    st.session_state.contador = 0
+
 if 'logado' not in st.session_state:
     st.session_state['logado'] = False
 if 'load_data' not in st.session_state: 
@@ -34,10 +37,7 @@ if 'data_final' not in st.session_state:
 if 'ultima_atualizacao' not in st.session_state:
     st.session_state.ultima_atualizacao = None
 
-# if 'ultimos_30_dias' not in st.session_state:
-#     st.session_state.ultimos_30_dias = None
-# if 'ultimos_1_hora_nivel' not in st.session_state:
-#     st.session_state.ultimos_1_hora_nivel = None
+
 
 print(' ' *10)
 print(' ' *10)

@@ -306,7 +306,7 @@ def create_grafico_producao_energia():
         df, x=df.index, y='Total', title='Geração de Energia',
         height=500, color_discrete_sequence=['#6EC1E4']
     )
-
+    st.write(df)
     # anotações (mesma lógica) ---------------------------------------------
     for idx, row in df.iterrows():
         linha = "<br>".join(f"{c.split()[0]}: {row[c]:.1f}" for c in col_prod)

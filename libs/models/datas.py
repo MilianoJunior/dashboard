@@ -37,12 +37,74 @@ def tratamento_df(df_: pd.DataFrame) -> pd.DataFrame:
         if df_[col].dtype != 'int64' and df_[col].dtype != 'float64' and col != 'data_hora':
             if pd.to_numeric(df_[col], errors='coerce').notna().all():
                 df_[col] = df_[col].astype(float)
-                df_[col] = df_[col].fillna(0)
+                # df_[col] = df_[col].fillna(0)
         colunas_numericas = df_.select_dtypes(include=[np.number]).columns
-        mask = (df_[colunas_numericas] >= 0).all(axis=1)
+        mask = (df_[colunas_numericas] >= 10).all(axis=1)
     
         df_ = df_[mask]
     return df_
+
+# def tratamento_aparecida(df_):
+#     cont = 0
+#     chave = False
+#     for index in range(len(df_)):
+#         if df_['data_hora'].iloc[index] >= datetime(2025, 10, 14, 3, 35, 0):
+#             soma = float(df_['energia_ug01'].iloc[index]) - float(df_['energia_ug01'].iloc[index-1])
+#             if not chave:
+#                 cont += 1
+#             if soma < 0 or chave:
+#                 chave = True
+#                 print(cont , ' index: ',index, 'data_hora: ',df_['data_hora'].iloc[index], 'energia_ug01: ',df_['energia_ug01'].iloc[index], '-', df_['energia_ug01'].iloc[index-1])
+#                 df_['energia_ug01'].iloc[index] = df_['energia_ug01'].iloc[index] + 9971.39
+#     return df_
+
+
+def tratamento_aparecida(df_, *, 
+                         col_time='data_hora', 
+                         col_energy='energia_ug01',
+                         threshold=pd.Timestamp(2025, 10, 14, 3, 35, 0),
+                         offset=9971.39):
+    df = df_.copy()
+
+    # garante tipos
+    df[col_time] = pd.to_datetime(df[col_time], errors='coerce')
+    s_mask = df[col_time] >= threshold
+
+    # se não há nada na janela, apenas retorna
+    if not s_mask.any():
+        return df, 0, None
+
+    # vetor dentro da janela
+    idx_win = df.index[s_mask]
+    s = pd.to_numeric(df.loc[idx_win, col_energy], errors='coerce').to_numpy()
+
+    # diffs sucessivas dentro da janela
+    d = np.diff(s)
+
+    # encontra a primeira posição onde houve queda (diff < 0)
+    neg_pos = np.where(d < 0)[0]
+    if neg_pos.size == 0:
+        # não houve queda; cont = total na janela; nada é ajustado
+        return df, len(idx_win), None
+
+    first_rel = int(neg_pos[0]) + 1           # +1 porque diff é deslocado
+    first_idx = idx_win[first_rel]            # índice absoluto no df
+    cont = first_rel                          # mesmo significado do seu cont
+
+    # aplica o offset da primeira queda em diante (incluindo a linha da queda)
+    df.loc[first_idx:, col_energy] = pd.to_numeric(df.loc[first_idx:, col_energy], errors='coerce') + offset
+
+    # info opcional da "quebra" para depuração
+    info_quebra = {
+        'index': int(first_idx),
+        'data_hora': df.at[first_idx, col_time],
+        'energia_antes': float(s[first_rel]),
+        'energia_antes_prev': float(s[first_rel-1]),
+        'diff': float(s[first_rel] - s[first_rel-1]),
+        'offset_aplicado': float(offset)
+    }
+
+    return df, cont, info_quebra
 
 @desempenho
 def get_db_data(data_inicial, data_final):
@@ -50,6 +112,10 @@ def get_db_data(data_inicial, data_final):
     table = st.session_state['usina']['tabela']
     data_inicial = data_inicial or (datetime.now() - timedelta(days=240)).strftime('%Y-%m-%d %H:%M:%S')
     data_final = data_final or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    data_inicial = pd.to_datetime(data_inicial)
+    data_final = pd.to_datetime(data_final)
+    print('data_inicial: ', data_inicial, type(data_inicial))
+    print('data_final: ', data_final, type(data_final))
     
     def build_columns(energia, nivel):
         return ', '.join(f'{v} as {k}' for d in [energia, nivel] for k, v in d.items())
@@ -57,30 +123,58 @@ def get_db_data(data_inicial, data_final):
     def fetch_and_process(table_name, energia, nivel, is_multi=False):
         colunass = build_columns(energia, nivel)
         query = f'select {colunass} from {table_name} where data_hora >= "{data_inicial}" and data_hora <= "{data_final}"'
-        print('  15 - função principal: get_db_data, query: ', query)
-        # colunas_query = st.session_state['db'].fetch_data(f'SHOW COLUMNS FROM {table_name}')
-        # print('  16 - função principal: get_db_data, colunas_query: ', colunas_query)
-        result = st.session_state['db'].fetch_data(query)
-        print('  16 - função principal: get_db_data, result: ')
+        if 'contador' in st.session_state:
+            st.session_state.contador += 1
+        print(' ')
+        print('query: ', query, 'contador: ', st.session_state.contador)
+        print(' ')
+        result = st.session_state['db'].fetch_data(query)            
         df = pd.DataFrame(result)
-        # st.write('  17 - função principal: get_db_data, df: ', df)
         df = tratamento_df(df)
+
         if is_multi:
             df['data_hora'] = df['data_hora'].dt.round('min')
+        # df = tratamento_aparecida(df)
+        # st.write(table_name, ' 1 - função principal: get_db_data, df: ', df, 'contador: ', st.session_state.contador,'state: ', st.session_state.ultima_atualizacao)
         return df
     
     if isinstance(table, str):
+        print('    1- Sem merge')
         energia = st.session_state['usina']['energia']
         nivel = st.session_state['usina']['nivel']
         df_ = fetch_and_process(table, energia, nivel)
+        # if st.session_state.get('dados_geral') is None:
+        #     print('    1- Sem dados')
+        #     df_ = fetch_and_process(table, energia, nivel)
+        if 'aparecida' in table:
+            df_, cont, info = tratamento_aparecida(df_)
+            
+        # else:
+        #     print('    2- Com dados')
+        #     df_ = st.session_state['dados']
+        #     if df_ is None or df_.empty:
+        #         print('    3- Sem dados')
+        #         df_ = fetch_and_process(table, energia, nivel)
+        #     if df_['data_hora'].iloc[-1] < data_inicial and df_['data_hora'].iloc[0] > data_final:
+        #         print('    3- Sem dados no intervalo')
+        #         df_ = fetch_and_process(table, energia, nivel)
+        #     else:
+        #         print('    4- Com dados no intervalo')
+        #         df_ = st.session_state['dados_geral']
+        #         # st.write('df_: ', df_)
+        #         # filtrar e enviar apenas os dados no intervalo de data_inicial e data_final
+        #         df_ = df_[(df_['data_hora']>=data_inicial) & (df_['data_hora']<=data_final)]
+        #         st.write('df_filtrado: ', df_)
     else:
+        print('    2- Com merge')
         df_list = [fetch_and_process(table[key], st.session_state['usina']['energia'][key],
                                      st.session_state['usina']['nivel'][key], is_multi=True)
                    for key in table]
         print('  16 - função principal: get_db_data, df_list: ')
         df_ = pd.merge(df_list[0], df_list[1], on='data_hora', how='outer')
     
-    st.session_state['dados'] = df_
+    st.session_state['dados_geral'] = df_
+    st.session_state['dados'] = st.session_state['dados_geral'].copy()
     
 
 @desempenho
