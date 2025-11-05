@@ -53,7 +53,7 @@ class Database:
     def fetch_data(self, query, params=None):
         if self.connection is None:
             self.connect()
-        cursor = self.connection.cursor()
+        cursor = self.connection.cursor(buffered=True)
         try:
             cursor.execute(query, params or ())
             result = cursor.fetchall()

@@ -368,6 +368,19 @@ def fetch_dados_graficos(usina, colunas_selecionadas, data_hora_inicial, data_ho
     except Exception as e:
         get_error('fetch_dados_graficos, ln 220', e)
 
+def fetch_dados_graficos_tabela(tabela_nome, colunas_selecionadas, data_hora_inicial, data_hora_final):
+    try:       
+        colunas_sel = 'data_hora, '
+        colunas_sel += ', '.join(colunas_selecionadas)
+        query = f"SELECT {colunas_sel} FROM {tabela_nome} WHERE data_hora BETWEEN '{data_hora_inicial}' AND '{data_hora_final}'"
+        print('query: ', query)
+        result = st.session_state['db'].fetch_data(query)
+        df = pd.DataFrame(result)
+        df = tratamento_df(df)
+        return df
+    except Exception as e:
+        get_error('fetch_dados_graficos_tabela, ln 220', e)
+
 @desempenho
 def converter_colunas_para_numerico(df, colunas):
     try:

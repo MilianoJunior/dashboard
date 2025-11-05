@@ -12,7 +12,7 @@ import streamlit as st # Certifique-se que está importado
 import streamlit_authenticator as stauth
 # from libs.views.pages import render_main_dashboard
 from libs.models.calculos import calcular_energia_acumulada
-from libs.models.datas import fetch_dados_graficos
+from libs.models.datas import fetch_dados_graficos_tabela
 import random
 from libs.utils.decorators import desempenho
 # import streamlit as st
@@ -306,10 +306,6 @@ def create_grafico_producao_energia():
         df, x=df.index, y='Total', title=f'Geração de Energia - Total:{round(df["Total"].sum(), 2)} MWh',
         height=500, color_discrete_sequence=['#6EC1E4']
     )
-    # with st.container(border=False, height=200):
-    #     st.write(df)
-    #     st.markdown()
-    # anotações (mesma lógica) ---------------------------------------------
     for idx, row in df.iterrows():
         linha = "<br>".join(f"{c.split()[0]}: {row[c]:.1f}" for c in col_prod)
         if len(col_prod) > 1:
@@ -540,7 +536,6 @@ def grafico_colunas_selecionadas():
     
     # Filtrar as colunas removendo energia e nível
     colunas_filtradas = [col for col in colunas if col not in colunas_energia and col not in colunas_nivel]
-    # remover id_usina
     colunas_filtradas = [col for col in colunas_filtradas if col != 'id']
     
     if not colunas_filtradas:
@@ -548,7 +543,7 @@ def grafico_colunas_selecionadas():
         return
     
     options = st.multiselect(
-        "Selecione as colunas para o gráfico",
+        'Selecione as colunas para o gráfico',
         colunas_filtradas,
         default=colunas_filtradas[0] if colunas_filtradas else None,
     )
@@ -560,7 +555,8 @@ def grafico_colunas_selecionadas():
         data_final = st.date_input('Data final', value=datetime.now())
     with cols_03:
         if st.button('Gerar gráfico'):
-            df_dados = fetch_dados_graficos(st.session_state['usina'], options, data_inicial, data_final)            
+            df_dados = fetch_dados_graficos_tabela(tabela, options, data_inicial, data_final)
+            st.session_state['load_data'] = False          
     if df_dados is not None and not df_dados.empty:        
         # Criar gráfico de linha para cada coluna selecionada
         fig = go.Figure()
