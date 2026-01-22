@@ -226,7 +226,7 @@ def menu_principal(config, usina):
         }
         </style>
         """, unsafe_allow_html=True)
-        if st.button("Logout", use_container_width=True):
+        if st.button("Logout", width='stretch'):
             st.session_state.clear()
             st.rerun()
 
@@ -253,7 +253,7 @@ def formulario_filtro_producao():
 
     with c1:
         opções = {"Hora": "H", "Diário": "D", "Mensal": "M"}
-        escolha = st.segmented_control("", list(opções.keys()), default="Diário")
+        escolha = st.segmented_control("Período", list(opções.keys()), default="Diário", label_visibility="collapsed")
         periodo = opções[escolha]
 
     hoje = datetime.now()
@@ -324,7 +324,7 @@ def create_grafico_producao_energia():
         yaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.15)')
     )
 
-    st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': False})
+    st.plotly_chart(fig, width='stretch', config={'scrollZoom': False})
 
 
 def card_download_dados():
@@ -462,7 +462,7 @@ def create_grafico_nivel():
         zeroline=False
     )
 
-    st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': False})
+    st.plotly_chart(fig, width='stretch', config={'scrollZoom': False})
 
 import extra_streamlit_components as stx
 
@@ -586,7 +586,7 @@ def grafico_colunas_selecionadas():
             )
         )
         
-        st.plotly_chart(fig, config={'scrollZoom': False}, use_container_width=True)
+        st.plotly_chart(fig, config={'scrollZoom': False}, width='stretch')
         with st.expander('Fazer download dos dados'):
             csv_bytes = df_dados.to_csv(index=False).encode("utf-8")
             st.download_button(

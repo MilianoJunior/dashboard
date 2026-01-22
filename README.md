@@ -201,3 +201,4 @@ A estrutura atual funciona para um MVP, mas não escala bem para múltiplas usin
 ## Créditos
 
 Desenvolvido por EngeGOM.
+

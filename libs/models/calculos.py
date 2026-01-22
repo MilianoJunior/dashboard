@@ -114,3 +114,4 @@ def get_total_gerado() -> pd.DataFrame:
         return pd.DataFrame(columns=['total'])
     except Exception as e:
         get_error('get_total_gerado, ln 160', e)
+

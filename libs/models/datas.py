@@ -131,11 +131,196 @@ def tratamento_aparecida(df_, *,
         'diff': float(s[first_rel] - s[first_rel-1]),
         'offset_aplicado': float(offset)
     }
-
     return df, cont, info_quebra
+
+# def atualizar_aparecida():
+#     # criar dados do dia 01/12/2025 13:28:36 até 11/12/2025 14:09:36 na frequencia de 1 minuto que fique no valor da diferença
+#     # parametro de potencia e nivel de agua tem que estar correlacionado, se a agua subir a potencia sobre, se a agua descer a potencia cai.Tentar gerar um sinal como o da imagem para a água
+#     data_inicial = datetime(2025, 12, 1, 13, 28, 36)
+#     data_final = datetime(2025, 12, 11, 14, 09, 36)
+#     pote_inicial = 985.497
+#     pote_final = 1055.75
+#     diferenca = pote_final - pote_inicial
+#     nivel_montante_max = 405.30
+#     nivel_montante_min = 403.95
+#     # gerar um valor aleatorio entre nivel_montante_min e nivel_montante_max
+    
+
+#     # gerar um valor aleatorio entre pote_inicial e pote_final que se some a pote_inicial e chegue ao pote_final
+
+#     # dados de conexão já configurado no session_state
+#     query = 'INSERT INTO cgh_aparecida (data_hora, energia_ug01, nivel_montante) VALUES (%s, %s, %s)'
+#     st.session_state['db'].execute_query(query, (data_hora, energia_ug01, nivel_montante))
+
+from datetime import datetime, timedelta
+import math
+import random
+# # import streamlit as st
+
+
+# def atualizar_aparecida():
+#     try:
+#         # intervalo a ser preenchido
+#         data_inicial = datetime(2025, 12, 1, 13, 28, 36)
+#         data_final   = datetime(2025, 12, 11, 14, 9, 36)
+
+#         # energia acumulada (UG-01)
+#         pote_inicial = 985.497
+#         pote_final   = 1055.75
+#         diferenca    = pote_final - pote_inicial
+
+#         # faixa de nível do reservatório (montante)
+#         nivel_montante_max = 405.30
+#         nivel_montante_min = 403.95
+#         faixa_nivel = nivel_montante_max - nivel_montante_min
+#         nivel_meio  = (nivel_montante_max + nivel_montante_min) / 2.0
+#         total_minutos = int((data_final - data_inicial).total_seconds() // 60)
+
+#         # 1) Gera sinal de nível com cara de operação (onda periódica + ruído)
+#         ciclo_min = 180  # 3h para um ciclo completo
+#         datas_niveis = []
+#         pesos = []
+
+#         for i in range(1, total_minutos + 1):
+#             data_hora = data_inicial + timedelta(minutes=i)
+
+#             # senoide para subir/descer o nível
+#             fase = 2 * math.pi * ((i % ciclo_min) / ciclo_min)
+#             nivel = nivel_meio + (faixa_nivel / 2.0) * math.sin(fase)
+
+#             # ruído pequeno para ficar menos “perfeito”
+#             nivel += random.uniform(-0.03, 0.03)
+
+#             # clamp para garantir que fica dentro da faixa
+#             nivel = max(min(nivel, nivel_montante_max), nivel_montante_min)
+
+#             # peso para distribuição da energia (nível alto => mais energia)
+#             peso = (nivel - nivel_montante_min) / faixa_nivel  # 0 a 1
+#             peso = 0.1 + 0.9 * peso  # evita peso zero
+
+#             datas_niveis.append((data_hora, nivel))
+#             pesos.append(peso)
+
+#         soma_pesos = sum(pesos)
+
+#         # 2) Distribui a diferença de energia ao longo do tempo,
+#         #    proporcional ao nível em cada minuto
+#         energia_acumulada = pote_inicial
+#         # query para consultar os nomes das colunas
+#         query = 'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = "cgh_aparecida"'
+#         colunas = st.session_state['db'].fetch_data(query)
+#         colunas = [coluna['COLUMN_NAME'] for coluna in colunas]
+#         st.write('colunas: ', colunas)  
+
+#         # query = 'INSERT INTO cgh_aparecida (data_hora, energia_ug01, nivel_montante) VALUES (%s, %s, %s)'
+
+#         # for (data_hora, nivel), peso in zip(datas_niveis, pesos):
+#         #     incremento = diferenca * (peso / soma_pesos)
+#         #     energia_acumulada += incremento
+
+#         #     energia_ug01 = round(energia_acumulada, 3)
+#         #     nivel_montante = round(nivel, 3)
+
+#         #     st.session_state['db'].execute_query(
+#         #         query,
+#         #         (data_hora, energia_ug01, nivel_montante)
+#         #     )
+#         # st.write('dados atualizados com sucesso')
+#     except Exception as e:
+#         get_error('atualizar_aparecida', e)
+
+def atualizar_aparecida():
+    db = st.session_state["db"]
+
+    # --- Configurações de Tempo e Energia ---
+    data_inicial  = datetime(2025, 12, 1, 13, 28, 36)
+    data_final    = datetime(2025, 12, 11, 14, 9, 36)
+    total_minutos = int((data_final - data_inicial).total_seconds() // 60) + 1
+    
+    pote_inicial, pote_final = 985.497, 1055.75
+    passo_energia = (pote_final - pote_inicial) / (total_minutos - 1) if total_minutos > 1 else 0
+
+    # --- Configurações de Nível e Potência ---
+    nivel_min, nivel_max = 403.95, 405.30
+    nivel_range = nivel_max - nivel_min
+    nivel_base_ref = 403.445
+    pot_base, ganho_pot = 305.0, 120.0
+
+    # --- Dicionário Base (Valores Estáticos) ---
+    base = {
+        "uhlm_pressao": 0, "temp_uhlm_oleo": 35.6, "uhrv_pressao": 138.77, "temp_uhrv_oleo": 44.5,
+        "status": 0, "distribuidor": 16.9189, "velocidade": 362, "posicao_rotor": 12.0239,
+        "turbina_vazao": 0, "temp_manc_casq_comb": 54.7, "temp_manc_casq_esc": 35.4,
+        "tensao_fase_A": 2320.5, "tensao_fase_B": 2323.65, "tensao_fase_C": 2339.4, "tensao_neutro": 0,
+        "corrente_fase_A": 77, "corrente_fase_B": 82, "corrente_fase_C": 79, "corrente_neutro": 23,
+        "tensao_excitacao": 129, "corrente_excitacao": 84.8684, "frequencia": 6004,
+        "potencia_reativa": -18, "potencia_aparente": 305, "fp": 100,
+        "temp_enrol_A": 45.6, "temp_enrol_B": 46.0, "temp_enrol_C": 46.1,
+        "temp_nucleo_estator_01": 46.4, "temp_nucleo_estator_02": 45.6, "temp_nucleo_estator_03": 45.0,
+        "temp_tiristor_01": 35.2, "temp_tiristor_02": 40.6, "temp_tiristor_03": 43.2,
+        "temp_crowbar_01": 38.1, "temp_crowbar_02": 37.1, "temp_transf_excitacao": 54.0,
+        "temp_casq_rad_comb": 45.3, "temp_mancal_casq_guia": 42.0, "temp_mancal_cont_esc": 37.0,
+        "nivel_jusante": 403.402, "horimetro_eletrico": 372.414,
+        "tensaoL_fase_AB": 0, "tensaoL_fase_BC": 0, "tensaoL_fase_CA": 0,
+        "correnteL_fase_A": 7, "correnteL_fase_B": 7, "correnteL_fase_C": 6,
+        # Campos que serão sobrescritos ou calculados:
+        "nivel_montante": 0, "acumulador_energia": 0, "potencia_ativa": 0, "data_hora": None
+    }
+
+    # Prepara a query SQL dinamicamente baseada nas chaves do dicionário
+    colunas = list(base.keys())
+    placeholders = ["%s"] * len(colunas)
+    sql = f"INSERT INTO cgh_aparecida ({', '.join(colunas)}) VALUES ({', '.join(placeholders)})"
+
+    batch_values = [] # Lista para armazenar todas as linhas e inserir de uma vez
+
+    for i in range(total_minutos):
+        # Lógica de "Onda" do Nível
+        ciclo = i % 240
+        if ciclo < 60:    fase = ciclo / 60.0             # Enchendo
+        elif ciclo < 120: fase = 1.0                      # Cheio
+        elif ciclo < 180: fase = 1.0 - (ciclo - 120)/60.0 # Esvaziando
+        else:             fase = 0.2                      # Baixo estável
+
+        # Cálculos das variáveis dinâmicas
+        nivel_atual = nivel_min + (fase * nivel_range) + random.uniform(-0.03, 0.03)
+        potencia_atual = max(0.0, pot_base + ganho_pot * (nivel_atual - nivel_base_ref))
+        energia_atual = pote_inicial + (i * passo_energia)
+        data_atual = data_inicial + timedelta(minutes=i)
+
+        # Atualiza apenas os campos dinâmicos no dicionário da iteração
+        linha = base.copy()
+        linha.update({
+            "nivel_montante": nivel_atual,
+            "potencia_ativa": potencia_atual,
+            "acumulador_energia": energia_atual,
+            "data_hora": data_atual
+        })
+
+        # Cria a tupla ordenada de acordo com as colunas
+        batch_values.append(tuple(linha[k] for k in colunas))
+
+    # Execução em lote (Batch Insert) - Muito mais rápido
+    # Se o seu driver DB suportar executemany, use: db.cursor().executemany(sql, batch_values)
+    # Caso contrário, itere sobre a lista:
+    for valores in batch_values:
+        db.execute_query(sql, valores)
+
+
+def executar_query():
+    query = '''SELECT id, data_hora, acumulador_energia FROM cgh_aparecida WHERE data_hora BETWEEN '2025-12-11 13:28:36' AND '2025-12-11 14:30:00' ORDER BY data_hora;'''
+    result = st.session_state['db'].fetch_data(query)
+    print('result: ', result)
 
 @desempenho
 def get_db_data(data_inicial, data_final):
+    if True:
+        executar_query()
+        print('dados atualizados com sucesso')
+        return
+    # if True:
+    #     atualizar_aparecida()
+    #     return
     print('  14 - função principal: get_db_data')
     table = st.session_state['usina']['tabela']
     # Otimização: reduzir janela de 240 para 180 dias (conforme nome da função sugere)
@@ -161,7 +346,9 @@ def get_db_data(data_inicial, data_final):
         print(' ')
         result = st.session_state['db'].fetch_data(query)            
         df = pd.DataFrame(result)
+        st.write('df: ', df)
         df = tratamento_df(df)
+
 
         if is_multi:
             df['data_hora'] = df['data_hora'].dt.round('min')
