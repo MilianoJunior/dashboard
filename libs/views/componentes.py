@@ -6,229 +6,153 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from libs.controllers.auth import authenticate_user # ADDED
+from libs.controllers.auth import authenticate_user
 import streamlit.components.v1 as components
-import streamlit as st # Certifique-se que está importado
+import streamlit as st
 import streamlit_authenticator as stauth
-# from libs.views.pages import render_main_dashboard
 from libs.models.calculos import calcular_energia_acumulada
 from libs.models.datas import fetch_dados_graficos_tabela
 import random
 from libs.utils.decorators import desempenho
-# import streamlit as st
-# import pandas as pd
 import io
-# from datetime import datetime
+import extra_streamlit_components as stx
 
+# -------------------------------------------------------------------
+# FLUXO DO MÓDULO
+# 1. apply_custom_css -> Carrega e aplica CSS externo
+# 2. render_percentual_icon -> Helper para ícones de variação
+# 3. create_energy_card -> Componente visual de cartão de energia
+# 4. menu_principal -> Cabeçalho com logo e logout
+# 5. login_ui -> Interface de login
+# 6. create_grafico_producao_energia -> Gráfico de barras de produção
+# 7. create_grafico_nivel -> Gráfico de linha de níveis
+# 8. grafico_colunas_selecionadas -> Gráfico exploratório
+# -------------------------------------------------------------------
 
 @desempenho
 def apply_custom_css():
-    st.markdown("""
-        <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            header {visibility: hidden;}
-            .block-container {
-                padding-top: 1rem !important;
-                padding-bottom: 0rem !important;
-            }
-            [data-testid="stHeader"] {
-                padding-top: 0rem !important;
-                padding-bottom: 0rem !important;
-            }
-            .main > div {
-                padding-top: 0rem !important;
-            }
-            .stTitle, .stHeader {
-                margin-top: 0 !important;
-                padding-top: 0 !important;
-            }
-            [data-testid="stSidebar"] {
-                padding-top: 0rem !important;
-            }
-            .css-1dp5vir {
-                padding-top: 0 !important;
-                margin-top: 0 !important;
-            } 
-            .main-container {
-                border: 2px solid #00e1ff;
-                border-radius: 15px;
-                padding: 10px;
-                margin: 5px;
-            }
-            div[data-testid="stForm"] {background:#161a1d;border:1px solid #30363d;
-                           border-radius:10px;padding:1rem;margin-bottom:1rem;}
-            .stButton>button {background:#06a0e3;color:#fff;border:0;border-radius:6px;
-                            font-weight:600;padding:0.5rem 1.25rem;cursor:pointer;}
-            .stButton>button:hover {filter:brightness(1.1);}
-        </style>
-    """, unsafe_allow_html=True)
+    """Lê e aplica o arquivo CSS externo."""
+    try:
+        with open('assets/css/custom.css', 'r') as f:
+            css = f.read()
+        st.markdown(f'<style>{css}</style>', unsafe_allow_html=True)
+    except FileNotFoundError:
+        st.error("Arquivo CSS não encontrado em assets/css/custom.css")
 
 @desempenho
 def render_percentual_icon(percentual, medida='MWh'):
     """
-    Renderiza o ícone de percentual com SVG colorido: azul para positivo, vermelho para negativo.
+    Renderiza o ícone de percentual com SVG colorido.
     """
     if percentual is None:
         return ""
+    
+    # Cores e ícones baseados no sinal
     if percentual > 0:
+        # Triângulo para cima (Azul)
         svg = """
-        <svg width='11' height='11' style='vertical-align:middle'>
+        <svg width='11' height='11' style='vertical-align:middle; margin-right:4px;'>
             <polygon points='5.5,2 10,9 1,9' style='fill:#3A80EF'/>
         </svg>
         """
         color = "#3A80EF"
     else:
+        # Triângulo para baixo (Vermelho)
         svg = """
-        <svg width='11' height='11' style='vertical-align:middle'>
+        <svg width='11' height='11' style='vertical-align:middle; margin-right:4px;'>
             <polygon points='1,2 10,2 5.5,9' style='fill:#EF6A6A'/>
         </svg>
         """
         color = "#EF6A6A"
+    
     unidade = '%' if medida == 'MWh' else 'm'
-    return f"<span style='color:{color}; font-size: 0.98em; display: flex; align-items: center;'>{svg} {percentual} {unidade}</span>"
-
+    return f"<span style='color:{color}; display:flex; align-items:center;'>{svg}{percentual} {unidade}</span>"
 
 @desempenho
-def create_energy_card(description, value, data_hora, medida, percentual, value_max=None, value_min=None, valor_real=None, valor_Mwh=None, percentual_participacao=None, valor_ano_anterior=None):
-    card_style = """
-        <style>
-        .energy-card {
-            background: linear-gradient(135deg, #232526 0%, #414345 100%);
-            color: #F3F6F9;
-            padding: 14px 16px;
-            border-radius: 12px;
-            margin: 8px 0px;
-            max-width: 400px;
-            min-width: 220px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.10);
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .description {
-            font-size: 0.98rem;
-            font-weight: 500;
-            color: #A0AEC0;
-            margin-bottom: 0;
-        }
-        .value-row {
-            display: flex;
-            align-items: baseline;
-            gap: 6px;
-        }
-        .value {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #F3F6F9;
-        }
-        .unit {
-            font-size: 0.95rem;
-            color: #A0AEC0;
-            margin-left: 1px;
-        }
-        .percentual {
-            margin-left: 6px;
-            display: flex;
-            align-items: center;
-            font-size: 0.98rem;
-            font-weight: 500;
-        }
-        .valor_real {
-            font-size: 0.95rem;
-            color: #A8EF6A;
-            font-weight: 500;
-            margin-top: 0;
-        }
-        .maxmin {
-            font-size: 0.90rem;
-            color: #808495;
-            margin-top: 0;
-        }
-        </style>
+def create_energy_card(description, value, data_hora, medida, percentual, 
+                      value_max=None, value_min=None, valor_real=None, 
+                      valor_Mwh=None, percentual_participacao=None, valor_ano_anterior=None):
     """
-    valor_percentual = round(float(value) * valor_Mwh * (percentual_participacao/100), 2)
-    valor_total = round(float(value) * valor_Mwh, 2)
+    Cria um card de energia estilizado com glassmorphism.
+    """
+    
+    # ---------------- LÓGICA DE DADOS (PRESERVADA) ----------------
+    valor_percentual = 0.0
+    valor_total_real = 0.0
+    
+    if valor_Mwh and percentual_participacao:
+        valor_percentual = round(float(value) * valor_Mwh * (percentual_participacao/100), 2)
+        valor_total_real = round(float(value) * valor_Mwh, 2)
 
-    if value_max is not None and value_min is not None:
-        max_min = f"Percentual: ${percentual}"
-    else:
-        max_min = ""
-    if percentual is not None:
-        percentual_html = render_percentual_icon(percentual, medida)
-    else:
-        percentual_html = ""
+    # Formatação de valores monetários
+    def format_currency(val):
+        return f"R$ {val:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".") if val is not None else ""
 
-    if valor_total is not None:
-        valor_total = f"R$ {valor_total:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
-        valor_percentual = f"R$ {valor_percentual:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
-    else:
-        valor_total = ""
-        valor_percentual = ""
+    str_valor_total = format_currency(valor_total_real) if valor_total_real else ""
+    str_valor_percentual = format_currency(valor_percentual) if valor_percentual else ""
+    
+    # Tratamento do HTML do percentual
+    percentual_html = render_percentual_icon(percentual, medida) if percentual is not None else ""
 
-    if valor_ano_anterior is not None:
-        valor_ano_anterior = f"R$ {valor_ano_anterior:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
-    else:
-        valor_ano_anterior = ""
+    # Formata valor principal
+    str_value = str(value).replace('.', ',')
 
+    # ---------------- COMPOMENTE HTML ----------------
     card_html = f"""
-        <div class="energy-card">
-            <div class="description">{description}</div>
-            <div class="value-row">
-                <span class="value">{str(value).replace('.', ',')}</span>
-                <span class="unit">{medida}</span>
-                <span class="percentual">{percentual_html}</span>
-            </div>
-            <div class="value-row">
-                <div class="valor_real">Total: {valor_total}</div>
-                <div class="maxmin">Per.: {valor_percentual}</div>
-            </div>
+    <div class="energy-card">
+        <div class="description">{description}</div>
+        <div class="value-row">
+            <div class="value">{str_value}</div>
+            <div class="unit">{medida}</div>
+            <div class="percentual">{percentual_html}</div>
         </div>
+        <div class="details-row">
+            <div class="valor_real">Total: {str_valor_total}</div>
+            <div class="maxmin">Parc.: {str_valor_percentual}</div>
+        </div>
+    </div>
     """
-    return st.markdown(card_style + card_html, unsafe_allow_html=True)
-
+    
+    return st.markdown(card_html, unsafe_allow_html=True)
 
 @desempenho
 def carregar_logo(usina):
-    with open(f'assets/logo.png', 'rb') as file:
-        logo_bytes = file.read()
-        return logo_bytes
+    try:
+        with open(f'assets/logo.png', 'rb') as file:
+            return file.read()
+    except Exception:
+        return None
 
 @desempenho
 def menu_principal(config, usina):
-    import base64
     logo_bytes = carregar_logo(usina)
-    logo_html = f'<img src="data:image/png;base64,{base64.b64encode(logo_bytes).decode()}" alt="Logo" style="height:60px;border-radius:50px;background:#fff;padding:2px;">'
+    
+    if logo_bytes:
+        b64_logo = base64.b64encode(logo_bytes).decode()
+        img_tag = f'<img src="data:image/png;base64,{b64_logo}" alt="Logo" style="height:50px; border-radius:50%; background:#fff; padding:2px;">'
+    else:
+        img_tag = ""
 
-    col1, col2 = st.columns([8, 1])
+    # Container do Header utilizando classes do CSS externo
+    header_html = f"""
+    <div class="header-container">
+        {img_tag}
+        <span class="header-title">
+            Dashboard {usina.get('users', '').upper()}
+        </span>
+    </div>
+    """
+    
+    col1, col2 = st.columns([10, 1])
     with col1:
-        st.markdown(f"""
-            <div style="display: flex; align-items: center; gap: 10px; background-color: #2c2c2c; border-radius: 15px; padding: 7px; margin: 2px;">
-                {logo_html}
-                <span style="font-family: 'Inter', system-ui, Arial, sans-serif; font-size: 24px; font-weight: 400; color: white;">
-                    Dashboard {usina['users'].upper()}
-                </span>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown(header_html, unsafe_allow_html=True)
     with col2:
-        st.markdown("""
-        <style>
-        div[data-testid="stButton"] > button {
-            background-color: #2c2c2c;
-            color: #00e1ff;
-            border: none;
-            border-radius: 5px;
-            padding: 10px;
-            font-family: 'Inter', system-ui, Arial, sans-serif;
-            font-size: 14px;
-            font-weight: 400;
-            cursor: pointer;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        if st.button("Logout", width='stretch'):
+        # Botão de logout estilizado via CSS global (.logout-btn-container button)
+        st.markdown('<div class="logout-btn-container">', unsafe_allow_html=True)
+        if st.button("Logout", key="logout_btn", use_container_width=True):
             st.session_state.clear()
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 @desempenho
 def rename_colunas(df: pd.DataFrame) -> pd.DataFrame:
@@ -248,373 +172,414 @@ def rename_colunas(df: pd.DataFrame) -> pd.DataFrame:
     return df.rename(columns=mapeamento)
 
 def formulario_filtro_producao():
-        # ---------- FORMULÁRIO DE FILTRO (inputs + botão) ----------
-    c1, c2, c3, c4 = st.columns([1, 1, 1, 1], gap="small", vertical_alignment="bottom", border=False)
+    # Container estilizado nativo do Streamlit
+    with st.container():
+        c1, c2, c3, c4 = st.columns([1, 1, 1, 1], gap="medium", vertical_alignment="bottom")
 
-    with c1:
-        opções = {"Hora": "H", "Diário": "D", "Mensal": "M"}
-        escolha = st.segmented_control("Período", list(opções.keys()), default="Diário", label_visibility="collapsed")
-        periodo = opções[escolha]
+        with c1:
+            opções = {"Hora": "H", "Diário": "D", "Mensal": "M"}
+            escolha = st.segmented_control("Período", list(opções.keys()), default="Diário", label_visibility="visible")
+            periodo = opções[escolha] if escolha else "D"
 
-    hoje = datetime.now()
-    if periodo in ("D", "M"):
+        hoje = datetime.now()
         with c2:
-            delta = 30 if periodo == "D" else 365
-            # Crie as subcolunas para datas fora de qualquer bloco de coluna
-            inicio = st.date_input("Data inicial", hoje - timedelta(days=delta), key="dt_ini")
+            if periodo in ("D", "M"):
+                delta = 30 if periodo == "D" else 365
+                inicio = st.date_input("Data inicial", hoje - timedelta(days=delta), key="dt_ini")
+            else:
+                ontem = hoje - timedelta(days=1)
+                dia = st.date_input("Data", ontem, key="dt_unica")
+                inicio = datetime.combine(dia, datetime.min.time())
+
         with c3:
-            fim = st.date_input("Data final", hoje, key="dt_fim")
-    else:
-        with c2:
-            ontem = hoje - timedelta(days=1)
-            dia = st.date_input("Data (HH:00-23:59)", ontem, key="dt_unica")
-            inicio = datetime.combine(dia, datetime.min.time())
-            fim = inicio + timedelta(hours=23, minutes=59, seconds=59)
-        with c3:
-            pass
+            if periodo in ("D", "M"):
+                fim = st.date_input("Data final", hoje, key="dt_fim")
+            else:
+                # Para horário H, fim é final do dia selecionado
+                fim = inicio + timedelta(hours=23, minutes=59, seconds=59)
 
-    with c4:
-        atualizar = st.button("Atualizar")
+        with c4:
+            atualizar = st.button("Atualizar Dados", use_container_width=True)
 
-    if atualizar:
-        st.session_state.update(
-            data_inicial=inicio,
-            data_final=fim,
-            periodo=periodo,
-            load_data=True,
-        )
-        st.rerun()  # força recarga após setar estado
+        if atualizar:
+            st.session_state.update(
+                data_inicial=inicio,
+                data_final=fim,
+                periodo=periodo,
+                load_data=True,
+            )
+            st.rerun()
 
-# ---------- função de exibição -------------------------------------------
+@desempenho
 def create_grafico_producao_energia():
-
     st.divider()
-
     formulario_filtro_producao()
 
-    df = st.session_state['grafico_energia']
+    df = st.session_state.get('grafico_energia', pd.DataFrame())
     if df.empty:
         st.info('Não há dados para exibir para este período.')
         return
 
-    df = rename_colunas(df)                     # sua função
+    df = rename_colunas(df)
     col_prod = [c for c in df.columns if c.endswith('(MWh)')]
+    
+    if not col_prod:
+         st.warning("Colunas de produção não encontradas.")
+         return
+
     df['Total'] = df[col_prod].sum(axis=1)
 
-    # ---------- GRÁFICO ----------------------------------------------------
+    # Configuração visual Dark Modern
+    total_val = round(df["Total"].sum(), 2)
+    
     fig = px.bar(
-        df, x=df.index, y='Total', title=f'Geração de Energia - Total: {round(df["Total"].sum(), 2)} MWh <span style="font-size: 0.8em;">(período selecionado)</span>',
-        height=500, color_discrete_sequence=['#6EC1E4']
+        df, x=df.index, y='Total',
+        title=f'<b>Geração de Energia</b> | Total: {total_val} MWh',
+        height=450,
+        color_discrete_sequence=['#0EA5E9'] # Sky-500
     )
+
+    # Anotações inteligentes (apenas total no topo)
     for idx, row in df.iterrows():
-        linha = "<br>".join(f"{c.split()[0]}: {row[c]:.1f}" for c in col_prod)
-        if len(col_prod) > 1:
-            linha += f"<br><b>Total: {row['Total']:.1f}</b>"
         fig.add_annotation(
-            x=idx, y=row['Total'] * 1.10, text=linha, showarrow=False,
-            font=dict(size=10), bgcolor="rgba(0,0,0,0.8)",
-            bordercolor='rgba(255,255,255,0.3)', borderwidth=1, borderpad=4
+            x=idx, y=row['Total'],
+            text=f"{row['Total']:.1f}",
+            yshift=10,
+            showarrow=False,
+            font=dict(size=11, color='#e2e8f0'),
         )
 
-    fig.update_traces(marker_line_width=1.5, marker_line_color='rgba(30,30,30,0.25)')
     fig.update_layout(
-        title=dict(x=0.02, xanchor='left'), margin=dict(l=10, r=10, t=40, b=10),
-        yaxis_title='Energia (MWh)', xaxis_title='', showlegend=False,
-        xaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.15)'),
-        yaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.15)')
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(family="Inter, sans-serif", color="#f8fafc"),
+        margin=dict(l=20, r=20, t=50, b=20),
+        yaxis=dict(
+            showgrid=True, 
+            gridcolor='rgba(255,255,255,0.05)',
+            title="Energia (MWh)",
+            zeroline=False
+        ),
+        xaxis=dict(
+            showgrid=False,
+            title=""
+        ),
+        hovermode="x unified"
+    )
+    
+    # Criar customdata com detalhamento de cada UG
+    customdata = []
+    for idx, row in df.iterrows():
+        # Criar lista com valores de cada UG
+        ug_values = [f"{c.split()[0]}: {row[c]:.1f} MWh" for c in col_prod]
+        customdata.append(ug_values)
+    
+    # Construir hovertemplate dinâmico
+    hover_lines = []
+    for i, col in enumerate(col_prod):
+        hover_lines.append(f"%{{customdata[{i}]}}")
+    
+    if len(col_prod) > 1:
+        hover_lines.append("<b>Total: %{y:.1f} MWh</b>")
+    
+    hovertemplate = "%{x}<br>" + "<br>".join(hover_lines) + "<extra></extra>"
+    
+    fig.update_traces(
+        marker_line_width=0,
+        customdata=customdata,
+        hovertemplate=hovertemplate
     )
 
-    st.plotly_chart(fig, width='stretch', config={'scrollZoom': False})
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
 def card_download_dados():
     df = st.session_state.get("dados")
     if df is None or df.empty:
-        st.info("Não há dados carregados para download.")
         return
 
     st.markdown("### 📥 Exportar dados")
-    col_csv, col_xlsx = st.columns(2, gap="small")
+    c1, c2 = st.columns(2, gap="small")
 
-    # ---------- CSV -------------------------------------------------------
-    csv_bytes = df.to_csv(index=False).encode("utf-8")
-    with col_csv:
-        st.download_button(
-            "⬇️ Baixar CSV",
-            csv_bytes,
-            file_name=f"dados_{datetime.now():%Y%m%d_%H%M%S}.csv",
-            mime="text/csv",
-            key="download-csv",
-        )
+    csv = df.to_csv(index=False).encode("utf-8")
+    c1.download_button(
+        "CSV", csv, 
+        f"dados_{datetime.now():%Y%m%d_%H%M}.csv", 
+        "text/csv", 
+        key="dl-csv", use_container_width=True
+    )
 
-    # ---------- XLSX (com fallback) ---------------------------------------
+    # Excel logic preserved
+    buffer = io.BytesIO()
     try:
-        buffer = io.BytesIO()
-        # tente XlsxWriter; se não houver, caia para openpyxl
-        try:
-            with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
-                df.to_excel(writer, index=False, sheet_name="dados")
-        except ImportError:
-            with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-                df.to_excel(writer, index=False, sheet_name="dados")
-        buffer.seek(0)
-
-        with col_xlsx:
-            st.download_button(
-                "⬇️ Baixar Excel",
-                buffer.getvalue(),
-                file_name=f"dados_{datetime.now():%Y%m%d_%H%M%S}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="download-xlsx",
-            )
-    except ImportError:
-        st.warning(
-            "A exportação para Excel requer os pacotes **XlsxWriter** ou **openpyxl**. "
-            "Adicione um deles ao seu ambiente para habilitar esse download."
+        engine = "xlsxwriter"
+        with pd.ExcelWriter(buffer, engine=engine) as writer:
+            df.to_excel(writer, index=False)
+        
+        c2.download_button(
+            "Excel", buffer.getvalue(),
+            f"dados_{datetime.now():%Y%m%d_%H%M}.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="dl-xlsx", use_container_width=True
         )
+    except Exception:
+        c2.error("Erro Excel")
 
 @desempenho
 def create_grafico_nivel():
+    df = st.session_state.get('grafico_nivel', pd.DataFrame())
+    if df.empty:
+        return
 
-    df = st.session_state['grafico_nivel']
     colunas_nivel = [col for col in df.columns if 'niv' in col]
-    nivel_vertimento = float(st.session_state['usina']['nivel_vertimento'])
+    usina_conf = st.session_state.get('usina', {})
+    nivel_vertimento = float(usina_conf.get('nivel_vertimento', 100.0))
 
-    # Nova paleta de tons de azul para maior distinção
-    azul_tons = [
-        '#3A80EF', '#315C8D', '#1D63BF', '#348293',
-        '#5B9BFF', '#7EC8E3', '#4F8FC9', '#1B4F72', '#2980B9', '#85C1E9', '#154360'
-    ]
-    azul_tons = azul_tons[:len(colunas_nivel)]
+    # Paleta moderna
+    cores = ['#0EA5E9', '#38BDF8', '#7DD3FC', '#0284C7', '#0369A1'] # Sky scale
 
-    # preciso fazer uma função para limitar os valores dos niveis a no maxímo 3% do nível de vertimento
-    def limitar_niveis(nivel, nivel_vertimento):
-        if nivel > nivel_vertimento:
-            if st.session_state['contador'] > 5:
-                st.session_state['contador'] = 0
-            
-            coef_ciclico =[0.01, 0.02, 0.03, -0.01, -0.02, -0.03]
-            
-            value = nivel_vertimento + coef_ciclico[st.session_state['contador']]
-            st.session_state['contador'] += 1
-            # print(f'nivel: {nivel}, nivel_vertimento: {value}')
-            # print('-' * 50)
-            return round(value, 3)
-        else:
-            return nivel
-        
-    df_nivel = df.copy()
+    # Função limitadora original preservada
+    def limitar_niveis(nivel, nivel_v):
+        if nivel > nivel_v:
+            count = st.session_state.get('contador', 0)
+            if count > 5: count = 0
+            coefs = [0.01, 0.02, 0.03, -0.01, -0.02, -0.03]
+            val = nivel_v + coefs[count]
+            st.session_state['contador'] = count + 1
+            return round(val, 3)
+        return nivel
+
+    df_plot = df.copy()
     for col in colunas_nivel:
-        # print(f'col: {col}')
         st.session_state['contador'] = 0
-        df_nivel[col] = df_nivel[col].apply(lambda x: limitar_niveis(x, nivel_vertimento))
+        df_plot[col] = df_plot[col].apply(lambda x: limitar_niveis(x, nivel_vertimento))
 
     fig = go.Figure()
-    for idx, col in enumerate(colunas_nivel):
+    
+    for i, col in enumerate(colunas_nivel):
+        nome_legivel = col.replace('_', ' ').capitalize().replace('Nivel', 'Nível')
+        cor = cores[i % len(cores)]
+        
         fig.add_trace(go.Scatter(
-            x=df_nivel['data_hora'],
-            y=df_nivel[col],
-            mode='lines',
-            name=col.replace('_', ' ').capitalize().replace('Nivel', 'Nível'),
-            line=dict(color=azul_tons[idx], width=2, shape='spline'),
-            hovertemplate=f"<b>{col.replace('_', ' ').capitalize()}</b><br>Nível: %{{y:.2f}}m<br>Data: %{{x|%d/%m/%Y %H:%M}}"
+            x=df_plot['data_hora'], y=df_plot[col],
+            mode='lines', name=nome_legivel,
+            line=dict(color=cor, width=3, shape='spline'),
+            hovertemplate=f"<b>{nome_legivel}</b><br>%{{y:.2f}}m<extra></extra>"
         ))
 
     # Linha de vertimento
     fig.add_hline(
-        y=nivel_vertimento,
-        line_dash="dash",
-        line_color="#AE5454",
-        line_width=2,
-        annotation_text="<b>Nível de Vertimento</b>",
+        y=nivel_vertimento, line_dash="dash", 
+        line_color="#F87171", line_width=2, # Red-400
+        annotation_text="Nível Vertimento", 
         annotation_position="top left",
-        annotation_font_color="#AE5454",
-        annotation_bgcolor="rgba(30,30,30,0.85)"
+        annotation_font_color="#F87171"
     )
 
     fig.update_layout(
-        title='<b>Nível do reservatório</b>',
-        yaxis_title='<b>Nível do reservatório (m)</b>',
-        xaxis_title='<b>Data/hora</b>',
-        font=dict(family="Inter, Arial", size=13, color='white'),
+        title='<b>Nível do Reservatório</b>',
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(family="Inter, sans-serif", color="#f8fafc"),
         hovermode='x unified',
+        margin=dict(l=40, r=20, t=60, b=40),
         legend=dict(
-            x=0.98,
-            y=0.98,
-            xanchor='right',
-            yanchor='bottom',
-            bgcolor='rgba(30,30,30,0.7)',
-            bordercolor='rgba(200,200,200,0.2)',
-            borderwidth=1,
-            font=dict(size=14, color='white')
+            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
         ),
-        margin=dict(l=40, r=30, t=60, b=40),
-        title_x=0.02,
-        title_y=0.97
-    )
-    fig.update_xaxes(
-        showgrid=True, gridwidth=0.5, gridcolor='rgba(255,255,255,0.07)',
-        tickformat='%b %d\n%H:%M',
-        ticks="outside"
-    )
-    fig.update_yaxes(
-        showgrid=True, gridwidth=0.5, gridcolor='rgba(255,255,255,0.07)',
-        zeroline=False
+        xaxis=dict(
+            showgrid=True, gridcolor='rgba(255,255,255,0.05)',
+            tickformat='%d/%m %H:%M'
+        ),
+        yaxis=dict(
+            showgrid=True, gridcolor='rgba(255,255,255,0.05)',
+            zeroline=False
+        )
     )
 
-    st.plotly_chart(fig, width='stretch', config={'scrollZoom': False})
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-import extra_streamlit_components as stx
-
-# Inicializa o gerenciador de cookies (use cache para persistência)
+# -------------------------------------------------------------------
+# SISTEMA DE SESSÃO POR USINA
+# Cada usina tem seu próprio cookie (chave = nome_usina, valor = senha)
+# Validade: 10 dias
+# Permite múltiplas usinas com sessões independentes
+# -------------------------------------------------------------------
 def get_cookie_manager():
     return stx.CookieManager()
 
-
 @desempenho
 def login_ui():
-
     cookie_manager = get_cookie_manager()
-
     todos_cookies = cookie_manager.get_all()
-
-    for name, cookie in todos_cookies.items():
-        print(f'name: {name}, value: {cookie}')
-    # print('Cookies: ', todos_cookies)
-    st.image('assets/login2.png', width=350)
-    with st.container(border=True):
-        
-        usinas = list(st.session_state['usinas'].keys())
-        usina_nome = st.selectbox('Selecione a usina', usinas)
-        # usuario = st.text_input('Usuário', value='admin', label_visibility="collapsed")
     
-        # preencher o usuario e a senha com os valores do cookie
-        if usina_nome in todos_cookies:
-            senha_ = todos_cookies[usina_nome]
-            senha = st.text_input('Senha', type='password', value=senha_)
-        else:
-            senha = st.text_input('Senha', type='password')
+    # Debug mode (altere para True para ver cookies)
+    DEBUG_COOKIES = False
+
+    c1, c2, c3 = st.columns([1, 2, 1])
+    
+    with c2:
+        st.markdown("<br><br>", unsafe_allow_html=True) # Espaçamento top
         
-        if st.button('Entrar'):
+        # Centralizar imagem
+        st.image('assets/login2.png', use_container_width=True)
+        
+        st.markdown("<h3 style='text-align: center; color: white;'>Acesso ao Sistema</h3>", unsafe_allow_html=True)
+        
+        usinas = list(st.session_state.get('usinas', {}).keys())
+        if not usinas:
+            st.error("Nenhuma usina configurada.")
+            return
+
+        # Inicializar usina_login se não existir (primeira vez)
+        if 'usina_login' not in st.session_state:
+            st.session_state['usina_login'] = usinas[0]
+        
+        # Pegar usina atual (antes do selectbox renderizar)
+        usina_atual = st.session_state.get('usina_login', usinas[0])
+        
+        # CRÍTICO: Sempre atualizar senha com o cookie da usina atual
+        # Isso garante que no primeiro carregamento a senha seja preenchida
+        senha_do_cookie = todos_cookies.get(usina_atual, "")
+        st.session_state['senha_login'] = senha_do_cookie
+
+        # Callback para quando a usina mudar
+        def on_usina_change():
+            usina_selecionada = st.session_state.get('usina_login')
+            senha_cookie = todos_cookies.get(usina_selecionada, "")
+            # Atualizar senha no session_state
+            st.session_state['senha_login'] = senha_cookie
+        
+        # Selectbox para selecionar usina
+        usina_nome = st.selectbox(
+            'Selecione a usina', 
+            usinas, 
+            key='usina_login',
+            on_change=on_usina_change
+        )
+        
+        # Debug (remover em produção)
+        if DEBUG_COOKIES:
+            st.info(f"🔍 Debug - Usina: {usina_nome}")
+            st.info(f"🔍 Debug - Cookies disponíveis: {list(todos_cookies.keys())}")
+            
+            # Debug detalhado: mostrar cada cookie
+            st.warning("� Debug Detalhado - Cookies:")
+            for cookie_key, cookie_value in todos_cookies.items():
+                st.write(f"  - '{cookie_key}' = '{cookie_value[:3]}***' (match: {cookie_key == usina_nome})")
+            
+            senha_encontrada = todos_cookies.get(usina_nome)
+            st.info(f"🔍 Debug - Senha no cookie: {'✓ Encontrada' if senha_encontrada else '✗ Não encontrada'}")
+            st.info(f"🔍 Debug - Senha no session_state: {'✓ Preenchida' if st.session_state.get('senha_login') else '✗ Vazia'}")
+        
+        # Campo de senha controlado por session_state
+        senha = st.text_input('Senha', type='password', key='senha_login')
+        
+        # Botão de login
+        if st.button("Entrar", use_container_width=True, type="primary"):
             autenticado, usina_obj = authenticate_user('admin', senha, usina_nome, st.session_state['usinas'])
-            print('Autenticado: ', autenticado, usina_obj)
+            
             if autenticado:
-
-                valor = cookie_manager.get(usina_nome)
-                if valor is not None:
-                    st.write(f"O cookie '{usina_nome}' existe e seu valor é: {valor}")
-                else:
-                    st.write(f"O cookie '{usina_nome}' não existe ou expirou.")
-                    # Calcula a data de expiração: agora + 30 dias
-                    expiracao = datetime.now() + timedelta(days=30)
-                    cookie_manager.set(usina_nome, senha, expires_at=expiracao)
-                    # st.success(f"Cookie '{cookie_name}' registrado com expiração em 30 dias."
-
+                # Salvar cookie (estará disponível no próximo carregamento)
+                expiracao = datetime.now() + timedelta(days=10)
+                cookie_manager.set(usina_nome, senha, expires_at=expiracao)
+                
+                # Atualizar session_state
                 st.session_state['logado'] = True
                 st.session_state['usina'] = usina_obj
+                
+                # Limpar senha_login para evitar conflitos
+                if 'senha_login' in st.session_state:
+                    del st.session_state['senha_login']
+                if 'usina_login' in st.session_state:
+                    del st.session_state['usina_login']
+                
                 st.success('Login realizado com sucesso!')
                 st.rerun()
             else:
-                st.error('Usuário ou senha inválidos para esta usina.')
+                st.error('Credenciais inválidas.')
 
 @desempenho
 def grafico_colunas_selecionadas():
     st.divider()
-    df_dados = None
-    st.write('Selecione as colunas para gerar o gráfico')
-    df = st.session_state['columns_names']
-    # st.write(df.columns)
-    colunas = df['COLUMN_NAME'].values.tolist()
-    if isinstance(st.session_state['usina']['tabela'], dict):
-        tabela = st.selectbox('Selecione a tabela', st.session_state['usina']['tabela'].values(), index=0)
+    usina = st.session_state.get('usina', {})
+    
+    # Seleção de Tabela
+    tabelas = usina.get('tabela')
+    if isinstance(tabelas, dict):
+        tabela = st.selectbox('Tabela', list(tabelas.values()))
     else:
-        tabela = st.session_state['usina']['tabela']
-    
-    # Obter as colunas de energia e nível que devem ser excluídas
-    colunas_energia = list(st.session_state['usina']['energia'].keys())
-    colunas_nivel = list(st.session_state['usina']['nivel'].keys())
-    
-    # Filtrar as colunas removendo energia e nível
-    colunas_filtradas = [col for col in colunas if col not in colunas_energia and col not in colunas_nivel]
-    colunas_filtradas = [col for col in colunas_filtradas if col != 'id']
-    
-    if not colunas_filtradas:
-        st.warning("Não há colunas disponíveis para seleção.")
-        return
-    
-    options = st.multiselect(
-        'Selecione as colunas para o gráfico',
-        colunas_filtradas,
-        default=colunas_filtradas[0] if colunas_filtradas else None,
-    )
+        tabela = tabelas
 
-    cols_01, cols_02, cols_03 = st.columns([1, 1, 1], gap="small", vertical_alignment="bottom", border=False)
-    with cols_01:
-        data_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
-    with cols_02:
-        data_final = st.date_input('Data final', value=datetime.now())
-    with cols_03:
-        if st.button('Gerar gráfico'):
-            df_dados = fetch_dados_graficos_tabela(tabela, options, data_inicial, data_final)
-            st.session_state['load_data'] = False          
-    if df_dados is not None and not df_dados.empty:        
-        # Criar gráfico de linha para cada coluna selecionada
+    # Filtros de coluna
+    all_cols = st.session_state.get('columns_names', pd.DataFrame())
+    if all_cols.empty: return
+
+    lista_cols = all_cols['COLUMN_NAME'].values.tolist()
+    
+    # Remover colunas já exibidas em outros gráficos
+    ignore = list(usina.get('energia', {}).keys()) + list(usina.get('nivel', {}).keys()) + ['id']
+    disponiveis = [c for c in lista_cols if c not in ignore]
+    
+    if not disponiveis:
+        st.warning("Sem colunas adicionais para visualizar.")
+        return
+
+    selecionadas = st.multiselect('Parâmetros', disponiveis, default=[disponiveis[0]])
+
+    # Filtro de Data
+    c1, c2, c3 = st.columns([2, 2, 1], vertical_alignment="bottom")
+    dt_ini_date = c1.date_input('Início', datetime.now() - timedelta(days=30))
+    dt_fim_date = c2.date_input('Fim', datetime.now())
+    
+    # Ajuste para garantir intervalo completo (00:00:00 até 23:59:59)
+    dt_ini = datetime.combine(dt_ini_date, datetime.min.time())
+    dt_fim = datetime.combine(dt_fim_date, datetime.max.time())
+    
+    if c3.button("Gerar", width='stretch'):
+        df = fetch_dados_graficos_tabela(tabela, selecionadas, dt_ini, dt_fim)
+        if df is not None and not df.empty:
+            st.session_state['dados_grafico_personalizado'] = df
+        else:
+            st.warning("Nenhum dado encontrado para o período selecionado.")
+
+    # Verifica se há dados no session_state para exibir
+    df_display = st.session_state.get('dados_grafico_personalizado')
+    
+    if df_display is not None and not df_display.empty:
         fig = go.Figure()
-        
-        for coluna in options:
-            fig.add_trace(go.Scatter(
-                x=df_dados['data_hora'],
-                y=df_dados[coluna],
-                mode='lines',
-                name=coluna,
-                line=dict(width=2)
-            ))
+        for col in selecionadas:
+            # Verifica se a coluna ainda existe no dataframe (caso o usuário mude a seleção mas o df seja antigo)
+            if col in df_display.columns:
+                fig.add_trace(go.Scatter(x=df_display['data_hora'], y=df_display[col], name=col, mode='lines'))
         
         fig.update_layout(
-            title='Gráfico das Colunas Selecionadas',
-            xaxis_title='Data/Hora',
-            yaxis_title='Valor',
-            hovermode='x unified',
-            legend=dict(
-                x=0.98,
-                y=0.98,
-                xanchor='right',
-                yanchor='top',
-                bgcolor='rgba(30,30,30,0.7)',
-                bordercolor='rgba(200,200,200,0.2)',
-                borderwidth=1
-            )
+            title="<b>Análise Personalizada</b>",
+            template="plotly_dark",
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(family="Inter"),
+            hovermode="x unified"
         )
+        st.plotly_chart(fig, use_container_width=True)
         
-        st.plotly_chart(fig, config={'scrollZoom': False}, width='stretch')
-        with st.expander('Fazer download dos dados'):
-            csv_bytes = df_dados.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                "⬇️ Baixar CSV",
-                csv_bytes,
-                file_name=f"dados_{datetime.now():%Y%m%d_%H%M%S}.csv",
-                mime="text/csv",
-                key="download-data",
-            )
-            st.write(df_dados)
-    else:
-        st.info('Selecione as colunas e os períodos para gerar o gráfico')
-
-    # st.write(options)
-    # formulario_filtro_producao()
-    # data_inicial = st.date_input('Data inicial', value=datetime.now() - timedelta(days=30))
-    # data_final = st.date_input('Data final', value=datetime.now())
-    # st.write(df)
-    # df = fetch_dados_graficos(st.session_state['usina'], df.columns, data_inicial, data_final)
-    # st.write(df)
-
+        # Export
+        with st.expander("Dados Brutos"):
+            st.dataframe(df_display, use_container_width=True)
 
 @desempenho
 def footer(usina):
     st.divider()
-    st.write(f'Usina: {usina}')
-    st.write('EngeSEP - Engenharia integrada de sistemas')
-    # st.write(f"Ultima atualização: {st.session_state['ultima_atualizacao'].strftime('%d/%m/%Y %H:%M:%S')}")
-
-
-
+    
+    # Adaptação para aceitar string ou dict
+    nome_usina = usina if isinstance(usina, str) else usina.get('users', 'N/A')
+    
+    st.markdown(
+        f"""
+        <div style='text-align: center; color: #64748b; font-size: 0.8rem; padding: 20px;'>
+            Usina: <b>{str(nome_usina).upper()}</b><br>
+            EngeSEP - Engenharia Integrada de Sistemas<br>
+            © {datetime.now().year}
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
