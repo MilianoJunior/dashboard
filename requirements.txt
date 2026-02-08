@@ -1,36 +1,36 @@
 # Requirements.txt - Dashboard Hidrelétricas
-# Atualizado: 2026-02-04
+# Atualizado: 2026-02-08
 # Deploy: Railway (auto-deploy via GitHub)
 
 # Core
-streamlit>=1.31.0
-pandas>=2.0.0
-numpy>=1.24.0
+streamlit==1.52.2
+pandas==2.2.0
+numpy==1.26.4
 
 # Visualização
-plotly>=5.18.0
+plotly==6.5.0
 matplotlib==3.8.0
 seaborn==0.13.2
 
 # Banco de Dados
-mysql-connector-python>=8.0.0
+mysql-connector-python==8.2.0
 
 # Configuração
-pyyaml>=6.0.1
-python-dotenv>=1.0.0
+pyyaml==6.0.3
+python-dotenv==1.0.1
 pytz==2023.4
 
 # Streamlit Extensions
-extra-streamlit-components>=0.1.70
-streamlit-authenticator>=0.4.2
+extra-streamlit-components==0.1.81
+streamlit-authenticator==0.4.2
 streamlit_extras==0.4.0
-streamlit-timeline>=0.0.2
-streamlit-on-Hover-tabs>=1.0.1
+streamlit-timeline==0.0.2
+streamlit-on-Hover-tabs==1.0.1
 
 # Exportação de Dados
-XlsxWriter>=3.2.0
-openpyxl>=3.1.0
-fpdf>=1.7.2
+XlsxWriter==3.2.9
+openpyxl==3.1.5
+fpdf==1.7.2
 
 # Processamento de Texto/HTML
 Markdown==3.5.2

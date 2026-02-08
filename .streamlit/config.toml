@@ -1,17 +1,11 @@
 [theme]
-base="dark"
+base = "dark"
 
 [server]
 enableCORS = false
-enableXsrfProtection = true
+enableXsrfProtection = false
 
 [browser]
 gatherUsageStats = false
-serverAddress = "localhost"
+serverAddress = "0.0.0.0"
 serverPort = 8501
-
-[ui]
-# Título da aba do navegador
-title = "Dashboard EngeSEP"
-# Caminho para o favicon personalizado (coloque o arquivo em /assets ou /.streamlit)
-favicon = "assets/logo.png"
