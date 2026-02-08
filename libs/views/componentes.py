@@ -290,7 +290,7 @@ def create_grafico_producao_energia():
         hovertemplate=hovertemplate
     )
 
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})
 
 
 def card_download_dados():
@@ -396,7 +396,7 @@ def create_grafico_nivel():
         )
     )
 
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})
 
 # -------------------------------------------------------------------
 # SISTEMA DE SESSÃO POR USINA
@@ -421,7 +421,7 @@ def login_ui():
         st.markdown("<br><br>", unsafe_allow_html=True) # Espaçamento top
         
         # Centralizar imagem
-        st.image('assets/login2.png', use_container_width=True)
+        st.image('assets/login2.png', width='stretch')
         
         st.markdown("<h3 style='text-align: center; color: white;'>Acesso ao Sistema</h3>", unsafe_allow_html=True)
         
@@ -437,10 +437,9 @@ def login_ui():
         # Pegar usina atual (antes do selectbox renderizar)
         usina_atual = st.session_state.get('usina_login', usinas[0])
         
-        # CRÍTICO: Sempre atualizar senha com o cookie da usina atual
-        # Isso garante que no primeiro carregamento a senha seja preenchida
-        senha_do_cookie = todos_cookies.get(usina_atual, "")
-        st.session_state['senha_login'] = senha_do_cookie
+        # Preencher senha do cookie apenas na primeira carga (não sobrescrever digitação do usuário)
+        if 'senha_login' not in st.session_state:
+            st.session_state['senha_login'] = todos_cookies.get(usina_atual, "")
 
         # Callback para quando a usina mudar
         def on_usina_change():
@@ -560,11 +559,11 @@ def grafico_colunas_selecionadas():
             font=dict(family="Inter"),
             hovermode="x unified"
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
         # Export
         with st.expander("Dados Brutos"):
-            st.dataframe(df_display, use_container_width=True)
+            st.dataframe(df_display, width='stretch')
 
 @desempenho
 def footer(usina):
