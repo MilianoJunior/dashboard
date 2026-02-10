@@ -36,6 +36,8 @@ def get_error(name, e: Exception) -> str:
     error_info = traceback.extract_tb(e.__traceback__)[-1]
     file_name = error_info.filename.split('/')[-1]
     function_name = error_info.name
+    error_msg = f"Erro na função {name} - {function_name} no arquivo {file_name}, linha {error_info.lineno}: {str(e)}"
+    print(error_msg)
     st.error(f"Erro na função {name} - {function_name} no arquivo {file_name}, linha {error_info.lineno}: {str(e)}")
     if st.button('Voltar'):
         st.session_state.clear()

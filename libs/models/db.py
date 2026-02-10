@@ -40,6 +40,12 @@ class Database:
             self.connect()
         cursor = self.connection.cursor()
         try:
+            print(' ')
+            print('--'*10)
+            print('query: ', query)
+            print('params: ', params)
+            print('--'*10)
+            print(' ')
             cursor.execute(query, params or ())
             self.connection.commit()
             return cursor
@@ -55,6 +61,12 @@ class Database:
             self.connect()
         cursor = self.connection.cursor(buffered=True)
         try:
+            print(' ')
+            print('--'*10)
+            print('query: ', query)
+            print('params: ', params)
+            print('--'*10)
+            print(' ')
             cursor.execute(query, params or ())
             result = cursor.fetchall()
             columns = [col[0] for col in cursor.description]

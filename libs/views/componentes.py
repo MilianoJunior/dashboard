@@ -212,6 +212,7 @@ def formulario_filtro_producao():
 
 @desempenho
 def create_grafico_producao_energia():
+    import json
     st.divider()
     formulario_filtro_producao()
 
@@ -222,6 +223,11 @@ def create_grafico_producao_energia():
 
     df = rename_colunas(df)
     col_prod = [c for c in df.columns if c.endswith('(MWh)')]
+
+    
+
+    
+    
     
     if not col_prod:
          st.warning("Colunas de produção não encontradas.")
@@ -229,8 +235,52 @@ def create_grafico_producao_energia():
 
     df['Total'] = df[col_prod].sum(axis=1)
 
+    # Incluir data/hora no dict: índice vira coluna formatada
+    df_export = df.reset_index()
+    col_index = df_export.columns[0]
+    if pd.api.types.is_datetime64_any_dtype(df_export[col_index]):
+        df_export['data_hora'] = df_export[col_index].dt.strftime('%d/%m/%Y %H:%M')
+    else:
+        df_export['data_hora'] = df_export[col_index].astype(str)
+    df_export = df_export.drop(columns=[col_index])
+
     # Configuração visual Dark Modern
     total_val = round(df["Total"].sum(), 2)
+    print('--'*10)
+    dict_df = df.to_dict(orient='records')
+    periodo = st.session_state.get("periodo_a", "")
+    if periodo == 'D' or periodo == 'H':
+        tempo = '%d/%m/%Y %H:%M'
+    if periodo == 'M':
+        tempo = '%Y-%m'
+    for i, (index, row) in enumerate(df.iterrows()):
+        if hasattr(index, 'strftime'):
+            dict_df[i]['data_hora'] = index.strftime(tempo)
+        else:
+            dict_df[i]['data_hora'] = str(index)
+
+    print(f'Usina: {st.session_state.get("usina", {}).get("users", "")}, periodo_a: {st.session_state.get("periodo_a", "")}')
+    print(f'data_a: {st.session_state.get("data_a", "")}, data_b: {st.session_state.get("data_b", "")}')
+    periodo = st.session_state.get("periodo_a", "")
+    if periodo == 'D':
+        dt_inicio = datetime.strptime(dict_df[0]['data_hora'], tempo) + timedelta(days=1)
+        dt_final = datetime.strptime(dict_df[-1]['data_hora'], tempo) - timedelta(days=1)
+        # remover o último e o primeiro item do dict_df
+        dict_df = dict_df[1:-1]
+    else:
+        dt_inicio = datetime.strptime(dict_df[0]['data_hora'], tempo) 
+        dt_final = datetime.strptime(dict_df[-1]['data_hora'], tempo)
+    new_dict = {
+        'usina': st.session_state.get("usina", {}).get("users", ""),
+        'periodo': st.session_state.get("periodo_a", ""),
+        'data_inicio': dt_inicio.strftime(tempo),
+        'data_final': dt_final.strftime(tempo),
+        'dados': dict_df,
+        'soma_total': float(total_val),
+    }
+    print(json.dumps(new_dict, indent=4, default=str))
+    print('--'*10)
+
     
     fig = px.bar(
         df, x=df.index, y='Total',

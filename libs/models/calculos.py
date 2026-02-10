@@ -19,6 +19,9 @@ def calcular_energia_acumulada(df, colunas, periodo):
     print(f'Periodo: {periodo}')
     print('df.shape: ',df.shape)
     print('colunas: ',colunas)
+    st.session_state['data_a'] = df['data_hora'].iloc[0]
+    st.session_state['data_b'] = df['data_hora'].iloc[-1]
+    st.session_state['periodo_a'] = periodo
     print('--'*10)
     
     if periodo == 'D':
