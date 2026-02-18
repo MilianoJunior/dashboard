@@ -93,12 +93,6 @@ def layout():
         st.session_state['load_data'] = False
     render_main_dashboard()
 
-    # render_main_dashboard(
-    #     usina_selecionada=usina, 
-    #     list_cards_data=st.session_state.get('list_cards'), 
-    #     ultimos_1_hora_nivel_data=st.session_state.get('ultimos_1_hora_nivel')
-    # )
-
 inicio = time.time()
 if not st.session_state['logado']:
     print('  5 - função principal: login_ui')

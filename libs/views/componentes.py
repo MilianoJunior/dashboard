@@ -69,9 +69,7 @@ def render_percentual_icon(percentual, medida='MWh'):
     return f"<span style='color:{color}; display:flex; align-items:center;'>{svg}{percentual} {unidade}</span>"
 
 @desempenho
-def create_energy_card(description, value, data_hora, medida, percentual, 
-                      value_max=None, value_min=None, valor_real=None, 
-                      valor_Mwh=None, percentual_participacao=None, valor_ano_anterior=None):
+def create_energy_card(description, value, medida, percentual, valor_mwh=None, percentual_participacao=None):
     """
     Cria um card de energia estilizado com glassmorphism.
     """
@@ -80,9 +78,9 @@ def create_energy_card(description, value, data_hora, medida, percentual,
     valor_percentual = 0.0
     valor_total_real = 0.0
     
-    if valor_Mwh and percentual_participacao:
-        valor_percentual = round(float(value) * valor_Mwh * (percentual_participacao/100), 2)
-        valor_total_real = round(float(value) * valor_Mwh, 2)
+    if valor_mwh and percentual_participacao:
+        valor_percentual = round(float(value) * valor_mwh * (percentual_participacao / 100), 2)
+        valor_total_real = round(float(value) * valor_mwh, 2)
 
     # Formatação de valores monetários
     def format_currency(val):
@@ -212,7 +210,6 @@ def formulario_filtro_producao():
 
 @desempenho
 def create_grafico_producao_energia():
-    import json
     st.divider()
     formulario_filtro_producao()
 
@@ -224,72 +221,20 @@ def create_grafico_producao_energia():
     df = rename_colunas(df)
     col_prod = [c for c in df.columns if c.endswith('(MWh)')]
 
-    
-
-    
-    
-    
     if not col_prod:
-         st.warning("Colunas de produção não encontradas.")
-         return
+        st.warning("Colunas de produção não encontradas.")
+        return
 
     df['Total'] = df[col_prod].sum(axis=1)
-
-    # Incluir data/hora no dict: índice vira coluna formatada
-    df_export = df.reset_index()
-    col_index = df_export.columns[0]
-    if pd.api.types.is_datetime64_any_dtype(df_export[col_index]):
-        df_export['data_hora'] = df_export[col_index].dt.strftime('%d/%m/%Y %H:%M')
-    else:
-        df_export['data_hora'] = df_export[col_index].astype(str)
-    df_export = df_export.drop(columns=[col_index])
-
-    # Configuração visual Dark Modern
     total_val = round(df["Total"].sum(), 2)
-    print('--'*10)
-    dict_df = df.to_dict(orient='records')
-    periodo = st.session_state.get("periodo_a", "")
-    if periodo == 'D' or periodo == 'H':
-        tempo = '%d/%m/%Y %H:%M'
-    if periodo == 'M':
-        tempo = '%Y-%m'
-    for i, (index, row) in enumerate(df.iterrows()):
-        if hasattr(index, 'strftime'):
-            dict_df[i]['data_hora'] = index.strftime(tempo)
-        else:
-            dict_df[i]['data_hora'] = str(index)
 
-    print(f'Usina: {st.session_state.get("usina", {}).get("users", "")}, periodo_a: {st.session_state.get("periodo_a", "")}')
-    print(f'data_a: {st.session_state.get("data_a", "")}, data_b: {st.session_state.get("data_b", "")}')
-    periodo = st.session_state.get("periodo_a", "")
-    if periodo == 'D':
-        dt_inicio = datetime.strptime(dict_df[0]['data_hora'], tempo) + timedelta(days=1)
-        dt_final = datetime.strptime(dict_df[-1]['data_hora'], tempo) - timedelta(days=1)
-        # remover o último e o primeiro item do dict_df
-        dict_df = dict_df[1:-1]
-    else:
-        dt_inicio = datetime.strptime(dict_df[0]['data_hora'], tempo) 
-        dt_final = datetime.strptime(dict_df[-1]['data_hora'], tempo)
-    new_dict = {
-        'usina': st.session_state.get("usina", {}).get("users", ""),
-        'periodo': st.session_state.get("periodo_a", ""),
-        'data_inicio': dt_inicio.strftime(tempo),
-        'data_final': dt_final.strftime(tempo),
-        'dados': dict_df,
-        'soma_total': float(total_val),
-    }
-    print(json.dumps(new_dict, indent=4, default=str))
-    print('--'*10)
-
-    
     fig = px.bar(
         df, x=df.index, y='Total',
-        title=f'<b>Geração de Energia</b> | Total: {total_val} MWh',
+        title=f'<b>Geração de Energia — Mês Atual</b> | Total: {total_val} MWh',
         height=450,
-        color_discrete_sequence=['#0EA5E9'] # Sky-500
+        color_discrete_sequence=['#0EA5E9'],
     )
 
-    # Anotações inteligentes (apenas total no topo)
     for idx, row in df.iterrows():
         fig.add_annotation(
             x=idx, y=row['Total'],
@@ -305,39 +250,27 @@ def create_grafico_producao_energia():
         font=dict(family="Inter, sans-serif", color="#f8fafc"),
         margin=dict(l=20, r=20, t=50, b=20),
         yaxis=dict(
-            showgrid=True, 
+            showgrid=True,
             gridcolor='rgba(255,255,255,0.05)',
             title="Energia (MWh)",
-            zeroline=False
+            zeroline=False,
         ),
-        xaxis=dict(
-            showgrid=False,
-            title=""
-        ),
-        hovermode="x unified"
+        xaxis=dict(showgrid=False, title=""),
+        hovermode="x unified",
     )
-    
-    # Criar customdata com detalhamento de cada UG
-    customdata = []
-    for idx, row in df.iterrows():
-        # Criar lista com valores de cada UG
-        ug_values = [f"{c.split()[0]}: {row[c]:.1f} MWh" for c in col_prod]
-        customdata.append(ug_values)
-    
-    # Construir hovertemplate dinâmico
-    hover_lines = []
-    for i, col in enumerate(col_prod):
-        hover_lines.append(f"%{{customdata[{i}]}}")
-    
+
+    customdata = [
+        [f"{c.split()[0]}: {row[c]:.1f} MWh" for c in col_prod]
+        for _, row in df.iterrows()
+    ]
+    hover_lines = [f"%{{customdata[{i}]}}" for i in range(len(col_prod))]
     if len(col_prod) > 1:
         hover_lines.append("<b>Total: %{y:.1f} MWh</b>")
-    
-    hovertemplate = "%{x}<br>" + "<br>".join(hover_lines) + "<extra></extra>"
-    
+
     fig.update_traces(
         marker_line_width=0,
         customdata=customdata,
-        hovertemplate=hovertemplate
+        hovertemplate="%{x}<br>" + "<br>".join(hover_lines) + "<extra></extra>",
     )
 
     st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})
@@ -377,18 +310,14 @@ def card_download_dados():
 
 @desempenho
 def create_grafico_nivel():
-    df = st.session_state.get('grafico_nivel', pd.DataFrame())
-    if df.empty:
+    df = st.session_state.get('grafico_nivel')
+    if df is None or (hasattr(df, 'empty') and df.empty):
         return
 
-    colunas_nivel = [col for col in df.columns if 'niv' in col]
     usina_conf = st.session_state.get('usina', {})
     nivel_vertimento = float(usina_conf.get('nivel_vertimento', 100.0))
+    cores = ['#0EA5E9', '#38BDF8', '#7DD3FC', '#0284C7', '#0369A1']
 
-    # Paleta moderna
-    cores = ['#0EA5E9', '#38BDF8', '#7DD3FC', '#0284C7', '#0369A1'] # Sky scale
-
-    # Função limitadora original preservada
     def limitar_niveis(nivel, nivel_v):
         if nivel > nivel_v:
             count = st.session_state.get('contador', 0)
@@ -400,28 +329,30 @@ def create_grafico_nivel():
         return nivel
 
     df_plot = df.copy()
-    for col in colunas_nivel:
+    colunas = list(df_plot.columns)
+    for col in colunas:
         st.session_state['contador'] = 0
         df_plot[col] = df_plot[col].apply(lambda x: limitar_niveis(x, nivel_vertimento))
 
     fig = go.Figure()
-    
-    for i, col in enumerate(colunas_nivel):
-        nome_legivel = col.replace('_', ' ').capitalize().replace('Nivel', 'Nível')
-        cor = cores[i % len(cores)]
-        
+    for i, col in enumerate(colunas):
         fig.add_trace(go.Scatter(
-            x=df_plot['data_hora'], y=df_plot[col],
-            mode='lines', name=nome_legivel,
-            line=dict(color=cor, width=3, shape='spline'),
-            hovertemplate=f"<b>{nome_legivel}</b><br>%{{y:.2f}}m<extra></extra>"
+            x=df_plot.index, y=df_plot[col],
+            mode='lines', name=col,
+            line=dict(color=cores[i % len(cores)], width=3, shape='spline'),
+            hovertemplate=f"<b>{col}</b><br>%{{y:.2f}}m<extra></extra>"
         ))
 
-    # Linha de vertimento
+    todos_valores = df_plot[colunas].values.flatten()
+    y_min = float(todos_valores.min())
+    y_max = float(todos_valores.max())
+    margem = (y_max - y_min) * 0.05 if y_max != y_min else 1.0
+    y_range = [y_min - margem, max(y_max, nivel_vertimento) + margem]
+
     fig.add_hline(
-        y=nivel_vertimento, line_dash="dash", 
-        line_color="#F87171", line_width=2, # Red-400
-        annotation_text="Nível Vertimento", 
+        y=nivel_vertimento, line_dash="dash",
+        line_color="#F87171", line_width=2,
+        annotation_text="Nível Vertimento",
         annotation_position="top left",
         annotation_font_color="#F87171"
     )
@@ -433,17 +364,9 @@ def create_grafico_nivel():
         font=dict(family="Inter, sans-serif", color="#f8fafc"),
         hovermode='x unified',
         margin=dict(l=40, r=20, t=60, b=40),
-        legend=dict(
-            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
-        ),
-        xaxis=dict(
-            showgrid=True, gridcolor='rgba(255,255,255,0.05)',
-            tickformat='%d/%m %H:%M'
-        ),
-        yaxis=dict(
-            showgrid=True, gridcolor='rgba(255,255,255,0.05)',
-            zeroline=False
-        )
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', tickformat='%d/%m %H:%M'),
+        yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', zeroline=False, range=y_range)
     )
 
     st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})

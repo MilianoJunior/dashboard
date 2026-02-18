@@ -21,41 +21,20 @@ def render_main_dashboard():
         list_cards_data = st.session_state.get('list_cards')
         if list_cards_data:
             for i, (key, value) in enumerate(list_cards_data.items()):
-                create_energy_card(description=key, 
-                                   value=value['value'], 
-                                   data_hora=value['data_hora'], 
-                                   medida=value['medida'], 
-                                   percentual=value['percentual'], 
-                                   value_max=value['value_max'], 
-                                   value_min=value['value_min'], 
-                                   valor_real=value['valor_real'],
-                                   valor_Mwh=valor_Mwh,
-                                   percentual_participacao=percentual_participacao,
-                                   valor_ano_anterior=value['ano_anterior'])
+                create_energy_card(
+                    description=key,
+                    value=value['value'],
+                    medida=value['medida'],
+                    percentual=value['percentual'],
+                    valor_mwh=valor_Mwh,
+                    percentual_participacao=percentual_participacao,
+                )
         else:
             st.write("Dados dos cards de energia não disponíveis.") # Placeholder if data is None
 
     with col2:
-        # st.write('col2')
-        # Use the passed data arguments
-        if st.session_state['grafico_energia'] is not None:
-             create_grafico_producao_energia()
-        else:
-            st.write("Dados para o gráfico de produção de energia não disponíveis.") # Placeholder
-        
-        if st.session_state.get('grafico_nivel') is not None:
-            create_grafico_nivel()
-        else:
-            st.write("Dados para o gráfico de nível não disponíveis.") # Placeholder
+        create_grafico_producao_energia()
 
-        card_download_dados()
-
-    if st.session_state.get('columns_names') is not None:
-        grafico_colunas_selecionadas()
-
-    # Use the passed usina_selecionada argument
-    if st.session_state['usina'] and "users" in st.session_state['usina']:
-        footer(st.session_state['usina']['users'])
-    else:
-        footer("Usina não especificada") # Placeholder
-        
+        st.divider()
+        st.markdown('##### Nível dos reservatórios')
+        create_grafico_nivel()

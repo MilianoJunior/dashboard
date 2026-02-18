@@ -167,7 +167,6 @@ def get_db_data(data_inicial, data_final):
         print(' ')
         result = st.session_state['db'].fetch_data(query)            
         df = pd.DataFrame(result)
-        st.write('df: ', df)
         df = tratamento_df(df)
 
 
