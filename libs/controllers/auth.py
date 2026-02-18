@@ -65,6 +65,7 @@ def authenticate_user(username, password, selected_usina_nome, usinas_config):
     print(f"username: {username}, password: {password}, selected_usina_nome: {selected_usina_nome}")
     print(f"senhas.get(selected_usina_nome,False): {senhas.get(selected_usina_nome,False)}")
     if (username == 'admin') and (password == senhas.get(selected_usina_nome,False)):
+    # if True:
         # print(f"selected_usina_nome: {selected_usina_nome}")
         register_user(selected_usina_nome)
         if selected_usina_nome in usinas_config:
@@ -77,3 +78,5 @@ def authenticate_user(username, password, selected_usina_nome, usinas_config):
     else:
         logger.warning(f"Falha na autenticação para o usuário '{username}'.")
         return False, None
+
+
