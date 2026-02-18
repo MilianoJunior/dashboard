@@ -80,15 +80,3 @@ def authenticate_user(username, password, selected_usina_nome, usinas_config):
         return False, None
 
 
-'''
-Geração – Janeiro/2026
-(valores totais aproximados por usina – MWh)
-
-Pedras     → 926,06 MWh
-Hoppen     → 544,11 MWh
-Aparecida  → 284,67 MWh
-Picadas    → 299,34 MWh
-FAE        → 0.0 MWh
-Pira       → 4.955 MWh
-
-'''
