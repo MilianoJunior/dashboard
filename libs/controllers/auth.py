@@ -64,8 +64,7 @@ def authenticate_user(username, password, selected_usina_nome, usinas_config):
     }
     print(f"username: {username}, password: {password}, selected_usina_nome: {selected_usina_nome}")
     print(f"senhas.get(selected_usina_nome,False): {senhas.get(selected_usina_nome,False)}")
-    # if (username == 'admin') and (password == senhas.get(selected_usina_nome,False)):
-    if True:
+    if (username == 'admin') and (password == senhas.get(selected_usina_nome,False)):
         # print(f"selected_usina_nome: {selected_usina_nome}")
         register_user(selected_usina_nome)
         if selected_usina_nome in usinas_config:
@@ -78,17 +77,3 @@ def authenticate_user(username, password, selected_usina_nome, usinas_config):
     else:
         logger.warning(f"Falha na autenticação para o usuário '{username}'.")
         return False, None
-
-
-'''
-Geração – Janeiro/2026
-(valores totais aproximados por usina – MWh)
-
-Pedras     → 926,06 MWh
-Hoppen     → 544,11 MWh
-Aparecida  → 284,67 MWh
-Picadas    → 299,34 MWh
-FAE        → 0.0 MWh
-Pira       → 4.955 MWh
-
-'''
