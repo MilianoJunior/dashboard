@@ -8,7 +8,7 @@
 # 6. _normalizar_grafico_energia_api -> Converte resposta em DataFrame p/ gráfico energia
 # 7. _normalizar_grafico_nivel_api   -> Converte resposta em DataFrame p/ gráfico nível
 # 8. _normalizar_cards_calculadora   -> Converte resposta mensal em list_cards
-# 9. carregar_dados                  -> Atualiza session_state dos cards e gráficos
+# 9. carregar_dados                  -> Dispara cards/grafico/nivel em paralelo (ThreadPoolExecutor)
 # 10. set_load_data                  -> Reseta flag de carregamento
 # -------------------------------------------------------------------
 
@@ -136,8 +136,9 @@ def _obter_codigo_usina_api():
     return None
 
 
-def _consultar_producao_api(periodo="M", data_inicio=None, data_fim=None):
-    codigo_usina = _obter_codigo_usina_api()
+def _consultar_producao_api(periodo="M", data_inicio=None, data_fim=None, codigo_usina=None):
+    if not codigo_usina:
+        codigo_usina = _obter_codigo_usina_api()
     if not codigo_usina:
         raise ValueError("Nao foi possivel resolver o codigo da usina da sessao")
 
@@ -162,8 +163,9 @@ def _consultar_producao_api(periodo="M", data_inicio=None, data_fim=None):
     )
 
 
-def _consultar_nivel_api(data_inicio=None, data_fim=None):
-    codigo_usina = _obter_codigo_usina_api()
+def _consultar_nivel_api(data_inicio=None, data_fim=None, codigo_usina=None):
+    if not codigo_usina:
+        codigo_usina = _obter_codigo_usina_api()
     if not codigo_usina:
         raise ValueError("Nao foi possivel resolver o codigo da usina da sessao")
 
@@ -315,73 +317,100 @@ def _normalizar_cards_calculadora(resposta_api):
 @desempenho
 def carregar_dados(periodo, data_inicial, data_final):
     import time
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     try:
         print(f'periodo: {periodo}, data_inicial: {data_inicial}, data_final: {data_final}')
         list_cards_anterior = st.session_state.get("list_cards")
-        if list_cards_anterior is None:
-            print(f' 1 consulta: list_cards_anterior')
-            try:
-                inicio = time.time()
-                print(' Testando consulta de cards')
-                resposta_api = _consultar_producao_api(periodo="M")
-                # print(f'resposta_api: {resposta_api}')
-                # print(f' Tempo de consulta de cards: {time.time() - inicio:.4f} s')
-                list_cards_novo = _normalizar_cards_calculadora(resposta_api)
-                # print(f'list_cards_novo: {list_cards_novo}')
-                fim = time.time()
-                print(f'tempo: {fim - inicio:.4f} s')
-                if list_cards_novo:
-                    st.session_state.list_cards = list_cards_novo
-                elif list_cards_anterior is None:
-                    st.session_state.list_cards = {}
-            except Exception as exc:
-                if list_cards_anterior is None:
-                    st.session_state.list_cards = {}
-                st.warning("Falha ao carregar cards da API. Mantendo ultimo valor valido.")
-                get_error("carregar_dados.cards_api", exc)
-        else:
-            print(f' 2 consulta: list_cards_anterior')
+        consultar_cards = list_cards_anterior is None
 
-        grafico_anterior = st.session_state.get("grafico_energia")
-        print(f'grafico_anterior: {grafico_anterior}')
-        try:
+        # Resolve codigo_usina no thread principal — st.session_state inacessivel em threads
+        codigo_usina = _obter_codigo_usina_api()
+        if not codigo_usina:
+            raise ValueError("Nao foi possivel resolver o codigo da usina da sessao")
+
+        def _tarefa_cards():
+            inicio = time.time()
+            print(' Testando consulta de cards')
+            resposta = _consultar_producao_api(periodo="M", codigo_usina=codigo_usina)
+            print(f'tempo cards: {time.time() - inicio:.4f} s')
+            return _normalizar_cards_calculadora(resposta)
+
+        def _tarefa_grafico():
             inicio = time.time()
             print(' Testando consulta de grafico')
-            resposta_diaria = _consultar_producao_api(
+            resposta = _consultar_producao_api(
                 periodo=periodo or "D",
                 data_inicio=data_inicial,
                 data_fim=data_final,
+                codigo_usina=codigo_usina,
             )
-            # print(f' Tempo de consulta de grafico: {time.time() - inicio:.4f} s')
-            # print(resposta_diaria)
-            df_grafico = _normalizar_grafico_energia_api(resposta_diaria, periodo=periodo or "D")
-            # print(df_grafico)
-            fim = time.time()
-            print(f'tempo: {fim - inicio:.4f} s')
+            print(f'tempo grafico: {time.time() - inicio:.4f} s')
+            return _normalizar_grafico_energia_api(resposta, periodo=periodo or "D")
+
+        def _tarefa_nivel():
+            inicio = time.time()
+            print(' Testando consulta de nivel')
+            resposta = _consultar_nivel_api(
+                data_inicio=data_inicial,
+                data_fim=data_final,
+                codigo_usina=codigo_usina,
+            )
+            print(f'tempo nivel: {time.time() - inicio:.4f} s')
+            return _normalizar_grafico_nivel_api(resposta)
+
+        tarefas = {"grafico": _tarefa_grafico, "nivel": _tarefa_nivel}
+        if consultar_cards:
+            print(' 1 consulta: list_cards_anterior')
+            tarefas["cards"] = _tarefa_cards
+        else:
+            print(' 2 consulta: list_cards_anterior')
+
+        inicio_total = time.time()
+        resultados = {}
+        erros = {}
+        with ThreadPoolExecutor(max_workers=len(tarefas)) as executor:
+            futures = {executor.submit(fn): nome for nome, fn in tarefas.items()}
+            for future in as_completed(futures):
+                nome = futures[future]
+                try:
+                    resultados[nome] = future.result()
+                except Exception as exc:
+                    erros[nome] = exc
+
+        print(f'tempo total paralelo: {time.time() - inicio_total:.4f} s')
+
+        if "cards" in resultados:
+            list_cards_novo = resultados["cards"]
+            if list_cards_novo:
+                st.session_state.list_cards = list_cards_novo
+            else:
+                st.session_state.list_cards = {}
+        if "cards" in erros:
+            st.session_state.list_cards = st.session_state.get("list_cards") or {}
+            st.warning("Falha ao carregar cards da API. Mantendo ultimo valor valido.")
+            get_error("carregar_dados.cards_api", erros["cards"])
+
+        grafico_anterior = st.session_state.get("grafico_energia")
+        if "grafico" in resultados:
+            df_grafico = resultados["grafico"]
             if not df_grafico.empty:
                 st.session_state.grafico_energia = df_grafico
             elif grafico_anterior is None:
                 st.session_state.grafico_energia = pd.DataFrame()
-        except Exception as exc:
+        if "grafico" in erros:
             if grafico_anterior is None:
                 st.session_state.grafico_energia = pd.DataFrame()
             st.warning("Falha ao carregar grafico de energia da API. Mantendo ultimo valor valido.")
-            get_error("carregar_dados.grafico_diario_api", exc)
+            get_error("carregar_dados.grafico_diario_api", erros["grafico"])
 
-        try:
-            inicio = time.time()
-            print(' Testando consulta de nivel')
-            resposta_nivel = _consultar_nivel_api(data_inicio=data_inicial, data_fim=data_final)
-            print(f' Tempo de consulta de nivel: {time.time() - inicio:.4f} s')
-            df_nivel = _normalizar_grafico_nivel_api(resposta_nivel)
-            # print(df_nivel)
+        if "nivel" in resultados:
+            df_nivel = resultados["nivel"]
             st.session_state.grafico_nivel = df_nivel if not df_nivel.empty else pd.DataFrame()
-        except Exception as exc:
+        if "nivel" in erros:
             if st.session_state.get("grafico_nivel") is None:
                 st.session_state.grafico_nivel = pd.DataFrame()
             st.warning("Falha ao carregar grafico de nivel da API.")
-            get_error("carregar_dados.grafico_nivel_api", exc)
-
+            get_error("carregar_dados.grafico_nivel_api", erros["nivel"])
 
     except Exception as exc:
         get_error("carregar_dados", exc)
