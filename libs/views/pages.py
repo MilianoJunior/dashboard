@@ -38,3 +38,6 @@ def render_main_dashboard():
         st.divider()
         st.markdown('##### Nível dos reservatórios')
         create_grafico_nivel()
+
+        grafico_colunas_selecionadas()
+    footer(st.session_state.get('usina'))

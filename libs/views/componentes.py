@@ -1,3 +1,20 @@
+# -------------------------------------------------------------------
+# FLUXO DO MÓDULO
+# 1. apply_custom_css -> Carrega e aplica CSS externo
+# 2. render_percentual_icon -> Helper para ícones de variação
+# 3. create_energy_card -> Componente visual de cartão de energia
+# 4. carregar_logo -> Lẽ logomarca e joga como bytes
+# 5. menu_principal -> Cabeçalho com logo e logout
+# 6. rename_colunas -> Ajusta nomes de colunas do DataFrame p/ gráficos
+# 7. formulario_filtro_producao -> Renderiza botões e inputs de data/frequência
+# 8. create_grafico_producao_energia -> Gráfico de barras de produção
+# 9. card_download_dados -> Componente reutilizável para download dos dataframes
+# 10. create_grafico_nivel -> Gráfico de linha de níveis
+# 11. get_cookie_manager -> Obter cookie-manager de sessão do login
+# 12. login_ui -> Interface de login
+# 13. grafico_colunas_selecionadas -> Gráfico exploratório
+# 14. footer -> Renderiza rodapé do dashboard
+# -------------------------------------------------------------------
 import base64
 import re
 from typing import Dict
@@ -11,23 +28,11 @@ import streamlit.components.v1 as components
 import streamlit as st
 import streamlit_authenticator as stauth
 from libs.models.calculos import calcular_energia_acumulada
-from libs.models.datas import fetch_dados_graficos_tabela
+from libs.controllers.data_controller import carregar_variaveis_usina, consultar_variaveis_selecionadas
 import random
 from libs.utils.decorators import desempenho
 import io
 import extra_streamlit_components as stx
-
-# -------------------------------------------------------------------
-# FLUXO DO MÓDULO
-# 1. apply_custom_css -> Carrega e aplica CSS externo
-# 2. render_percentual_icon -> Helper para ícones de variação
-# 3. create_energy_card -> Componente visual de cartão de energia
-# 4. menu_principal -> Cabeçalho com logo e logout
-# 5. login_ui -> Interface de login
-# 6. create_grafico_producao_energia -> Gráfico de barras de produção
-# 7. create_grafico_nivel -> Gráfico de linha de níveis
-# 8. grafico_colunas_selecionadas -> Gráfico exploratório
-# -------------------------------------------------------------------
 
 @desempenho
 def apply_custom_css():
@@ -275,35 +280,35 @@ def create_grafico_producao_energia():
 
     st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})
 
+    with st.expander("📥 Exportar Dados de Geração"):
+        card_download_dados(df, "Geração", "geracao")
 
-def card_download_dados():
-    df = st.session_state.get("dados")
+
+def card_download_dados(df: pd.DataFrame, titulo: str, prefixo_arquivo: str):
     if df is None or df.empty:
         return
 
-    st.markdown("### 📥 Exportar dados")
     c1, c2 = st.columns(2, gap="small")
 
-    csv = df.to_csv(index=False).encode("utf-8")
+    csv = df.to_csv(index=True).encode("utf-8")
     c1.download_button(
         "CSV", csv, 
-        f"dados_{datetime.now():%Y%m%d_%H%M}.csv", 
+        f"{prefixo_arquivo}_{datetime.now():%Y%m%d_%H%M}.csv", 
         "text/csv", 
-        key="dl-csv", use_container_width=True
+        key=f"dl-csv-{prefixo_arquivo}", use_container_width=True
     )
 
-    # Excel logic preserved
     buffer = io.BytesIO()
     try:
         engine = "xlsxwriter"
         with pd.ExcelWriter(buffer, engine=engine) as writer:
-            df.to_excel(writer, index=False)
+            df.to_excel(writer, index=True)
         
         c2.download_button(
             "Excel", buffer.getvalue(),
-            f"dados_{datetime.now():%Y%m%d_%H%M}.xlsx",
+            f"{prefixo_arquivo}_{datetime.now():%Y%m%d_%H%M}.xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            key="dl-xlsx", use_container_width=True
+            key=f"dl-xlsx-{prefixo_arquivo}", use_container_width=True
         )
     except Exception:
         c2.error("Erro Excel")
@@ -319,14 +324,20 @@ def create_grafico_nivel():
     cores = ['#0EA5E9', '#38BDF8', '#7DD3FC', '#0284C7', '#0369A1']
 
     def limitar_niveis(nivel, nivel_v):
+        try:
+            nivel = float(nivel)
+        except (ValueError, TypeError):
+            return 0.0
+            
         if nivel > nivel_v:
             count = st.session_state.get('contador', 0)
             if count > 5: count = 0
             coefs = [0.01, 0.02, 0.03, -0.01, -0.02, -0.03]
             val = nivel_v + coefs[count]
             st.session_state['contador'] = count + 1
-            return round(val, 3)
-        return nivel
+            return round(val, 2)
+            
+        return round(nivel, 2)
 
     df_plot = df.copy()
     colunas = list(df_plot.columns)
@@ -370,6 +381,9 @@ def create_grafico_nivel():
     )
 
     st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})
+
+    with st.expander("📥 Exportar Dados de Nível"):
+        card_download_dados(df_plot, "Nível", "nivel")
 
 # -------------------------------------------------------------------
 # SISTEMA DE SESSÃO POR USINA
@@ -473,57 +487,56 @@ def login_ui():
 @desempenho
 def grafico_colunas_selecionadas():
     st.divider()
-    usina = st.session_state.get('usina', {})
-    
-    # Seleção de Tabela
-    tabelas = usina.get('tabela')
-    if isinstance(tabelas, dict):
-        tabela = st.selectbox('Tabela', list(tabelas.values()))
-    else:
-        tabela = tabelas
+    st.markdown('##### Análise Personalizada')
 
-    # Filtros de coluna
-    all_cols = st.session_state.get('columns_names', pd.DataFrame())
-    if all_cols.empty: return
-
-    lista_cols = all_cols['COLUMN_NAME'].values.tolist()
-    
-    # Remover colunas já exibidas em outros gráficos
-    ignore = list(usina.get('energia', {}).keys()) + list(usina.get('nivel', {}).keys()) + ['id']
-    disponiveis = [c for c in lista_cols if c not in ignore]
-    
-    if not disponiveis:
-        st.warning("Sem colunas adicionais para visualizar.")
+    # Buscar grupos/variáveis via API (cache no session_state)
+    grupos = carregar_variaveis_usina()
+    if not grupos:
+        st.info("Nenhuma variável disponível para esta usina.")
         return
 
-    selecionadas = st.multiselect('Parâmetros', disponiveis, default=[disponiveis[0]])
+    # Seleção de grupo
+    nomes_grupos = list(grupos.keys())
+    grupo_sel = st.selectbox('Grupo', nomes_grupos, key='grupo_analise')
+
+    # Variáveis do grupo selecionado
+    variaveis = grupos.get(grupo_sel, [])
+    if not variaveis:
+        st.warning("Grupo sem variáveis disponíveis.")
+        return
+
+    selecionadas = st.multiselect('Variáveis', variaveis, default=[variaveis[0]], key='vars_analise')
 
     # Filtro de Data
     c1, c2, c3 = st.columns([2, 2, 1], vertical_alignment="bottom")
-    dt_ini_date = c1.date_input('Início', datetime.now() - timedelta(days=30))
-    dt_fim_date = c2.date_input('Fim', datetime.now())
-    
-    # Ajuste para garantir intervalo completo (00:00:00 até 23:59:59)
+    dt_ini_date = c1.date_input('Início', datetime.now() - timedelta(days=7), key='dt_ini_analise')
+    dt_fim_date = c2.date_input('Fim', datetime.now(), key='dt_fim_analise')
+
     dt_ini = datetime.combine(dt_ini_date, datetime.min.time())
     dt_fim = datetime.combine(dt_fim_date, datetime.max.time())
-    
-    if c3.button("Gerar", width='stretch'):
-        df = fetch_dados_graficos_tabela(tabela, selecionadas, dt_ini, dt_fim)
+
+    if c3.button("Gerar", key='btn_gerar_analise', use_container_width=True):
+        with st.spinner('Consultando API...'):
+            df = consultar_variaveis_selecionadas(selecionadas, dt_ini, dt_fim)
         if df is not None and not df.empty:
             st.session_state['dados_grafico_personalizado'] = df
+            st.session_state['vars_grafico_personalizado'] = selecionadas
         else:
             st.warning("Nenhum dado encontrado para o período selecionado.")
 
-    # Verifica se há dados no session_state para exibir
+    # Exibir dados do session_state
     df_display = st.session_state.get('dados_grafico_personalizado')
-    
+    vars_display = st.session_state.get('vars_grafico_personalizado', selecionadas)
+
     if df_display is not None and not df_display.empty:
         fig = go.Figure()
-        for col in selecionadas:
-            # Verifica se a coluna ainda existe no dataframe (caso o usuário mude a seleção mas o df seja antigo)
+        for col in vars_display:
             if col in df_display.columns:
-                fig.add_trace(go.Scatter(x=df_display['data_hora'], y=df_display[col], name=col, mode='lines'))
-        
+                fig.add_trace(go.Scatter(
+                    x=df_display['data_hora'], y=df_display[col],
+                    name=col, mode='lines'
+                ))
+
         fig.update_layout(
             title="<b>Análise Personalizada</b>",
             template="plotly_dark",
@@ -532,11 +545,10 @@ def grafico_colunas_selecionadas():
             font=dict(family="Inter"),
             hovermode="x unified"
         )
-        st.plotly_chart(fig, width='stretch')
-        
-        # Export
-        with st.expander("Dados Brutos"):
-            st.dataframe(df_display, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
+
+        with st.expander("📥 Exportar Dados"):
+            card_download_dados(df_display, "Analise", "analise")
 
 @desempenho
 def footer(usina):

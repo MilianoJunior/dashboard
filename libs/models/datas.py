@@ -64,16 +64,25 @@ def parse_query_info(query: str) -> dict:
 
 @desempenho
 def tratamento_df(df_: pd.DataFrame) -> pd.DataFrame:
-    for col in df_.dtypes.index:
-        if df_[col].dtype != 'int64' and df_[col].dtype != 'float64' and col != 'data_hora':
-            if pd.to_numeric(df_[col], errors='coerce').notna().all():
-                df_[col] = df_[col].astype(float)
-                # df_[col] = df_[col].fillna(0)
-        colunas_numericas = df_.select_dtypes(include=[np.number]).columns
-        mask = (df_[colunas_numericas] >= 10).all(axis=1)
-    
-        df_ = df_[mask]
-    return df_
+    df = df_.copy()
+    for col in df.columns:
+        if col == 'data_hora':
+            continue
+            
+        # Substitui vírgula por ponto para resolver formatação PT-BR em strings
+        if df[col].dtype == object or df[col].dtype.name == 'string':
+            df[col] = df[col].astype(str).str.replace(',', '.', regex=False)
+            
+        # Força numérico (inválidos como 'S' viram NaN) e aplica round
+        df[col] = pd.to_numeric(df[col], errors='coerce').round(2)
+        
+    # Mantém a mesma lógica de negócio (remove registros onde qualquer coluna seja < 10 ou NaN)
+    cols_num = df.select_dtypes(include=[np.number]).columns
+    if not cols_num.empty:
+        mask = (df[cols_num] >= 10).all(axis=1)
+        df = df[mask]
+        
+    return df
 
 # def tratamento_aparecida(df_):
 #     cont = 0
@@ -429,8 +438,8 @@ def _get_grafico_nivel_cached(tabela: str, cols_nivel_padrao: str, cols_nivel_re
     # resample + média
     df_out = df[cols_list].resample(freq).mean().reset_index()
 
-    # forward fill para valores None
-    df_out = df_out.ffill()
+    # forward fill para valores None e garante arredondamento após a média
+    df_out = df_out.ffill().round(2)
 
     return df_out
 

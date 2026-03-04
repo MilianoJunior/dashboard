@@ -1,15 +1,17 @@
 # -------------------------------------------------------------------
 # FLUXO DO MÓDULO
-# 1. _obter_codigo_usina_api         -> Resolve código da usina para payload da API
-# 2. _parse_data_periodo             -> Parse de data com truncamento por periodo (H/D/M)
-# 3. _obter_valor_total_mwh          -> Extrai valor total MWh de um registro da API
-# 4. _consultar_producao_api         -> Consulta /producao-acumulada com periodo e datas
-# 5. _consultar_nivel_api            -> Consulta /grupo-usina com grupo=hidraulica
-# 6. _normalizar_grafico_energia_api -> Converte resposta em DataFrame p/ gráfico energia
-# 7. _normalizar_grafico_nivel_api   -> Converte resposta em DataFrame p/ gráfico nível
-# 8. _normalizar_cards_calculadora   -> Converte resposta mensal em list_cards
-# 9. carregar_dados                  -> Dispara cards/grafico/nivel em paralelo (ThreadPoolExecutor)
-# 10. set_load_data                  -> Reseta flag de carregamento
+# 1. _obter_codigo_usina_api            -> Resolve código da usina para payload da API
+# 2. _parse_data_periodo                -> Parse de data com truncamento por periodo (H/D/M)
+# 3. _obter_valor_total_mwh             -> Extrai valor total MWh de um registro da API
+# 4. _consultar_producao_api            -> Consulta /producao-acumulada com periodo e datas
+# 5. _consultar_nivel_api               -> Consulta /grupo-usina com grupo=hidraulica
+# 6. _normalizar_grafico_energia_api    -> Converte resposta em DataFrame p/ gráfico energia
+# 7. _normalizar_grafico_nivel_api      -> Converte resposta em DataFrame p/ gráfico nível
+# 8. _normalizar_cards_calculadora      -> Converte resposta mensal em list_cards
+# 9. carregar_dados                     -> Dispara cards/grafico/nivel em paralelo (ThreadPoolExecutor)
+# 10. carregar_variaveis_usina          -> Busca grupos/variáveis via GET /grupos/{usina}
+# 11. consultar_variaveis_selecionadas  -> Busca dados de N variáveis via POST /sensor-usina
+# 12. set_load_data                     -> Reseta flag de carregamento
 # -------------------------------------------------------------------
 
 import os
@@ -19,7 +21,12 @@ import streamlit as st
 from dotenv import load_dotenv
 
 import pandas as pd
-from libs.controllers.api_controller import consultar_producao_acumulada_api, consultar_grupo_usina_api
+from libs.controllers.api_controller import (
+    consultar_producao_acumulada_api,
+    consultar_grupo_usina_api,
+    consultar_grupos_usina_api,
+    consultar_sensor_usina_api,
+)
 from libs.models.datas import (
     get_db_data,
     get_grafico_energia,
@@ -214,7 +221,13 @@ def _normalizar_grafico_nivel_api(resposta_api):
 
     df = pd.DataFrame(registros).set_index("data_hora")
     df.index = pd.to_datetime(df.index)
-    df = df.apply(pd.to_numeric, errors="coerce").fillna(0.0)
+    
+    for col in df.columns:
+        if df[col].dtype == object or df[col].dtype.name == 'string':
+            df[col] = df[col].astype(str).str.replace(',', '.', regex=False)
+        df[col] = pd.to_numeric(df[col], errors="coerce").round(2)
+
+    df = df.fillna(0.0)
     return df
 
 def _normalizar_grafico_energia_api(resposta_api, periodo="D"):
@@ -250,7 +263,13 @@ def _normalizar_grafico_energia_api(resposta_api, periodo="D"):
 
     df = pd.DataFrame(registros).set_index("data_hora")
     df.index = pd.to_datetime(df.index)
-    df = df.apply(pd.to_numeric, errors="coerce").fillna(0.0)
+
+    for col in df.columns:
+        if df[col].dtype == object or df[col].dtype.name == 'string':
+            df[col] = df[col].astype(str).str.replace(',', '.', regex=False)
+        df[col] = pd.to_numeric(df[col], errors="coerce").round(2)
+
+    df = df.fillna(0.0)
     return df
 
 
@@ -414,6 +433,72 @@ def carregar_dados(periodo, data_inicial, data_final):
 
     except Exception as exc:
         get_error("carregar_dados", exc)
+
+
+def carregar_variaveis_usina():
+    """Busca grupos e variáveis da usina via API e armazena no session_state."""
+    codigo_usina = _obter_codigo_usina_api()
+    if not codigo_usina:
+        return {}
+
+    cache = st.session_state.get("grupos_variaveis")
+    cache_usina = st.session_state.get("grupos_variaveis_usina")
+    if cache and cache_usina == codigo_usina:
+        return cache
+
+    try:
+        resposta = consultar_grupos_usina_api(URL_API, codigo_usina)
+        if isinstance(resposta, dict):
+            st.session_state["grupos_variaveis"] = resposta
+            st.session_state["grupos_variaveis_usina"] = codigo_usina
+            return resposta
+    except Exception as exc:
+        get_error("carregar_variaveis_usina", exc)
+    return {}
+
+
+def consultar_variaveis_selecionadas(variaveis, data_inicio, data_fim):
+    """Consulta N variáveis via /sensor-usina e faz merge por data_hora."""
+    codigo_usina = _obter_codigo_usina_api()
+    if not codigo_usina or not variaveis:
+        return pd.DataFrame()
+
+    if hasattr(data_inicio, "strftime"):
+        data_inicio = data_inicio.strftime("%d/%m/%Y %H:%M")
+    if hasattr(data_fim, "strftime"):
+        data_fim = data_fim.strftime("%d/%m/%Y %H:%M")
+
+    df_merged = None
+    for variavel in variaveis:
+        try:
+            resp = consultar_sensor_usina_api(
+                url_api=URL_API,
+                token_api=API_TOKEN,
+                codigo_usina=codigo_usina,
+                variavel=variavel,
+                data_inicio=data_inicio,
+                data_fim=data_fim,
+            )
+            dados = resp.get("dados", [])
+            if not dados:
+                continue
+            df_var = pd.DataFrame(dados)
+            df_var["data_hora"] = pd.to_datetime(df_var["data_hora"])
+            if df_merged is None:
+                df_merged = df_var
+            else:
+                cols_novas = [c for c in df_var.columns if c not in df_merged.columns]
+                df_merged = df_merged.merge(
+                    df_var[["data_hora"] + cols_novas], on="data_hora", how="outer"
+                )
+        except Exception as exc:
+            get_error(f"consultar_variaveis_selecionadas({variavel})", exc)
+
+    if df_merged is None:
+        return pd.DataFrame()
+
+    df_merged = df_merged.sort_values("data_hora").reset_index(drop=True)
+    return df_merged
 
 
 @desempenho
