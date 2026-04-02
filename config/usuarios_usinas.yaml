@@ -50,7 +50,7 @@ usinas:
     usuario: "engesep"
     senha: "654123"
     nivel_vertimento: "1097.5"
-    tabela: 
+    tabela:
       ug01: "pch_pedras_ug01"
       ug02: "pch_pedras_ug02"
     energia:
@@ -101,7 +101,7 @@ usinas:
     usuario: "engesep"
     senha: "654123"
     nivel_vertimento: "869.9"
-    tabela: 
+    tabela:
       ug01: "cgh_hoppen_ug01"
       ug02: "cgh_hoppen_ug02"
     energia:
@@ -119,4 +119,7 @@ usinas:
     cols_energia: "data_hora,energia_ug01,energia_ug02"
     cols_nivel: "data_hora,nivel_montante_ug01,nivel_montante_ug02"
 
-
+  PCH-PIRA:
+    users: "pch-pira"
+    password: "Pira654123@"
+    nivel_vertimento: "391.00"

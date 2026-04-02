@@ -24,12 +24,8 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 from libs.controllers.auth import authenticate_user
-import streamlit.components.v1 as components
 import streamlit as st
-import streamlit_authenticator as stauth
-from libs.models.calculos import calcular_energia_acumulada
 from libs.controllers.data_controller import carregar_variaveis_usina, consultar_variaveis_selecionadas
-import random
 from libs.utils.decorators import desempenho
 import io
 import extra_streamlit_components as stx

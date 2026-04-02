@@ -27,12 +27,6 @@ from libs.controllers.api_controller import (
     consultar_grupos_usina_api,
     consultar_sensor_usina_api,
 )
-from libs.models.datas import (
-    get_db_data,
-    get_grafico_energia,
-    get_grafico_nivel,
-    get_names_all_columns,
-)
 from libs.utils.decorators import desempenho, get_error
 
 load_dotenv()
@@ -228,6 +222,9 @@ def _normalizar_grafico_nivel_api(resposta_api):
         df[col] = pd.to_numeric(df[col], errors="coerce").round(2)
 
     df = df.fillna(0.0)
+    print(f"\n[LOG NIVEL] {len(df)} registros | colunas: {list(df.columns)}")
+    print(df.head(5))
+    print()
     return df
 
 def _normalizar_grafico_energia_api(resposta_api, periodo="D"):
@@ -270,6 +267,9 @@ def _normalizar_grafico_energia_api(resposta_api, periodo="D"):
         df[col] = pd.to_numeric(df[col], errors="coerce").round(2)
 
     df = df.fillna(0.0)
+    print(f"\n[LOG ENERGIA] {len(df)} registros | colunas: {list(df.columns)}")
+    print(df.head(5))
+    print()
     return df
 
 
@@ -330,6 +330,10 @@ def _normalizar_cards_calculadora(resposta_api):
             "data_hora": data_consulta,
             "medida": "MWh",
         }
+    print(f"\n[LOG CARDS] {len(cards)} meses")
+    for titulo, info in list(cards.items())[:5]:
+        print(f"  {titulo}: {info['value']} MWh ({info['percentual']}%)")
+    print()
     return cards
 
 

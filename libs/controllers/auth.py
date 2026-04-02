@@ -61,6 +61,7 @@ def authenticate_user(username, password, selected_usina_nome, usinas_config):
         'PCH-PEDRAS': 'pedras25',
         'CGH-APARECIDA': 'aparecida103',
         'CGH-HOPPEN': 'hoppen80',
+        'PCH-PIRA': 'pira123',
     }
     print(f"username: {username}, password: {password}, selected_usina_nome: {selected_usina_nome}")
     print(f"senhas.get(selected_usina_nome,False): {senhas.get(selected_usina_nome,False)}")

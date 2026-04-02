@@ -1,0 +1,20 @@
+{
+    "python.defaultInterpreterPath": "/home/jrmfilho23/projetos/claude/.venv/bin/python",
+    "python.envFile": "${workspaceFolder}/.env",
+    "python-envs.workspaceSearchPaths": [
+        "/home/jrmfilho23/projetos/claude/.venv"
+    ],
+    "python.analysis.extraPaths": [],
+    "python.terminal.activateEnvironment": true,
+    "terminal.integrated.env.linux": {
+        "VIRTUAL_ENV": "/home/jrmfilho23/projetos/claude/.venv",
+        "PATH": "/home/jrmfilho23/projetos/claude/.venv/bin:${env:PATH}"
+    },
+    "terminal.integrated.profiles.linux": {
+        "bash-venv": {
+            "path": "/bin/bash",
+            "args": ["--rcfile", "/home/jrmfilho23/projetos/claude/.venv/bin/activate"]
+        }
+    },
+    "terminal.integrated.defaultProfile.linux": "bash-venv"
+}
