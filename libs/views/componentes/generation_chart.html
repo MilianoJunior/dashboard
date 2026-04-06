@@ -1,0 +1,114 @@
+<!-- GenerationSection - Section 2: Geração Acumulada (Dados reais API) -->
+<div class="bg-surface-container-low rounded p-6 shadow-xl border border-outline-variant/10">
+    <!-- Section Header + Filter Bar -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
+        <div>
+            <h2 class="text-headline-sm font-headline font-bold text-on-surface flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary-dim">bolt</span>
+                GERAÇÃO ACUMULADA - {{ codigo_usina }}
+            </h2>
+            <p class="text-label-sm text-on-surface-variant font-medium">Produção por unidade geradora</p>
+        </div>
+        <!-- Filtros como formulário GET -->
+        <form method="get" action="/" class="flex flex-wrap items-center gap-3 bg-surface-container-highest p-2 rounded" id="filtroForm">
+            <div class="flex items-center gap-2 px-3 border-r border-outline-variant/30">
+                <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Período</span>
+                <input class="bg-transparent border-none text-xs text-on-surface focus:ring-0 p-0 font-medium" type="date" name="start_date" value="{{ start_date }}" onchange="this.form.submit()"/>
+                <span class="text-on-surface-variant text-xs">até</span>
+                <input class="bg-transparent border-none text-xs text-on-surface focus:ring-0 p-0 font-medium" type="date" name="end_date" value="{{ end_date }}" onchange="this.form.submit()"/>
+            </div>
+            <!-- Campo hidden para o período selecionado -->
+            <input type="hidden" name="periodo" id="periodoInput" value="{{ active_period }}"/>
+            <div class="flex items-center gap-1">
+                {% for period in ['HORA', 'DIÁRIO', 'MENSAL'] %}
+                <button type="button"
+                    class="px-3 py-1 text-[10px] font-bold rounded transition-colors periodo-btn {{ 'bg-primary-dim text-on-primary-fixed' if period == active_period else 'bg-surface-variant text-on-surface-variant hover:text-on-surface' }}"
+                    data-periodo="{{ period }}"
+                    onclick="document.getElementById('periodoInput').value='{{ period }}'; document.getElementById('filtroForm').submit();">
+                    {{ period }}
+                </button>
+                {% endfor %}
+            </div>
+        </form>
+    </div>
+
+    {% if chart_data %}
+    <!-- Stacked Bar Chart com dados reais -->
+    <div class="h-[340px] w-full relative">
+        <!-- Camada de Fundo Fixa: Eixo Y e Grid -->
+        {% set y_max = max_total|round(-1) + 10 %}
+        <div class="absolute inset-0 bottom-10 flex">
+            <!-- Y-Axis labels (Fixo) -->
+            <div class="w-14 flex flex-col justify-between text-[9px] text-on-surface-variant font-mono pointer-events-none pb-[2px] pr-2">
+                <span>{{ "%.0f"|format(y_max) }}MWh</span>
+                <span>{{ "%.0f"|format(y_max * 0.8) }}MWh</span>
+                <span>{{ "%.0f"|format(y_max * 0.6) }}MWh</span>
+                <span>{{ "%.0f"|format(y_max * 0.4) }}MWh</span>
+                <span>{{ "%.0f"|format(y_max * 0.2) }}MWh</span>
+                <span>0</span>
+            </div>
+            <!-- Grid Lines -->
+            <div class="flex-1 flex flex-col justify-between pointer-events-none border-l border-b border-outline-variant/20 -mt-[4px]">
+                {% for _ in range(5) %}
+                <div class="w-full border-t border-outline-variant/5"></div>
+                {% endfor %}
+                <div class="w-full h-0"></div><!-- Linha do zero -->
+            </div>
+        </div>
+
+        <!-- Camada de Rolagem: Barras do Gráfico -->
+        <div class="absolute inset-0 left-14 overflow-x-auto custom-scrollbar flex items-end">
+            <!-- Bar Columns -->
+            <div class="flex-1 flex items-end justify-around gap-1 min-w-max px-2 pb-10 mr-4 h-full">
+                {% set chart_height = 280 %}
+                {% for day in chart_data %}
+                <div class="flex flex-col items-center group cursor-pointer relative" style="min-width: 18px;">
+                    <!-- Tooltip -->
+                    <div class="hidden group-hover:block absolute bottom-full mb-2 bg-surface-container-highest border border-outline-variant/30 rounded p-2.5 text-[10px] text-on-surface whitespace-nowrap z-50 shadow-xl pointer-events-none" style="left: 50%; transform: translateX(-50%);">
+                        <div class="font-bold text-primary-dim mb-1">{{ day.day_label }} — Total: {{ day.total }} MWh</div>
+                        {% for val in day.ug_values %}
+                        <div class="flex justify-between gap-4 items-center py-0.5">
+                            <span class="flex items-center gap-1.5">
+                                <span class="inline-block w-2 h-2 rounded-full flex-shrink-0" style="background: {{ ug_colors[loop.index0 % ug_colors|length] }};"></span>
+                                <span class="text-on-surface-variant">{{ ug_names[loop.index0] }}:</span>
+                            </span>
+                            <span class="font-medium">{{ "%.2f"|format(val) }} MWh</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <!-- Stacked bars (sem title nativo para evitar tooltip duplicado) -->
+                    <div class="flex flex-col-reverse w-4 relative z-0">
+                        {% for val in day.ug_values %}
+                        {% if y_max > 0 %}
+                        {% set h_px = (val / y_max * chart_height)|int %}
+                        {% else %}
+                        {% set h_px = 0 %}
+                        {% endif %}
+                        {% if h_px > 0 %}
+                        <div class="{{ 'rounded-t-sm' if loop.last else '' }}" style="height: {{ h_px }}px; background: {{ ug_colors[loop.index0 % ug_colors|length] }};"></div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    <!-- Day label -->
+                    <span class="text-[9px] text-white font-medium absolute -bottom-6 whitespace-nowrap">{{ day.day_label }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="h-[300px] flex items-center justify-center text-on-surface-variant">
+        <span class="material-symbols-outlined mr-2">info</span>
+        Sem dados de geração disponíveis para o período.
+    </div>
+    {% endif %}
+
+    <!-- Legend -->
+    <div class="mt-4 flex flex-wrap gap-4 text-[10px] font-bold text-on-surface-variant uppercase justify-center">
+        {% for name in ug_names %}
+        <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full" style="background: {{ ug_colors[loop.index0 % ug_colors|length] }};"></span> {{ name }}
+        </div>
+        {% endfor %}
+    </div>
+</div>

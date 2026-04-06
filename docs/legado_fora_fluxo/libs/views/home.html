@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EngeSEP O&amp;M IA - Kinetic Cockpit</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface-variant": "#a6abb4",
+                        "surface-container-low": "#0d141b",
+                        "outline": "#70767e",
+                        "primary-dim": "#02aeef",
+                        "on-secondary-fixed-variant": "#4c5e6a",
+                        "secondary-dim": "#c4d7e5",
+                        "surface-bright": "#242d37",
+                        "secondary": "#d2e5f4",
+                        "on-error-container": "#ffa8a3",
+                        "surface": "#090f15",
+                        "surface-dim": "#090f15",
+                        "secondary-container": "#374955",
+                        "inverse-primary": "#00668e",
+                        "primary": "#54c3ff",
+                        "on-tertiary-fixed": "#0d005f",
+                        "error": "#ff716c",
+                        "tertiary-fixed": "#aaa8ff",
+                        "on-error": "#490006",
+                        "on-primary": "#003b54",
+                        "surface-variant": "#1e272f",
+                        "tertiary-fixed-dim": "#9b98ff",
+                        "on-secondary": "#425460",
+                        "on-primary-fixed": "#001a28",
+                        "on-tertiary-container": "#120076",
+                        "surface-container-high": "#182028",
+                        "on-tertiary-fixed-variant": "#2e2792",
+                        "tertiary-container": "#9592ff",
+                        "primary-fixed-dim": "#02aeef",
+                        "surface-tint": "#54c3ff",
+                        "on-secondary-fixed": "#30424d",
+                        "secondary-fixed": "#d2e5f4",
+                        "secondary-fixed-dim": "#c4d7e5",
+                        "surface-container-highest": "#1e272f",
+                        "on-secondary-container": "#c0d3e1",
+                        "on-surface": "#e6ebf4",
+                        "tertiary-dim": "#9592ff",
+                        "on-primary-fixed-variant": "#003e58",
+                        "error-dim": "#d7383b",
+                        "tertiary": "#a4a1ff",
+                        "background": "#090f15",
+                        "surface-container-lowest": "#000000",
+                        "primary-container": "#21b6f8",
+                        "error-container": "#9f0519",
+                        "primary-fixed": "#2dbcfe",
+                        "inverse-surface": "#f7f9ff",
+                        "surface-container": "#131a22",
+                        "on-tertiary": "#201585",
+                        "on-background": "#e6ebf4",
+                        "inverse-on-surface": "#50565d",
+                        "outline-variant": "#424850",
+                        "on-primary-container": "#003045"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .gauge-svg { transform: rotate(-90deg); }
+        .glass-panel {
+            backdrop-filter: blur(20px);
+            background: rgba(36, 45, 55, 0.6);
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #090f15; }
+        ::-webkit-scrollbar-thumb { background: #1e272f; border-radius: 2px; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary-dim selection:text-on-primary-fixed">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full px-6 py-3 z-50 bg-[#0d141b] dark:bg-[#0d141b] font-['Space_Grotesk'] tracking-tight sticky top-0 shadow-none">
+<div class="text-xl font-bold text-[#02aeef] uppercase tracking-wider">EngeSEP O&amp;M IA</div>
+<nav class="hidden md:flex gap-8">
+<a class="text-[#02aeef] font-bold border-b-2 border-[#02aeef] px-1 py-1 transition-transform active:scale-95" href="#">Dashboard</a>
+<a class="text-[#a6abb4] hover:bg-[#1e272f] transition-colors duration-200 px-1 py-1 transition-transform active:scale-95" href="#">Analytics</a>
+<a class="text-[#a6abb4] hover:bg-[#1e272f] transition-colors duration-200 px-1 py-1 transition-transform active:scale-95" href="#">Alerts</a>
+<a class="text-[#a6abb4] hover:bg-[#1e272f] transition-colors duration-200 px-1 py-1 transition-transform active:scale-95" href="#">Reports</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="p-2 text-[#a6abb4] hover:bg-[#1e272f] rounded-full transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-[#a6abb4] hover:bg-[#1e272f] rounded-full transition-all">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="p-2 text-[#a6abb4] hover:bg-[#1e272f] rounded-full transition-all">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<main class="p-6 space-y-6 max-w-[1600px] mx-auto pb-24">
+<!-- SECTION 1: Kinetic Gauges -->
+<div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+<!-- UG-01 (Verde/Normal) -->
+<div class="bg-surface-container-highest p-4 rounded border-l-2 border-primary-dim shadow-sm flex flex-col items-center justify-center">
+<div class="text-on-surface-variant text-[10px] uppercase font-bold tracking-widest mb-2">UG-01 • Ativa</div>
+<div class="relative w-32 h-16 overflow-hidden">
+<svg class="w-32 h-32 absolute top-0 left-0" viewbox="0 0 100 100">
+<circle class="text-surface-variant" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="141.37" stroke-dashoffset="0" stroke-width="8" transform="rotate(180 50 50)"></circle>
+<circle class="text-primary-dim" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="141.37" stroke-dashoffset="25" stroke-width="8" style="filter: drop-shadow(0 0 4px #02aeef);" transform="rotate(180 50 50)"></circle>
+</svg>
+<div class="absolute bottom-0 w-full text-center font-headline text-xl font-bold">82%</div>
+</div>
+<div class="text-[10px] text-on-surface-variant mt-1">45.2 MW</div>
+</div>
+<!-- UG-02 (Verde/Normal) -->
+<div class="bg-surface-container-highest p-4 rounded border-l-2 border-primary-dim shadow-sm flex flex-col items-center justify-center">
+<div class="text-on-surface-variant text-[10px] uppercase font-bold tracking-widest mb-2">UG-02 • Ativa</div>
+<div class="relative w-32 h-16 overflow-hidden">
+<svg class="w-32 h-32 absolute top-0 left-0" viewbox="0 0 100 100">
+<circle class="text-surface-variant" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="141.37" stroke-dashoffset="0" stroke-width="8" transform="rotate(180 50 50)"></circle>
+<circle class="text-primary-dim" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="141.37" stroke-dashoffset="15" stroke-width="8" style="filter: drop-shadow(0 0 4px #02aeef);" transform="rotate(180 50 50)"></circle>
+</svg>
+<div class="absolute bottom-0 w-full text-center font-headline text-xl font-bold">89%</div>
+</div>
+<div class="text-[10px] text-on-surface-variant mt-1">48.9 MW</div>
+</div>
+<!-- UG-03 (Amarelo/Warning) -->
+<div class="bg-surface-container-highest p-4 rounded border-l-2 border-tertiary shadow-sm flex flex-col items-center justify-center">
+<div class="text-tertiary text-[10px] uppercase font-bold tracking-widest mb-2">UG-03 • Atenção</div>
+<div class="relative w-32 h-16 overflow-hidden">
+<svg class="w-32 h-32 absolute top-0 left-0" viewbox="0 0 100 100">
+<circle class="text-surface-variant" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="141.37" stroke-dashoffset="0" stroke-width="8" transform="rotate(180 50 50)"></circle>
+<circle class="text-tertiary" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="141.37" stroke-dashoffset="5" stroke-width="8" style="filter: drop-shadow(0 0 4px #a4a1ff);" transform="rotate(180 50 50)"></circle>
+</svg>
+<div class="absolute bottom-0 w-full text-center font-headline text-xl font-bold text-tertiary">96%</div>
+</div>
+<div class="text-[10px] text-on-surface-variant mt-1">52.8 MW</div>
+</div>
+<!-- UG-04 (Vermelho/Critical) -->
+<div class="bg-surface-container-highest p-4 rounded border-l-2 border-error shadow-sm flex flex-col items-center justify-center">
+<div class="text-error text-[10px] uppercase font-bold tracking-widest mb-2">UG-04 • Crítico</div>
+<div class="relative w-32 h-16 overflow-hidden">
+<svg class="w-32 h-32 absolute top-0 left-0" viewbox="0 0 100 100">
+<circle class="text-surface-variant" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="141.37" stroke-dashoffset="0" stroke-width="8" transform="rotate(180 50 50)"></circle>
+<circle class="text-error" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="141.37" stroke-dashoffset="0.1" stroke-width="8" style="filter: drop-shadow(0 0 4px #ff716c);" transform="rotate(180 50 50)"></circle>
+</svg>
+<div class="absolute bottom-0 w-full text-center font-headline text-xl font-bold text-error">100%</div>
+</div>
+<div class="text-[10px] text-on-surface-variant mt-1">55.0 MW</div>
+</div>
+<!-- UG-05 (Verde/Normal) -->
+<div class="bg-surface-container-highest p-4 rounded border-l-2 border-primary-dim shadow-sm flex flex-col items-center justify-center">
+<div class="text-on-surface-variant text-[10px] uppercase font-bold tracking-widest mb-2">UG-05 • Ativa</div>
+<div class="relative w-32 h-16 overflow-hidden">
+<svg class="w-32 h-32 absolute top-0 left-0" viewbox="0 0 100 100">
+<circle class="text-surface-variant" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="141.37" stroke-dashoffset="0" stroke-width="8" transform="rotate(180 50 50)"></circle>
+<circle class="text-primary-dim" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="141.37" stroke-dashoffset="60" stroke-width="8" style="filter: drop-shadow(0 0 4px #02aeef);" transform="rotate(180 50 50)"></circle>
+</svg>
+<div class="absolute bottom-0 w-full text-center font-headline text-xl font-bold">58%</div>
+</div>
+<div class="text-[10px] text-on-surface-variant mt-1">31.9 MW</div>
+</div>
+</div>
+<!-- SECTION 2: Geração Acumulada Card & Bar Chart -->
+<div class="bg-surface-container-low rounded p-6 shadow-xl border border-outline-variant/10">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
+<div>
+<h2 class="text-headline-sm font-headline font-bold text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-dim">bolt</span>
+                        GERAÇÃO ACUMULADA - MENSUAL
+                    </h2>
+<p class="text-label-sm text-on-surface-variant font-medium">Monitoramento de produtividade integrada por unidade geradora</p>
+</div>
+<div class="flex flex-wrap items-center gap-3 bg-surface-container-highest p-2 rounded">
+<div class="flex items-center gap-2 px-3 border-r border-outline-variant/30">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Período</span>
+<input class="bg-transparent border-none text-xs text-on-surface focus:ring-0 p-0 font-medium" type="date" value="2023-10-01"/>
+<span class="text-on-surface-variant text-xs">até</span>
+<input class="bg-transparent border-none text-xs text-on-surface focus:ring-0 p-0 font-medium" type="date" value="2023-10-31"/>
+</div>
+<div class="flex items-center gap-1">
+<button class="px-3 py-1 text-[10px] font-bold rounded bg-surface-variant text-on-surface-variant hover:text-on-surface transition-colors">HORA</button>
+<button class="px-3 py-1 text-[10px] font-bold rounded bg-surface-variant text-on-surface-variant hover:text-on-surface transition-colors">DIÁRIO</button>
+<button class="px-3 py-1 text-[10px] font-bold rounded bg-primary-dim text-on-primary-fixed">MENSAL</button>
+</div>
+</div>
+</div>
+<!-- Stacked Bar Chart Simulation -->
+<div class="h-[300px] flex items-end justify-between gap-1 w-full relative overflow-x-auto pb-4">
+<!-- Y-Axis labels (Absolute positioned) -->
+<div class="absolute left-0 top-0 bottom-4 w-10 flex flex-col justify-between text-[9px] text-on-surface-variant font-mono pointer-events-none">
+<span>500MWh</span>
+<span>400MWh</span>
+<span>300MWh</span>
+<span>200MWh</span>
+<span>100MWh</span>
+<span>0</span>
+</div>
+<!-- Grid Lines -->
+<div class="absolute inset-0 left-10 bottom-4 flex flex-col justify-between pointer-events-none border-l border-b border-outline-variant/20">
+<div class="w-full border-t border-outline-variant/5"></div>
+<div class="w-full border-t border-outline-variant/5"></div>
+<div class="w-full border-t border-outline-variant/5"></div>
+<div class="w-full border-t border-outline-variant/5"></div>
+<div class="w-full border-t border-outline-variant/5"></div>
+</div>
+<!-- 30 Individual Days (Simplified rendering of a few for brevity) -->
+<!-- We simulate 30 bars with varying heights -->
+<div class="flex-1 ml-10 flex items-end justify-around gap-[2px]">
+<!-- Repeat logic for a visual pattern -->
+<div class="flex flex-col-reverse w-4 group cursor-pointer">
+<div class="h-10 bg-primary-dim/20 hover:bg-primary-dim/40 rounded-t-sm" title="UG-05"></div>
+<div class="h-12 bg-primary-dim/40 hover:bg-primary-dim/60" title="UG-04"></div>
+<div class="h-8 bg-primary-dim/60 hover:bg-primary-dim/80" title="UG-03"></div>
+<div class="h-14 bg-primary-dim/80 hover:bg-primary-dim" title="UG-02"></div>
+<div class="h-6 bg-primary-dim hover:brightness-125" title="UG-01"></div>
+</div>
+<!-- Repeating visual fillers for the 30 days effect -->
+<div class="flex flex-col-reverse w-4"><div class="h-12 bg-primary-dim/20"></div><div class="h-8 bg-primary-dim/40"></div><div class="h-14 bg-primary-dim/60"></div><div class="h-10 bg-primary-dim/80"></div><div class="h-8 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-8 bg-primary-dim/20"></div><div class="h-12 bg-primary-dim/40"></div><div class="h-10 bg-primary-dim/60"></div><div class="h-14 bg-primary-dim/80"></div><div class="h-6 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-14 bg-primary-dim/20"></div><div class="h-10 bg-primary-dim/40"></div><div class="h-8 bg-primary-dim/60"></div><div class="h-12 bg-primary-dim/80"></div><div class="h-10 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-10 bg-primary-dim/20"></div><div class="h-14 bg-primary-dim/40"></div><div class="h-12 bg-primary-dim/60"></div><div class="h-8 bg-primary-dim/80"></div><div class="h-12 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-12 bg-primary-dim/20"></div><div class="h-6 bg-primary-dim/40"></div><div class="h-10 bg-primary-dim/60"></div><div class="h-14 bg-primary-dim/80"></div><div class="h-14 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-14 bg-primary-dim/20"></div><div class="h-10 bg-primary-dim/40"></div><div class="h-12 bg-primary-dim/60"></div><div class="h-10 bg-primary-dim/80"></div><div class="h-8 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-10 bg-primary-dim/20"></div><div class="h-12 bg-primary-dim/40"></div><div class="h-14 bg-primary-dim/60"></div><div class="h-8 bg-primary-dim/80"></div><div class="h-10 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-8 bg-primary-dim/20"></div><div class="h-14 bg-primary-dim/40"></div><div class="h-10 bg-primary-dim/60"></div><div class="h-12 bg-primary-dim/80"></div><div class="h-12 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-12 bg-primary-dim/20"></div><div class="h-8 bg-primary-dim/40"></div><div class="h-12 bg-primary-dim/60"></div><div class="h-14 bg-primary-dim/80"></div><div class="h-8 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-10 bg-primary-dim/20"></div><div class="h-12 bg-primary-dim/40"></div><div class="h-10 bg-primary-dim/60"></div><div class="h-10 bg-primary-dim/80"></div><div class="h-10 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-14 bg-primary-dim/20"></div><div class="h-10 bg-primary-dim/40"></div><div class="h-14 bg-primary-dim/60"></div><div class="h-12 bg-primary-dim/80"></div><div class="h-12 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-12 bg-primary-dim/20"></div><div class="h-14 bg-primary-dim/40"></div><div class="h-12 bg-primary-dim/60"></div><div class="h-8 bg-primary-dim/80"></div><div class="h-14 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-8 bg-primary-dim/20"></div><div class="h-12 bg-primary-dim/40"></div><div class="h-14 bg-primary-dim/60"></div><div class="h-10 bg-primary-dim/80"></div><div class="h-8 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-14 bg-primary-dim/20"></div><div class="h-10 bg-primary-dim/40"></div><div class="h-10 bg-primary-dim/60"></div><div class="h-12 bg-primary-dim/80"></div><div class="h-10 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-12 bg-primary-dim/20"></div><div class="h-14 bg-primary-dim/40"></div><div class="h-12 bg-primary-dim/60"></div><div class="h-14 bg-primary-dim/80"></div><div class="h-12 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-10 bg-primary-dim/20"></div><div class="h-8 bg-primary-dim/40"></div><div class="h-14 bg-primary-dim/60"></div><div class="h-10 bg-primary-dim/80"></div><div class="h-14 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-12 bg-primary-dim/20"></div><div class="h-14 bg-primary-dim/40"></div><div class="h-10 bg-primary-dim/60"></div><div class="h-12 bg-primary-dim/80"></div><div class="h-8 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-14 bg-primary-dim/20"></div><div class="h-12 bg-primary-dim/40"></div><div class="h-14 bg-primary-dim/60"></div><div class="h-10 bg-primary-dim/80"></div><div class="h-10 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-10 bg-primary-dim/20"></div><div class="h-10 bg-primary-dim/40"></div><div class="h-12 bg-primary-dim/60"></div><div class="h-14 bg-primary-dim/80"></div><div class="h-12 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-12 bg-primary-dim/20"></div><div class="h-14 bg-primary-dim/40"></div><div class="h-14 bg-primary-dim/60"></div><div class="h-12 bg-primary-dim/80"></div><div class="h-14 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-14 bg-primary-dim/20"></div><div class="h-8 bg-primary-dim/40"></div><div class="h-10 bg-primary-dim/60"></div><div class="h-10 bg-primary-dim/80"></div><div class="h-8 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-10 bg-primary-dim/20"></div><div class="h-12 bg-primary-dim/40"></div><div class="h-12 bg-primary-dim/60"></div><div class="h-14 bg-primary-dim/80"></div><div class="h-10 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-12 bg-primary-dim/20"></div><div class="h-14 bg-primary-dim/40"></div><div class="h-14 bg-primary-dim/60"></div><div class="h-12 bg-primary-dim/80"></div><div class="h-12 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-14 bg-primary-dim/20"></div><div class="h-10 bg-primary-dim/40"></div><div class="h-10 bg-primary-dim/60"></div><div class="h-8 bg-primary-dim/80"></div><div class="h-8 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-10 bg-primary-dim/20"></div><div class="h-12 bg-primary-dim/40"></div><div class="h-12 bg-primary-dim/60"></div><div class="h-14 bg-primary-dim/80"></div><div class="h-10 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-12 bg-primary-dim/20"></div><div class="h-14 bg-primary-dim/40"></div><div class="h-14 bg-primary-dim/60"></div><div class="h-12 bg-primary-dim/80"></div><div class="h-12 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-14 bg-primary-dim/20"></div><div class="h-10 bg-primary-dim/40"></div><div class="h-10 bg-primary-dim/60"></div><div class="h-10 bg-primary-dim/80"></div><div class="h-14 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-10 bg-primary-dim/20"></div><div class="h-12 bg-primary-dim/40"></div><div class="h-12 bg-primary-dim/60"></div><div class="h-14 bg-primary-dim/80"></div><div class="h-10 bg-primary-dim"></div></div>
+<div class="flex flex-col-reverse w-4"><div class="h-12 bg-primary-dim/20"></div><div class="h-14 bg-primary-dim/40"></div><div class="h-14 bg-primary-dim/60"></div><div class="h-12 bg-primary-dim/80"></div><div class="h-12 bg-primary-dim"></div></div>
+</div>
+</div>
+<!-- Legend -->
+<div class="mt-4 flex flex-wrap gap-4 text-[10px] font-bold text-on-surface-variant uppercase justify-center">
+<div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-primary-dim"></span> UG-01</div>
+<div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-primary-dim/80"></span> UG-02</div>
+<div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-primary-dim/60"></span> UG-03</div>
+<div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-primary-dim/40"></span> UG-04</div>
+<div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-primary-dim/20"></span> UG-05</div>
+</div>
+</div>
+<!-- SECTION 3: Nível dos Reservatórios Line Chart -->
+<div class="bg-surface-container-low rounded p-6 shadow-xl border border-outline-variant/10">
+<div class="flex items-center justify-between mb-6">
+<div>
+<h3 class="text-headline-sm font-headline font-bold text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-dim">waves</span>
+                        NÍVEL DOS RESERVATÓRIOS
+                    </h3>
+</div>
+<div class="flex gap-4">
+<div class="flex items-center gap-2">
+<span class="w-3 h-0.5 bg-primary-dim"></span>
+<span class="text-[10px] font-bold text-on-surface-variant">RES-1</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-0.5 bg-tertiary"></span>
+<span class="text-[10px] font-bold text-on-surface-variant">RES-2</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-0.5 bg-secondary-dim"></span>
+<span class="text-[10px] font-bold text-on-surface-variant">RES-3</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-0.5 bg-outline"></span>
+<span class="text-[10px] font-bold text-on-surface-variant">RES-4</span>
+</div>
+</div>
+</div>
+<div class="relative h-[250px] w-full border-l border-b border-outline-variant/20">
+<!-- SVG Line Chart Simulation -->
+<svg class="w-full h-full preserve-3d" preserveaspectratio="none" viewbox="0 0 1000 250">
+<!-- Red Dotted Spill Level Line -->
+<line stroke="#ff716c" stroke-dasharray="8 4" stroke-width="2" x1="0" x2="1000" y1="50" y2="50"></line>
+<!-- RES Lines (Curvas suaves) -->
+<path d="M0,180 Q100,160 200,190 T400,150 T600,170 T800,140 T1000,160" fill="none" stroke="#02aeef" stroke-linecap="round" stroke-width="3"></path>
+<path d="M0,200 Q150,220 300,180 T600,210 T900,170 T1000,190" fill="none" stroke="#a4a1ff" stroke-linecap="round" stroke-width="3"></path>
+<path d="M0,150 Q200,130 400,160 T700,140 T1000,130" fill="none" stroke="#c4d7e5" stroke-linecap="round" stroke-width="3"></path>
+<path d="M0,220 Q250,210 500,230 T1000,210" fill="none" opacity="0.6" stroke="#70767e" stroke-linecap="round" stroke-width="2"></path>
+</svg>
+<!-- Label for Spill Level -->
+<div class="absolute top-8 right-2 flex items-center gap-2">
+<span class="text-[9px] font-bold text-error uppercase bg-error/10 px-2 py-0.5 rounded">Nível de Vertimento</span>
+</div>
+<!-- X-Axis markers -->
+<div class="flex justify-between mt-2 text-[9px] text-on-surface-variant font-mono uppercase px-2">
+<span>00:00</span>
+<span>04:00</span>
+<span>08:00</span>
+<span>12:00</span>
+<span>16:00</span>
+<span>20:00</span>
+<span>23:59</span>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<footer class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-2 bg-[#090f15] dark:bg-[#090f15] border-t border-[#1e272f] shadow-[0_-4px_20px_rgba(0,0,0,0.5)] z-50">
+<div class="flex flex-col items-center justify-center text-[#02aeef] bg-[#02aeef]/10 rounded-xl p-2 active:scale-90 transition-transform">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-['Inter'] text-[10px] font-medium uppercase mt-1">Dashboard</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#a6abb4] p-2 active:scale-90 transition-transform hover:text-white transition-all">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-['Inter'] text-[10px] font-medium uppercase mt-1">Analytics</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#a6abb4] p-2 active:scale-90 transition-transform hover:text-white transition-all">
+<span class="material-symbols-outlined">warning</span>
+<span class="font-['Inter'] text-[10px] font-medium uppercase mt-1">Alerts</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#a6abb4] p-2 active:scale-90 transition-transform hover:text-white transition-all">
+<span class="material-symbols-outlined">description</span>
+<span class="font-['Inter'] text-[10px] font-medium uppercase mt-1">Reports</span>
+</div>
+</footer>
+</body></html>

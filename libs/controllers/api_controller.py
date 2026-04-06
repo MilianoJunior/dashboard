@@ -11,6 +11,7 @@
 
 import json
 from urllib import error, request
+from libs.utils.decorators import desempenho
 cont_conexao = 0
 
 
@@ -24,6 +25,7 @@ def _montar_payload_producao_acumulada(codigo_usina, data_inicio, data_fim, peri
     }
 
 
+@desempenho
 def _post_json_sem_timeout(url, payload):
     global cont_conexao
     cont_conexao += 1
@@ -47,6 +49,7 @@ def _post_json_sem_timeout(url, payload):
         raise RuntimeError(f"Falha de conexao com API: {exc.reason}") from exc
 
 
+@desempenho
 def consultar_producao_acumulada_api(url_api, token_api, codigo_usina, data_inicio, data_fim, periodo="M"):
     if not url_api:
         raise ValueError("URL_API nao configurada no .env")
@@ -65,6 +68,7 @@ def consultar_producao_acumulada_api(url_api, token_api, codigo_usina, data_inic
     return _post_json_sem_timeout(f"{url_api}/producao-acumulada", payload)
 
 
+@desempenho
 def consultar_grupo_usina_api(url_api, token_api, codigo_usina, grupo, data_inicio, data_fim):
     if not url_api:
         raise ValueError("URL_API nao configurada no .env")
@@ -83,6 +87,7 @@ def consultar_grupo_usina_api(url_api, token_api, codigo_usina, grupo, data_inic
     return _post_json_sem_timeout(f"{url_api}/grupo-usina", payload)
 
 
+@desempenho
 def _get_json_sem_timeout(url):
     global cont_conexao
     cont_conexao += 1
@@ -98,6 +103,7 @@ def _get_json_sem_timeout(url):
         raise RuntimeError(f"Falha de conexao com API: {exc.reason}") from exc
 
 
+@desempenho
 def consultar_grupos_usina_api(url_api, codigo_usina):
     if not url_api:
         raise ValueError("URL_API nao configurada no .env")
@@ -106,6 +112,7 @@ def consultar_grupos_usina_api(url_api, codigo_usina):
     return _get_json_sem_timeout(f"{url_api}/grupos/{codigo_usina}")
 
 
+@desempenho
 def consultar_sensor_usina_api(url_api, token_api, codigo_usina, variavel, data_inicio, data_fim):
     if not url_api:
         raise ValueError("URL_API nao configurada no .env")

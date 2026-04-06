@@ -1,0 +1,15 @@
+<!-- GaugeGrid - Section 1: Kinetic Gauges -->
+{% from 'componentes/gauge_card.html' import gauge_card %}
+
+<div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+    {% for ug in usinas %}
+    {{ gauge_card(
+        name=ug.name,
+        status=ug.status,
+        percent=ug.percent,
+        power_mw=ug.power_mw,
+        variant=ug.variant,
+        color=ug.color
+    ) }}
+    {% endfor %}
+</div>

@@ -1,0 +1,22 @@
+<!-- Header / TopNavBar -->
+<header class="flex justify-between items-center w-full px-6 py-3 z-50 bg-[#0d141b] dark:bg-[#0d141b] font-['Space_Grotesk'] tracking-tight sticky top-0 shadow-none">
+    <div class="text-xl font-bold text-[#02aeef] uppercase tracking-wider">EngeSEP O&amp;M IA</div>
+    <nav class="hidden md:flex gap-8">
+        {% set nav_items = nav_items or [
+            {'label': 'Dashboard', 'href': '#', 'active': true},
+            {'label': 'Analytics', 'href': '#', 'active': false},
+            {'label': 'Alerts', 'href': '#', 'active': false},
+            {'label': 'Reports', 'href': '#', 'active': false}
+        ] %}
+        {% for item in nav_items %}
+        <a class="{{ 'text-[#02aeef] font-bold border-b-2 border-[#02aeef]' if item.active else 'text-[#a6abb4] hover:bg-[#1e272f] transition-colors duration-200' }} px-1 py-1 transition-transform active:scale-95" href="{{ item.href }}">{{ item.label }}</a>
+        {% endfor %}
+    </nav>
+    <div class="flex items-center gap-4">
+        {% for icon in ['notifications', 'settings', 'account_circle'] %}
+        <button class="p-2 text-[#a6abb4] hover:bg-[#1e272f] rounded-full transition-all">
+            <span class="material-symbols-outlined">{{ icon }}</span>
+        </button>
+        {% endfor %}
+    </div>
+</header>

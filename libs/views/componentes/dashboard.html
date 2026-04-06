@@ -1,0 +1,12 @@
+{% extends 'componentes/base.html' %}
+
+{% block content %}
+    <!-- Section 1: Gauge Grid -->
+    {% include 'componentes/gauge_grid.html' %}
+
+    <!-- Section 2: Geração Acumulada -->
+    {% include 'componentes/generation_chart.html' %}
+
+    <!-- Section 3: Nível dos Reservatórios -->
+    {% include 'componentes/reservoir_chart.html' %}
+{% endblock %}

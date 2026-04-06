@@ -27,6 +27,12 @@ from libs.controllers.api_controller import (
     consultar_grupos_usina_api,
     consultar_sensor_usina_api,
 )
+from libs.controllers.consultas import (
+    consultar_producao,
+    consultar_nivel,
+    normalizar_energia,
+    normalizar_nivel,
+)
 from libs.utils.decorators import desempenho, get_error
 
 load_dotenv()
@@ -140,88 +146,27 @@ def _obter_codigo_usina_api():
 def _consultar_producao_api(periodo="M", data_inicio=None, data_fim=None, codigo_usina=None):
     if not codigo_usina:
         codigo_usina = _obter_codigo_usina_api()
-    if not codigo_usina:
-        raise ValueError("Nao foi possivel resolver o codigo da usina da sessao")
-
-    agora = datetime.now()
-    if data_inicio is None:
-        delta = timedelta(days=180) if periodo == "M" else timedelta(days=30)
-        data_inicio = (agora - delta).strftime("%d/%m/%Y %H:%M")
-    elif hasattr(data_inicio, "strftime"):
-        data_inicio = data_inicio.strftime("%d/%m/%Y %H:%M")
-    if data_fim is None:
-        data_fim = agora.strftime("%d/%m/%Y %H:%M")
-    elif hasattr(data_fim, "strftime"):
-        data_fim = data_fim.strftime("%d/%m/%Y %H:%M")
-
-    return consultar_producao_acumulada_api(
-        url_api=URL_API,
-        token_api=API_TOKEN,
-        codigo_usina=codigo_usina,
+    return consultar_producao(
+        periodo=periodo,
         data_inicio=data_inicio,
         data_fim=data_fim,
-        periodo=periodo,
+        codigo_usina=codigo_usina,
     )
 
 
 def _consultar_nivel_api(data_inicio=None, data_fim=None, codigo_usina=None):
     if not codigo_usina:
         codigo_usina = _obter_codigo_usina_api()
-    if not codigo_usina:
-        raise ValueError("Nao foi possivel resolver o codigo da usina da sessao")
-
-    agora = datetime.now()
-    if data_inicio is None:
-        data_inicio = (agora - timedelta(days=30)).strftime("%d/%m/%Y %H:%M")
-    elif hasattr(data_inicio, "strftime"):
-        data_inicio = data_inicio.strftime("%d/%m/%Y %H:%M")
-    if data_fim is None:
-        data_fim = agora.strftime("%d/%m/%Y %H:%M")
-    elif hasattr(data_fim, "strftime"):
-        data_fim = data_fim.strftime("%d/%m/%Y %H:%M")
-
-    return consultar_grupo_usina_api(
-        url_api=URL_API,
-        token_api=API_TOKEN,
-        codigo_usina=codigo_usina,
-        grupo="hidraulica",
+    return consultar_nivel(
         data_inicio=data_inicio,
         data_fim=data_fim,
+        codigo_usina=codigo_usina,
     )
 
 
 def _normalizar_grafico_nivel_api(resposta_api):
     """Converte resposta de /grupo-usina (hidraulica) em DataFrame com indice datetime."""
-    dados = resposta_api.get("dados") or resposta_api.get("resultado") or []
-    if not isinstance(dados, list) or not dados:
-        return pd.DataFrame()
-
-    registros = []
-    for item in dados:
-        if not isinstance(item, dict):
-            continue
-        data_raw = item.get("data_hora") or item.get("data")
-        if not data_raw:
-            continue
-        dt = _parse_data_periodo(data_raw, "H")
-        if dt is None:
-            continue
-        registro = {k: v for k, v in item.items() if k not in ("data_hora", "data")}
-        registro["data_hora"] = dt
-        registros.append(registro)
-
-    if not registros:
-        return pd.DataFrame()
-
-    df = pd.DataFrame(registros).set_index("data_hora")
-    df.index = pd.to_datetime(df.index)
-    
-    for col in df.columns:
-        if df[col].dtype == object or df[col].dtype.name == 'string':
-            df[col] = df[col].astype(str).str.replace(',', '.', regex=False)
-        df[col] = pd.to_numeric(df[col], errors="coerce").round(2)
-
-    df = df.fillna(0.0)
+    df = normalizar_nivel(resposta_api)
     print(f"\n[LOG NIVEL] {len(df)} registros | colunas: {list(df.columns)}")
     print(df.head(5))
     print()
@@ -233,40 +178,7 @@ def _normalizar_grafico_energia_api(resposta_api, periodo="D"):
     Colunas de energia ficam com nome original da API (ex: 'UG-01 Energia Acumulada').
     O grafico usa rename_colunas() para padronizar para 'UG-XX (MWh)'.
     """
-    dados = resposta_api.get("resultado") or resposta_api.get("dados") or []
-    if not isinstance(dados, list) or not dados:
-        return pd.DataFrame()
-
-    registros = []
-    for item in dados:
-        if not isinstance(item, dict):
-            continue
-        data_raw = item.get("data") or item.get("periodo") or item.get("data_hora")
-        if not data_raw:
-            continue
-        dt = _parse_data_periodo(data_raw, periodo)
-        if dt is None:
-            continue
-        registro = {
-            k.removeprefix("prod_"): v
-            for k, v in item.items()
-            if k not in ("data", "periodo", "data_hora")
-        }
-        registro["data_hora"] = dt
-        registros.append(registro)
-
-    if not registros:
-        return pd.DataFrame()
-
-    df = pd.DataFrame(registros).set_index("data_hora")
-    df.index = pd.to_datetime(df.index)
-
-    for col in df.columns:
-        if df[col].dtype == object or df[col].dtype.name == 'string':
-            df[col] = df[col].astype(str).str.replace(',', '.', regex=False)
-        df[col] = pd.to_numeric(df[col], errors="coerce").round(2)
-
-    df = df.fillna(0.0)
+    df = normalizar_energia(resposta_api, periodo=periodo)
     print(f"\n[LOG ENERGIA] {len(df)} registros | colunas: {list(df.columns)}")
     print(df.head(5))
     print()

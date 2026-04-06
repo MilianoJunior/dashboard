@@ -1,0 +1,15 @@
+<!-- BottomNav - Mobile Navigation -->
+<footer class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-2 bg-[#090f15] dark:bg-[#090f15] border-t border-[#1e272f] shadow-[0_-4px_20px_rgba(0,0,0,0.5)] z-50">
+    {% set bottom_items = bottom_items or [
+        {'icon': 'dashboard', 'label': 'Dashboard', 'active': true},
+        {'icon': 'insights', 'label': 'Analytics', 'active': false},
+        {'icon': 'warning', 'label': 'Alerts', 'active': false},
+        {'icon': 'description', 'label': 'Reports', 'active': false}
+    ] %}
+    {% for item in bottom_items %}
+    <div class="flex flex-col items-center justify-center {{ 'text-[#02aeef] bg-[#02aeef]/10 rounded-xl' if item.active else 'text-[#a6abb4] hover:text-white' }} p-2 active:scale-90 transition-transform transition-all">
+        <span class="material-symbols-outlined">{{ item.icon }}</span>
+        <span class="font-['Inter'] text-[10px] font-medium uppercase mt-1">{{ item.label }}</span>
+    </div>
+    {% endfor %}
+</footer>

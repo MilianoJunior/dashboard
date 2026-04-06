@@ -1,0 +1,57 @@
+<!-- ReservoirSection - Section 3: Nível dos Reservatórios -->
+<div class="bg-surface-container-low rounded p-6 shadow-xl border border-outline-variant/10">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h3 class="text-headline-sm font-headline font-bold text-on-surface flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary-dim">waves</span>
+                NÍVEL DOS RESERVATÓRIOS
+            </h3>
+        </div>
+        <div class="flex gap-4">
+            {% for res in nivel_series %}
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-0.5" style="background-color: {{ res.color }};"></span>
+                <span class="text-[10px] font-bold text-on-surface-variant">{{ res.name }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="flex">
+        <!-- Eixo Y Dinâmico (Valores) -->
+        <div class="flex flex-col justify-between h-[250px] pr-3 text-[10px] text-on-surface-variant font-mono text-right select-none">
+            {% for y_val in nivel_y_axis %}
+            <span class="transform -translate-y-1/2 leading-none relative z-10">{{ y_val | replace('m', '') }}</span>
+            {% endfor %}
+        </div>
+
+        <div class="relative h-[250px] w-full border-l border-b border-outline-variant/20 flex-1 mb-6">
+            <!-- SVG Line Chart -->
+            <svg class="w-full h-full preserve-3d overflow-visible" preserveAspectRatio="none" viewBox="0 0 1000 250">
+                <!-- Grid Lines Horizontais (5 faixas acompanhando os labels Y) -->
+                {% for y_pos in [0, 62.5, 125, 187.5, 250] %}
+                <line stroke="#ffffff" opacity="0.05" stroke-width="1" x1="0" x2="1000" y1="{{ y_pos }}" y2="{{ y_pos }}"></line>
+                {% endfor %}
+
+                <!-- Spill Level Line -->
+                <line stroke="#ff716c" stroke-dasharray="8 4" stroke-width="2" x1="0" x2="1000" y1="{{ spill_y }}" y2="{{ spill_y }}"></line>
+                
+                <!-- Reservoir Lines -->
+                {% for res in nivel_series %}
+                <path d="{{ res.path }}" fill="none" stroke="{{ res.color }}" stroke-linejoin="round" stroke-linecap="round" stroke-width="1.5"></path>
+                {% endfor %}
+            </svg>
+
+            <!-- Spill Level Label -->
+            <div class="absolute top-2 right-2 flex items-center gap-2">
+                <span class="text-[9px] font-bold text-error uppercase bg-error/10 px-2 py-0.5 rounded">Vertimento: {{ nivel_vertimento_label }}</span>
+            </div>
+
+            <!-- X-Axis markers -->
+            <div class="absolute -bottom-6 left-0 right-0 flex justify-between text-[9px] text-on-surface-variant font-mono uppercase px-2 w-full">
+                {% for label in nivel_labels %}
+                <span>{{ label }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
