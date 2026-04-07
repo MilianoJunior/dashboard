@@ -17,8 +17,9 @@
                 <span class="text-on-surface-variant text-xs">até</span>
                 <input class="bg-transparent border-none text-xs text-on-surface focus:ring-0 p-0 font-medium" type="date" name="end_date" value="{{ end_date }}" onchange="this.form.submit()"/>
             </div>
-            <!-- Campo hidden para o período selecionado -->
+            <!-- Campos hidden para preservar estado -->
             <input type="hidden" name="periodo" id="periodoInput" value="{{ active_period }}"/>
+            <input type="hidden" name="usina" value="{{ codigo_usina }}"/>
             <div class="flex items-center gap-1">
                 {% for period in ['HORA', 'DIÁRIO', 'MENSAL'] %}
                 <button type="button"

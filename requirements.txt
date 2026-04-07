@@ -39,6 +39,9 @@ beautifulsoup4==4.12.3
 # HTTP/Requests
 requests==2.31.0
 
+# WebSocket
+flask-socketio==5.4.1
+
 # Imagens
 Pillow==10.0.0
 

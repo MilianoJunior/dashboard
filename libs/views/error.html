@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Erro {{ error_code }}</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #090f15;
+            color: #e6ebf4;
+        }
+        main {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 48px 24px;
+        }
+        .card {
+            background: #131a22;
+            border: 1px solid #424850;
+            border-radius: 12px;
+            padding: 24px;
+        }
+        h1 {
+            margin-top: 0;
+            color: #54c3ff;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #0d141b;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="card">
+            <h1>Erro {{ error_code }}</h1>
+            <p>{{ error_msg }}</p>
+            {% if debug_trace %}
+            <h2>Debug Trace</h2>
+            <pre>{{ debug_trace }}</pre>
+            {% endif %}
+        </div>
+    </main>
+</body>
+</html>

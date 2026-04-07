@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 from dotenv import load_dotenv
 
-from libs.controllers.api_controller import (
+from libs.models.api_model import (
     consultar_producao_acumulada_api,
     consultar_grupo_usina_api,
 )
@@ -175,7 +175,7 @@ def normalizar_energia(resposta_api, periodo="D"):
     # Excluir coluna se tiver >= 30% de Nones (exige 70% de dados não-nulos)
     limite = int(len(df) * 0.7)
     df = df.dropna(thresh=limite, axis=1)
-    
+
     # Preencher restantes com o anterior, e preencher qualquer sobra inicial com 0.0
     df = df.ffill().fillna(0.0)
     return df
@@ -218,8 +218,7 @@ def normalizar_nivel(resposta_api):
     # Excluir coluna se tiver >= 30% de Nones (exige 70% de dados não-nulos)
     limite = int(len(df) * 0.7)
     df = df.dropna(thresh=limite, axis=1)
-    
+
     # Preencher restantes com o anterior, e preencher qualquer sobra inicial com 0.0
     df = df.ffill().fillna(0.0)
     return df
-

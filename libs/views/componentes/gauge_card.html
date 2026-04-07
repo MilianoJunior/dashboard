@@ -1,5 +1,5 @@
 <!-- GaugeCard Macro — usa cor da paleta UG -->
-{% macro gauge_card(name, status, percent, power_mw, variant='normal', color='#5BC0EB') %}
+{% macro gauge_card(name, status, percent, power_kw=0, pot_max_kw=0, variant='normal', color='#5BC0EB') %}
 {% set offset = 141.37 * (1 - percent / 100) %}
 {% set status_colors = {
     'normal': {'text_class': '', 'value_class': ''},
@@ -7,15 +7,15 @@
     'critical': {'text_class': 'text-error', 'value_class': 'text-error'}
 } %}
 {% set sc = status_colors[variant] %}
-<div class="bg-surface-container-highest p-4 rounded border-l-2 shadow-sm flex flex-col items-center justify-center" style="border-left-color: {{ color }};">
-    <div class="text-[10px] uppercase font-bold tracking-widest mb-2 {{ sc.text_class }}" {% if not sc.text_class %}style="color: {{ color }};"{% endif %}>{{ name }} • {{ status }}</div>
+<div id="gauge-{{ name }}" class="bg-surface-container-highest p-4 rounded border-l-2 shadow-sm flex flex-col items-center justify-center" style="border-left-color: {{ color }};">
+    <div class="gauge-label text-[10px] uppercase font-bold tracking-widest mb-2 {{ sc.text_class }}" {% if not sc.text_class %}style="color: {{ color }};"{% endif %}>{{ name }} • {{ status }}</div>
     <div class="relative w-32 h-16 overflow-hidden">
         <svg class="w-32 h-32 absolute top-0 left-0" viewBox="0 0 100 100">
             <circle class="text-surface-variant" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="141.37" stroke-dashoffset="0" stroke-width="8" transform="rotate(180 50 50)"></circle>
-            <circle cx="50" cy="50" fill="none" r="45" stroke="{{ color }}" stroke-dasharray="141.37" stroke-dashoffset="{{ offset }}" stroke-width="8" style="filter: drop-shadow(0 0 4px {{ color }});" transform="rotate(180 50 50)"></circle>
+            <circle class="gauge-arc" cx="50" cy="50" fill="none" r="45" stroke="{{ color }}" stroke-dasharray="141.37" stroke-dashoffset="{{ offset }}" stroke-width="8" style="filter: drop-shadow(0 0 4px {{ color }}); transition: stroke-dashoffset 0.8s ease;" transform="rotate(180 50 50)"></circle>
         </svg>
-        <div class="absolute bottom-0 w-full text-center font-headline text-xl font-bold {{ sc.value_class }}" {% if not sc.value_class %}style="color: {{ color }};"{% endif %}>{{ percent }}%</div>
+        <div class="gauge-percent absolute bottom-0 w-full text-center font-headline text-xl font-bold {{ sc.value_class }}" {% if not sc.value_class %}style="color: {{ color }};"{% endif %}>{{ percent }}%</div>
     </div>
-    <div class="text-[10px] text-on-surface-variant mt-1">{{ power_mw }} MW</div>
+    <div class="gauge-power text-[10px] text-on-surface-variant mt-1">{{ power_kw }} / {{ pot_max_kw }} kW</div>
 </div>
 {% endmacro %}

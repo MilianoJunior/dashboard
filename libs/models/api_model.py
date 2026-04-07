@@ -29,9 +29,6 @@ def _montar_payload_producao_acumulada(codigo_usina, data_inicio, data_fim, peri
 def _post_json_sem_timeout(url, payload):
     global cont_conexao
     cont_conexao += 1
-    print(' ' *10)
-    print(f'Conexao {cont_conexao}')
-    print(' ' *10)
     req = request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
@@ -39,7 +36,7 @@ def _post_json_sem_timeout(url, payload):
         method="POST",
     )
     try:
-        
+
         with request.urlopen(req) as response:
             return json.loads(response.read().decode("utf-8"))
     except error.HTTPError as exc:
@@ -91,7 +88,6 @@ def consultar_grupo_usina_api(url_api, token_api, codigo_usina, grupo, data_inic
 def _get_json_sem_timeout(url):
     global cont_conexao
     cont_conexao += 1
-    print(f'Conexao GET {cont_conexao}')
     req = request.Request(url, method="GET")
     try:
         with request.urlopen(req) as response:

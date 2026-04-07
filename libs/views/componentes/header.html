@@ -1,7 +1,7 @@
 <!-- Header / TopNavBar -->
 <header class="flex justify-between items-center w-full px-6 py-3 z-50 bg-[#0d141b] dark:bg-[#0d141b] font-['Space_Grotesk'] tracking-tight sticky top-0 shadow-none">
     <div class="text-xl font-bold text-[#02aeef] uppercase tracking-wider">EngeSEP O&amp;M IA</div>
-    <nav class="hidden md:flex gap-8">
+    <nav class="hidden md:flex gap-8 items-center">
         {% set nav_items = nav_items or [
             {'label': 'Dashboard', 'href': '#', 'active': true},
             {'label': 'Analytics', 'href': '#', 'active': false},
@@ -11,6 +11,14 @@
         {% for item in nav_items %}
         <a class="{{ 'text-[#02aeef] font-bold border-b-2 border-[#02aeef]' if item.active else 'text-[#a6abb4] hover:bg-[#1e272f] transition-colors duration-200' }} px-1 py-1 transition-transform active:scale-95" href="{{ item.href }}">{{ item.label }}</a>
         {% endfor %}
+        <div class="border-l border-outline-variant/30 pl-4 ml-2">
+            <select id="usinaSelect"
+                class="bg-[#131a22] border border-outline-variant/30 text-[#e6ebf4] text-xs font-medium rounded px-3 py-1.5 focus:ring-1 focus:ring-[#02aeef] focus:border-[#02aeef] cursor-pointer">
+                {% for usina in usinas_disponiveis %}
+                <option value="{{ usina }}" {{ 'selected' if usina == codigo_usina }}>{{ usina }}</option>
+                {% endfor %}
+            </select>
+        </div>
     </nav>
     <div class="flex items-center gap-4">
         {% for icon in ['notifications', 'settings', 'account_circle'] %}
@@ -20,3 +28,23 @@
         {% endfor %}
     </div>
 </header>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var select = document.getElementById('usinaSelect');
+    if (!select) return;
+
+    select.addEventListener('change', function () {
+        var usinaSelecionada = this.value;
+        var url = new URL(window.location.href);
+
+        url.searchParams.set('usina', usinaSelecionada);
+
+        // Resetar datas ao trocar de usina para carregar o período padrão
+        url.searchParams.delete('start_date');
+        url.searchParams.delete('end_date');
+
+        window.location.href = url.toString();
+    });
+});
+</script>

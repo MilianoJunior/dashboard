@@ -1,15 +1,89 @@
 <!-- GaugeGrid - Section 1: Kinetic Gauges -->
 {% from 'componentes/gauge_card.html' import gauge_card %}
 
-<div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+<div id="gaugeGrid" class="grid grid-cols-2 md:grid-cols-5 gap-4">
     {% for ug in usinas %}
     {{ gauge_card(
         name=ug.name,
         status=ug.status,
         percent=ug.percent,
-        power_mw=ug.power_mw,
+        power_kw=ug.power_kw,
+        pot_max_kw=ug.pot_max_kw,
         variant=ug.variant,
         color=ug.color
     ) }}
     {% endfor %}
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+(function () {
+    var socket = io();
+
+    // Ao conectar, informar qual usina está selecionada
+    socket.on('connect', function () {
+        console.log('[SOCKET] Conectado ao servidor');
+        var select = document.getElementById('usinaSelect');
+        if (select) {
+            socket.emit('selecionar_usina', { usina: select.value });
+        }
+    });
+
+    // Quando o usuário troca a usina no select, notificar o servidor via socket
+    var select = document.getElementById('usinaSelect');
+    if (select) {
+        select.addEventListener('change', function () {
+            socket.emit('selecionar_usina', { usina: this.value });
+        });
+    }
+
+    socket.on('atualizar_gauges', function (data) {
+        var usinas = data.usinas;
+        var grid = document.getElementById('gaugeGrid');
+        console.log('[SOCKET] Gauges atualizados -', usinas.length, 'UGs -', data.codigo_usina);
+
+        // Reconstruir os cards dinamicamente (o número de UGs muda por usina)
+        grid.innerHTML = '';
+        usinas.forEach(function (ug, idx) {
+            var offset = (141.37 * (1 - ug.percent / 100)).toFixed(2);
+
+            var labelClass = '';
+            var labelStyle = '';
+            var pctClass = '';
+            var pctStyle = '';
+            if (ug.variant === 'warning') {
+                labelClass = 'text-tertiary';
+                pctClass = 'text-tertiary';
+            } else if (ug.variant === 'critical') {
+                labelClass = 'text-error';
+                pctClass = 'text-error';
+            } else {
+                labelStyle = 'color:' + ug.color + ';';
+                pctStyle = 'color:' + ug.color + ';';
+            }
+
+            var card = document.createElement('div');
+            card.id = 'gauge-' + ug.name;
+            card.className = 'bg-surface-container-highest p-4 rounded border-l-2 shadow-sm flex flex-col items-center justify-center';
+            card.style.borderLeftColor = ug.color;
+
+            card.innerHTML =
+                '<div class="gauge-label text-[10px] uppercase font-bold tracking-widest mb-2 ' + labelClass + '" style="' + labelStyle + '">' + ug.name + ' \u2022 ' + ug.status + '</div>' +
+                '<div class="relative w-32 h-16 overflow-hidden">' +
+                    '<svg class="w-32 h-32 absolute top-0 left-0" viewBox="0 0 100 100">' +
+                        '<circle class="text-surface-variant" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="141.37" stroke-dashoffset="0" stroke-width="8" transform="rotate(180 50 50)"></circle>' +
+                        '<circle class="gauge-arc" cx="50" cy="50" fill="none" r="45" stroke="' + ug.color + '" stroke-dasharray="141.37" stroke-dashoffset="' + offset + '" stroke-width="8" style="filter:drop-shadow(0 0 4px ' + ug.color + ');transition:stroke-dashoffset 0.8s ease;" transform="rotate(180 50 50)"></circle>' +
+                    '</svg>' +
+                    '<div class="gauge-percent absolute bottom-0 w-full text-center font-headline text-xl font-bold ' + pctClass + '" style="' + pctStyle + '">' + ug.percent + '%</div>' +
+                '</div>' +
+                '<div class="gauge-power text-[10px] text-on-surface-variant mt-1">' + ug.power_kw + ' / ' + ug.pot_max_kw + ' kW</div>';
+
+            grid.appendChild(card);
+        });
+    });
+
+    socket.on('disconnect', function () {
+        console.log('[SOCKET] Desconectado do servidor');
+    });
+})();
+</script>

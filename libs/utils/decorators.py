@@ -95,11 +95,12 @@ def _obter_contexto_execucao():
     return "fora-flask"
 
 
-def _log_desempenho(evento, chamada_id, nivel, nome_completo, contexto, detalhe):
+def _log_desempenho(evento, chamada_id, nivel, nome_completo, contexto, detalhe, detalhe2):
     identacao = "  " * nivel
+    detalhe2 = f" | {detalhe2}" if detalhe2 else ""
     print(
         f"[{_agora_log()}] [PERF {chamada_id:04d}] {identacao}{evento} "
-        f"{nome_completo} | ctx={contexto} | {detalhe}",
+        f"{nome_completo} {detalhe2}",
         flush=True,
     )
 
@@ -113,7 +114,7 @@ def desempenho(funcao):
         contexto = _obter_contexto_execucao()
         args_resumidos = _resumir_argumentos(funcao, *args, **kwargs)
 
-        _log_desempenho("->", chamada_id, nivel_atual, nome_completo, contexto, f"args: {args_resumidos}")
+        _log_desempenho("->", chamada_id, nivel_atual, nome_completo, contexto, f"args: {args_resumidos}",None)
 
         token_nivel = _NIVEL_CHAMADA.set(nivel_atual + 1)
         inicio = time.perf_counter()
@@ -129,6 +130,7 @@ def desempenho(funcao):
                 nome_completo,
                 contexto,
                 f"tempo={tempo_total:.4f}s | retorno: {retorno_resumido}",
+                f"tempo={tempo_total:.4f}s",
             )
             return resultado
         except Exception as erro:
