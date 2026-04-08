@@ -1,9 +1,29 @@
+# -------------------------------------------------------------------
+# FLUXO DO MÓDULO
+# 1. _carregar_config   -> Carrega o JSON de dispositivos
+# 2. _ler_dados_ug      -> Lê potência e status da UG via API Modbus usando ConexaoAPI
+# 3. _ler_nivel_montante-> Lê nível montante via API Modbus usando ConexaoAPI
+# 4. _ler_gauges_usina  -> Monta os gauges RT de uma usina em paralelo
+# 5. ConexaoSocketIO    -> Instância que gerencia usina_atual e emissão dos dados
+# 6. Event handlers     -> Funções globais que interagem com ConexaoSocketIO
+# -------------------------------------------------------------------
+
+import hashlib
+import inspect
 import json
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib import error, request as urllib_request
 
 from flask_socketio import SocketIO
+
+from libs.models.gauge_rt import (
+    NIVEL_MONTANTE_LABEL,
+    montar_registros_gauge,
+    obter_registro_nivel_montante,
+    resolver_status_ug,
+)
 
 socketio = SocketIO(async_mode="threading")
 
@@ -14,8 +34,159 @@ _CONFIG_PATH = os.path.join(
 )
 _config_cache = None
 
-# Usina selecionada (compartilhada entre clientes)
-_usina_atual = "PCH-PIRA"
+
+class ConexaoAPI:
+    """Responsável exclusivo pelas transações HTTP com a API Modbus"""
+    
+    _observabilidade_historico = []
+    _MAX_HISTORICO = 200
+    _JANELA_SEGUNDOS = 15
+    
+    def __init__(self):
+        self.contador = 0
+        self.erro = 0
+        
+    def _registrar_observabilidade(self, ip, port, tipo, body):
+        try:
+            agora = time.time()
+            conexao_info = body.get("conexao", {})
+            clp_ip = conexao_info.get("ip", ip)
+            clp_port = conexao_info.get("port", port)
+            clp_id = f"{clp_ip}:{clp_port}"
+            
+            registros = body.get("registers", {})
+            reg_str = json.dumps(registros, sort_keys=True).encode("utf-8")
+            assinatura = hashlib.md5(reg_str).hexdigest()
+            
+            origem = "desconhecida"
+            try:
+                frame = inspect.currentframe()
+                if frame and frame.f_back and frame.f_back.f_back:
+                    origem = frame.f_back.f_back.f_code.co_name
+            except Exception:
+                pass
+            
+            cls = ConexaoAPI
+            cls._observabilidade_historico = [
+                h for h in cls._observabilidade_historico 
+                if (agora - h["timestamp"]) <= cls._JANELA_SEGUNDOS
+            ][-cls._MAX_HISTORICO:]
+            
+            historico_clp = [h for h in cls._observabilidade_historico if h["clp_id"] == clp_id]
+            
+            chamadas_15s = len(historico_clp) + 1
+            repetida = any(h["assinatura"] == assinatura for h in historico_clp)
+            
+            intervalo_medio = 0.0
+            if historico_clp:
+                if len(historico_clp) > 1:
+                    delta_total = historico_clp[-1]["timestamp"] - historico_clp[0]["timestamp"]
+                    intervalo_medio = delta_total / (len(historico_clp) - 1)
+                else:
+                    intervalo_medio = agora - historico_clp[0]["timestamp"]
+                    
+            print(f"[OBS] CLP={clp_id} | chamadas_15s={chamadas_15s} | intervalo_medio={intervalo_medio:.1f}s | repetida={repetida} | origem={origem}", flush=True)
+
+            cls._observabilidade_historico.append({
+                "timestamp": agora,
+                "clp_id": clp_id,
+                "tipo": tipo,
+                "assinatura": assinatura,
+                "origem": origem
+            })
+        except Exception as e:
+            print(f"[OBS] Falha interna ao registrar log: {e}", flush=True)
+
+    def read_clp(self, ip, port, body, tipo="leituras", timeout=5, log_context="API"):
+        # self._registrar_observabilidade(ip, port, tipo, body)
+        self.contador += 1
+        url = f"http://{ip}:{port}/readCLP/{tipo}"
+        req = urllib_request.Request(
+            url,
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        # registros = json.dumps(body.get('registers', {}), indent=4, ensure_ascii=False)
+        registros = body.get('registers', {}).keys()
+        start = time.time()
+        print(' ')
+        print(f" {self.contador} [DEBUG] read_clp: body={body.get('conexao', {}).get('ip', ip)}:{body.get('conexao', {}).get('port', port)}")
+        print(list(registros))
+        try:
+            with urllib_request.urlopen(req, timeout=timeout) as resp:
+                resultado = json.loads(resp.read().decode("utf-8"))
+                if resultado.get("status") == "success":
+                    resp = resultado.get("data", {})
+                    end = time.time()
+                    print(f"resp={resp} | Tempo: {round(end - start, 3)}")
+                    return resp
+                else:
+                    msg = resultado.get("message", "erro desconhecido")
+                    print(f"[SOCKET] {log_context} -> API erro: {msg}", flush=True)
+        except error.URLError as e:
+            print(f"[SOCKET] {log_context} -> Falha conexão: {e.reason}", flush=True)
+            self.erro += 1
+        except Exception as e:
+            print(f"[SOCKET] {log_context} -> Erro: {e}", flush=True)
+            self.erro += 1
+        # finally:
+        #     self.diagnostic_connections(ip, port, timeout, log_context)
+        #     self.close_connections(ip, port, timeout, log_context)
+        if self.erro > 0:
+            print('###############')  
+            print(f'Quantidades de erros: {self.erro}')
+            print('###############')
+            
+        return None
+            
+    def close_connections(self, ip, port, timeout=5, log_context="API"):
+        url = f"http://{ip}:{port}/closeConnections"
+        req = urllib_request.Request(
+            url,
+            method="POST",
+        )
+        try:
+            with urllib_request.urlopen(req, timeout=timeout) as resp:
+                resultado = json.loads(resp.read().decode("utf-8"))
+                if resultado.get("status") == "success":
+                    print(f" [DEBUG] close_connections: resp={resultado}")
+                else:
+                    msg = resultado.get("message", "erro desconhecido")
+                    print(f"[SOCKET] {log_context} -> API erro close: {msg}", flush=True)
+        except error.URLError as e:
+            print(f"[SOCKET] {log_context} -> Falha close: {e.reason}", flush=True)
+        except Exception as e:
+            print(f"[SOCKET] {log_context} -> Erro close: {e}", flush=True)
+            
+        return False
+
+    def diagnostic_connections(self, ip, port, timeout=5, log_context="API"):
+        url = f"http://{ip}:{port}/diagnostics"
+        req = urllib_request.Request(
+            url,
+            method="GET",
+        )
+        try:
+            with urllib_request.urlopen(req, timeout=timeout) as resp:
+                resultado = json.loads(resp.read().decode("utf-8"))
+                if resultado.get("status") == "success":
+                    print(f" [DEBUG] diagnostic_connections: resp={resultado}")
+                else:
+                    msg = resultado.get("message", "erro desconhecido")
+                    print(f"[SOCKET] {log_context} -> API erro close: {msg}", flush=True)
+        except error.URLError as e:
+            print(f"[SOCKET] {log_context} -> Falha close: {e.reason}", flush=True)
+        except Exception as e:
+            print(f"[SOCKET] {log_context} -> Erro close: {e}", flush=True)
+            
+        return False
+
+    
+
+
+# Singleton global de gerência HTTP
+api_manager = ConexaoAPI()
 
 
 def _carregar_config():
@@ -26,119 +197,144 @@ def _carregar_config():
     return _config_cache
 
 
-def _ler_potencia_ug(api_ip, api_port, conexao, registro_potencia, nome_ug):
-    """POST na API Modbus para ler Potência Ativa de uma UG.
-    Retorna o valor lido ou None em caso de erro.
+def _ler_dados_ug(api_ip, api_port, codigo_usina, conexao, registros_gauge, nome_ug):
+    """POST na API Modbus para ler potência e status de uma UG.
+    Retorna o payload `data` da API ou None em caso de erro.
     """
-    url = f"http://{api_ip}:{api_port}/readCLP/leituras"
     body = {
         "conexao": {
             "ip": conexao["ip"],
             "port": conexao["port"],
             "timeout": conexao.get("timeout", 10.0),
         },
+        "registers": registros_gauge,
+    }
+    
+    leituras_rt = api_manager.read_clp(api_ip, api_port, body, tipo="leituras", timeout=5, log_context=nome_ug)
+    
+    if leituras_rt is not None:
+        valor = leituras_rt.get("Potência Ativa")
+        status = resolver_status_ug(leituras_rt, codigo_usina=codigo_usina)
+        leituras_log = json.dumps(leituras_rt, ensure_ascii=False, sort_keys=True)
+        # print(
+        #     f"[SOCKET] {codigo_usina} | {nome_ug} -> Leituras RT = {leituras_log} | "
+        #     f"Potência Ativa = {valor} | Status = {status}",
+        #     flush=True,
+        # )
+        return leituras_rt
+
+    return None
+
+
+def _ler_nivel_montante(api_ip, api_port, codigo_usina, usina_cfg):
+    leitura_nivel = obter_registro_nivel_montante(usina_cfg)
+    if leitura_nivel is None:
+        print(f"[SOCKET] {codigo_usina} -> Nível Montante não configurado", flush=True)
+        return None
+
+    body = {
+        "conexao": {
+            "ip": leitura_nivel["conexao"]["ip"],
+            "port": leitura_nivel["conexao"]["port"],
+            "timeout": leitura_nivel["conexao"].get("timeout", 10.0),
+        },
         "registers": {
-            "Potência Ativa": registro_potencia,
+            NIVEL_MONTANTE_LABEL: leitura_nivel["registro"],
         },
     }
-    req = urllib_request.Request(
-        url,
-        data=json.dumps(body).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urllib_request.urlopen(req, timeout=5) as resp:
-            resultado = json.loads(resp.read().decode("utf-8"))
-            if resultado.get("status") == "success":
-                valor = resultado.get("data", {}).get("Potência Ativa")
-                print(
-                    f"[SOCKET] {nome_ug} -> Potência Ativa = {valor}",
-                    flush=True,
-                )
-                return valor
-            else:
-                msg = resultado.get("message", "erro desconhecido")
-                print(f"[SOCKET] {nome_ug} -> API erro: {msg}", flush=True)
-    except error.URLError as e:
-        print(f"[SOCKET] {nome_ug} -> Falha conexão: {e.reason}", flush=True)
-    except Exception as e:
-        print(f"[SOCKET] {nome_ug} -> Erro: {e}", flush=True)
+    
+    data = api_manager.read_clp(api_ip, api_port, body, tipo="leituras", timeout=5, log_context=codigo_usina)
+    
+    if data is not None:
+        nivel = data.get(NIVEL_MONTANTE_LABEL)
+        # print(
+        #     f"[SOCKET] {codigo_usina} | {leitura_nivel['nome']} -> "
+        #     f"Nível Montante = {nivel}",
+        #     flush=True,
+        # )
+        return nivel
+
     return None
 
 
 def _ler_gauges_usina(codigo_usina):
-    """Lê Potência Ativa de cada UG da usina via API Modbus (paralelo)."""
+    """Lê potência e status de cada UG elegível da usina via API Modbus."""
     config = _carregar_config()
     chave = codigo_usina.replace("-", " ")
     usina_cfg = config.get(chave)
     if not usina_cfg:
         print(f"[SOCKET] Usina '{chave}' não encontrada no config", flush=True)
-        return []
+        return [], {
+            "nivel_montante": None,
+            "total_power_kw": 0.0,
+            "percent_total": 0,
+            "pot_max_total_kw": 0.0,
+        }
 
     api_ip = usina_cfg["ip"]
     api_port = usina_cfg["port"]
     dispositivos = usina_cfg.get("dispositivos", {})
 
-    # Filtrar apenas dispositivos que possuem "Potência Ativa"
+    # Filtrar apenas dispositivos que possuem potência e todas as labels de status.
     ugs_para_ler = []
     for nome_disp, disp_cfg in dispositivos.items():
-        leituras = disp_cfg.get("leituras", {})
-        potencia_reg = leituras.get("Potência Ativa")
-        if potencia_reg is None:
+        registros_gauge = montar_registros_gauge(disp_cfg)
+        if registros_gauge is None:
             continue
         pot_max_kw = disp_cfg.get("caracteristicas", {}).get("potência máxima", 1)
         conexao = disp_cfg.get("conexao", {})
         ugs_para_ler.append({
             "nome": nome_disp,
             "conexao": conexao,
-            "registro": potencia_reg,
+            "registros": registros_gauge,
             "pot_max_kw": pot_max_kw,
         })
 
     if not ugs_para_ler:
-        print(f"[SOCKET] Nenhuma UG com Potência Ativa em '{chave}'", flush=True)
-        return []
-
-    # Ler todas as UGs em paralelo (cada leitura pode levar até 5s)
-    resultados = {}
-    with ThreadPoolExecutor(max_workers=len(ugs_para_ler)) as executor:
-        futures = {
-            executor.submit(
-                _ler_potencia_ug,
-                api_ip,
-                api_port,
-                ug["conexao"],
-                ug["registro"],
-                ug["nome"],
-            ): ug
-            for ug in ugs_para_ler
+        print(f"[SOCKET] Nenhuma UG elegível para gauge em '{chave}'", flush=True)
+        return [], {
+            "nivel_montante": None,
+            "total_power_kw": 0.0,
+            "percent_total": 0,
+            "pot_max_total_kw": 0.0,
         }
-        for future in as_completed(futures):
-            ug = futures[future]
-            resultados[ug["nome"]] = future.result()
+
+    # Ler todas as UGs de forma sequencial para evitar timeouts e sobrecarga na API
+    resultados = {}
+    for ug in ugs_para_ler:
+        resultado = _ler_dados_ug(
+            api_ip,
+            api_port,
+            codigo_usina,
+            ug["conexao"],
+            ug["registros"],
+            ug["nome"],
+        )
+        resultados[ug["nome"]] = resultado
+
+    
+    # api_manager.diagnostic_connections(api_ip, api_port)
+    # api_manager.close_connections(api_ip, api_port)
 
     # Montar lista de gauges na ordem original
     usinas = []
     for idx, ug in enumerate(ugs_para_ler):
-        valor = resultados.get(ug["nome"])
+        leituras_rt = resultados.get(ug["nome"])
         pot_max = ug["pot_max_kw"]
 
-        if valor is not None:
-            power_kw = abs(float(valor))
-            percent = min(round(power_kw / pot_max * 100), 100) if pot_max > 0 else 0
+        if leituras_rt is not None:
+            valor = leituras_rt.get("Potência Ativa")
+            status = resolver_status_ug(leituras_rt, codigo_usina=codigo_usina)
         else:
-            power_kw = 0.0
-            percent = 0
+            valor = None
+            status = "Offline"
 
-        if valor is None:
-            status, variant = "Offline", "critical"
-        elif percent >= 98:
-            status, variant = "Crítico", "critical"
-        elif percent >= 90:
-            status, variant = "Atenção", "warning"
-        else:
-            status, variant = "Ativa", "normal"
+        try:
+            power_kw = abs(float(valor)) if valor is not None else 0.0
+        except (TypeError, ValueError):
+            power_kw = 0.0
+
+        percent = min(round(power_kw / pot_max * 100), 100) if pot_max > 0 else 0
 
         usinas.append({
             "name": ug["nome"],
@@ -146,50 +342,171 @@ def _ler_gauges_usina(codigo_usina):
             "percent": percent,
             "power_kw": round(power_kw, 1),
             "pot_max_kw": pot_max,
-            "variant": variant,
             "color": UG_COLORS[idx % len(UG_COLORS)],
         })
 
-    return usinas
+    total_power_kw = round(sum(ug["power_kw"] for ug in usinas), 1)
+    pot_max_total_kw = round(sum(ug["pot_max_kw"] for ug in usinas), 1)
+    percent_total = (
+        min(round(total_power_kw / pot_max_total_kw * 100), 100)
+        if pot_max_total_kw > 0
+        else 0
+    )
+    nivel_montante = _ler_nivel_montante(
+        api_ip=api_ip,
+        api_port=api_port,
+        codigo_usina=codigo_usina,
+        usina_cfg=usina_cfg,
+    )
+
+    resumo_rt = {
+        "nivel_montante": round(float(nivel_montante), 2) if nivel_montante is not None else None,
+        "total_power_kw": total_power_kw,
+        "percent_total": percent_total,
+        "pot_max_total_kw": pot_max_total_kw,
+    }
+
+    return usinas, resumo_rt
 
 
-def _emitir_gauges():
-    """Lê dados reais e envia para todos os clientes."""
-    dados = _ler_gauges_usina(_usina_atual)
-    socketio.emit("atualizar_gauges", {"usinas": dados, "codigo_usina": _usina_atual})
+class ConexaoSocketIO:
+    """Responsável por gerenciar o estado e eventos do WebSocket."""
+    
+    def __init__(self, sio):
+        self.sio = sio
+        self.usina_atual = "PCH-PIRA"
+        self.contador = 0
+        self.tempo = time.time()
+
+    def emitir_gauges(self):
+        """Lê dados reais e envia para todos os clientes."""
+        self.contador += 1
+        tempo_atual = time.time()
+        print(' ')
+        print('-------------------------------------------------------------')
+        print(f" Ciclo: {self.contador} Tempo: {tempo_atual - self.tempo}")
+        if tempo_atual - self.tempo > 15:
+            self.tempo = tempo_atual
+            usinas, resumo_rt = _ler_gauges_usina(self.usina_atual)
+            self.sio.emit(
+                "atualizar_gauges",
+                {
+                "usinas": usinas,
+                "resumo_rt": resumo_rt,
+                "codigo_usina": self.usina_atual,
+            },
+        )
+
+    def iniciar_emissao_periodica(self, app):
+        """Loop que emite dados dos gauges a cada 20 segundos."""
+        def _loop():
+            while True:
+                self.sio.sleep(20)
+                with app.app_context():
+                    self.emitir_gauges()
+
+        self.sio.start_background_task(_loop)
+
+    def registrar_eventos(self):
+        """Registra os eventos do SocketIO."""
+        @self.sio.on("connect")
+        def handle_connect():
+            # print(f"[SOCKET] Cliente conectado — usina: {self.usina_atual}", flush=True)
+            self.emitir_gauges()
+
+        @self.sio.on("selecionar_usina")
+        def handle_selecionar_usina(data):
+            nova = data.get("usina", self.usina_atual)
+            if nova != self.usina_atual:
+                self.usina_atual = nova
+                # print(f"[SOCKET] Usina alterada para: {self.usina_atual}", flush=True)
+            self.emitir_gauges()
+
+        @self.sio.on("disconnect")
+        def handle_disconnect():
+            pass
+            # print("[SOCKET] Cliente desconectado", flush=True)
+
+
+# ===================================================================
+# INSTÂNCIA PÚBLICA E FUNÇÕES GLOBAIS (Não quebra o entrypoint atual do app)
+# ===================================================================
+socket_manager = ConexaoSocketIO(socketio)
 
 
 def iniciar_emissao_periodica(app):
-    """Loop que emite dados dos gauges a cada 20 segundos."""
-    def _loop():
-        while True:
-            socketio.sleep(20)
-            with app.app_context():
-                _emitir_gauges()
-
-    socketio.start_background_task(_loop)
+    socket_manager.iniciar_emissao_periodica(app)
 
 
 def registrar_eventos():
-    """Registra os eventos do SocketIO."""
+    socket_manager.registrar_eventos()
 
-    @socketio.on("connect")
-    def handle_connect():
-        print(f"[SOCKET] Cliente conectado — usina: {_usina_atual}", flush=True)
-        dados = _ler_gauges_usina(_usina_atual)
-        socketio.emit("atualizar_gauges", {"usinas": dados, "codigo_usina": _usina_atual})
 
-    @socketio.on("selecionar_usina")
-    def handle_selecionar_usina(data):
-        global _usina_atual
-        nova = data.get("usina", _usina_atual)
-        if nova != _usina_atual:
-            _usina_atual = nova
-            print(f"[SOCKET] Usina alterada para: {_usina_atual}", flush=True)
-        # Emitir imediatamente para a nova usina
-        dados = _ler_gauges_usina(_usina_atual)
-        socketio.emit("atualizar_gauges", {"usinas": dados, "codigo_usina": _usina_atual})
+'''
+data: {
+    'server_timestamp': 1775666590.6077511, 
+    'active_connections_count': 5, 
+    'connections': [
+        {'connection': '10.200.20.11:502', 'connected': True, 'last_used': 1775666582.1603782, 'idle_time_seconds': 8.43}, 
+        {'connection': '10.200.20.21:502', 'connected': True, 'last_used': 1775666582.1592762, 'idle_time_seconds': 8.43}, 
+        {'connection': '10.200.20.31:502', 'connected': True, 'last_used': 1775666582.1598194, 'idle_time_seconds': 8.43}, 
+        {'connection': '10.200.20.41:502', 'connected': True, 'last_used': 1775666582.160115, 'idle_time_seconds': 8.43}, 
+        {'connection': '10.200.20.51:502', 'connected': True, 'last_used': 1775666582.1605704, 'idle_time_seconds': 8.43}], 
+    'logs': [
+        '2026-04-08 13:41:58,627 [INFO] 08/04/2026 13:41:58 [PERFORMANCE] Tempo: 0.446s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:41:58,628 [INFO] 08/04/2026 13:41:58 [PERFORMANCE] Tempo: 0.443s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:41:58,631 [INFO] 08/04/2026 13:41:58 [PERFORMANCE] Tempo: 0.448s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:41:58,640 [INFO] 08/04/2026 13:41:58 [PERFORMANCE] Tempo: 0.455s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:41:58,643 [INFO] 08/04/2026 13:41:58 [PERFORMANCE] Tempo: 0.460s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:41:59,346 [INFO] 08/04/2026 13:41:59 [PERFORMANCE] Tempo: 0.462s | Pacotes: 12 | Tags Lidas: 6',
+        '2026-04-08 13:41:59,347 [INFO] 08/04/2026 13:41:59 [PERFORMANCE] Tempo: 0.461s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:41:59,351 [INFO] 08/04/2026 13:41:59 [PERFORMANCE] Tempo: 0.465s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:41:59,360 [INFO] 08/04/2026 13:41:59 [PERFORMANCE] Tempo: 0.473s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:41:59,363 [INFO] 08/04/2026 13:41:59 [PERFORMANCE] Tempo: 0.477s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:00,591 [INFO] 08/04/2026 13:42:00 [PERFORMANCE] Tempo: 0.442s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:00,600 [INFO] 08/04/2026 13:42:00 [PERFORMANCE] Tempo: 0.450s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:00,603 [INFO] 08/04/2026 13:42:00 [PERFORMANCE] Tempo: 0.454s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:00,627 [INFO] 08/04/2026 13:42:00 [PERFORMANCE] Tempo: 0.478s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:00,628 [INFO] 08/04/2026 13:42:00 [PERFORMANCE] Tempo: 0.477s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:15,851 [INFO] 08/04/2026 13:42:15 [PERFORMANCE] Tempo: 0.446s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:15,867 [INFO] 08/04/2026 13:42:15 [PERFORMANCE] Tempo: 0.463s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:15,868 [INFO] 08/04/2026 13:42:15 [PERFORMANCE] Tempo: 0.461s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:15,881 [INFO] 08/04/2026 13:42:15 [PERFORMANCE] Tempo: 0.474s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:15,884 [INFO] 08/04/2026 13:42:15 [PERFORMANCE] Tempo: 0.479s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:29,428 [INFO] 08/04/2026 13:42:29 [PERFORMANCE] Tempo: 0.452s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:29,428 [INFO] 08/04/2026 13:42:29 [PERFORMANCE] Tempo: 0.451s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:29,441 [INFO] 08/04/2026 13:42:29 [PERFORMANCE] Tempo: 0.463s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:29,445 [INFO] 08/04/2026 13:42:29 [PERFORMANCE] Tempo: 0.468s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:29,451 [INFO] 08/04/2026 13:42:29 [PERFORMANCE] Tempo: 0.475s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:31,921 [INFO] 08/04/2026 13:42:31 [PERFORMANCE] Tempo: 0.444s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:31,925 [INFO] 08/04/2026 13:42:31 [PERFORMANCE] Tempo: 0.448s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:31,931 [INFO] 08/04/2026 13:42:31 [PERFORMANCE] Tempo: 0.454s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:31,947 [INFO] 08/04/2026 13:42:31 [PERFORMANCE] Tempo: 0.470s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:31,948 [INFO] 08/04/2026 13:42:31 [PERFORMANCE] Tempo: 0.471s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:45,828 [INFO] 08/04/2026 13:42:45 [PERFORMANCE] Tempo: 0.441s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:45,842 [INFO] 08/04/2026 13:42:45 [PERFORMANCE] Tempo: 0.454s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:45,845 [INFO] 08/04/2026 13:42:45 [PERFORMANCE] Tempo: 0.458s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:45,851 [INFO] 08/04/2026 13:42:45 [PERFORMANCE] Tempo: 0.465s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:45,868 [INFO] 08/04/2026 13:42:45 [PERFORMANCE] Tempo: 0.481s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:59,332 [INFO] 08/04/2026 13:42:59 [PERFORMANCE] Tempo: 0.447s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:59,349 [INFO] 08/04/2026 13:42:59 [PERFORMANCE] Tempo: 0.464s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:59,349 [INFO] 08/04/2026 13:42:59 [PERFORMANCE] Tempo: 0.462s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:59,362 [INFO] 08/04/2026 13:42:59 [PERFORMANCE] Tempo: 0.475s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:42:59,365 [INFO] 08/04/2026 13:42:59 [PERFORMANCE] Tempo: 0.479s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:43:00,206 [INFO] 08/04/2026 13:43:00 [PERFORMANCE] Tempo: 0.444s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:43:00,211 [INFO] 08/04/2026 13:43:00 [PERFORMANCE] Tempo: 0.450s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:43:00,228 [INFO] 08/04/2026 13:43:00 [PERFORMANCE] Tempo: 0.466s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:43:00,229 [INFO] 08/04/2026 13:43:00 [PERFORMANCE] Tempo: 0.468s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:43:00,242 [INFO] 08/04/2026 13:43:00 [PERFORMANCE] Tempo: 0.480s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:43:02,602 [INFO] 08/04/2026 13:43:02 [PERFORMANCE] Tempo: 0.442s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:43:02,606 [INFO] 08/04/2026 13:43:02 [PERFORMANCE] Tempo: 0.446s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:43:02,611 [INFO] 08/04/2026 13:43:02 [PERFORMANCE] Tempo: 0.453s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:43:02,628 [INFO] 08/04/2026 13:43:02 [PERFORMANCE] Tempo: 0.469s | Pacotes: 12 | Tags Lidas: 6', 
+        '2026-04-08 13:43:02,629 [INFO] 08/04/2026 13:43:02 [PERFORMANCE] Tempo: 0.469s | Pacotes: 12 | Tags Lidas: 6']
+    }, 
+    'status': 'success', 
+    'message': 'Diagnóstico realizado com sucesso'
+}
 
-    @socketio.on("disconnect")
-    def handle_disconnect():
-        print("[SOCKET] Cliente desconectado", flush=True)
+
+'''

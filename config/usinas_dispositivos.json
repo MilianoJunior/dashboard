@@ -3,6 +3,7 @@
     "ip": "100.110.212.125",
     "port": 8010,
     "table": "cgh_aparecida",
+    "nivel_vertimento": 405.30,
     "dispositivos": {
       "UG-01": {
         "conexao": {
@@ -21,7 +22,7 @@
               "offset": -1
             }
           ],
-          "Nivel montante": [
+          "Nível montante": [
             13519,
             "REAL",
             {
@@ -520,6 +521,7 @@
     "ip": "100.106.33.66",
     "port": 8010,
     "table": "cgh_fae",
+    "nivel_vertimento": 701.15,
     "dispositivos": {
       "PSA": {
         "conexao": {
@@ -527,7 +529,7 @@
           "port": 502
         },
         "leituras": {
-          "Nivel montante": [
+          "Nível montante": [
             13353,
             "REAL",
             {
@@ -1155,6 +1157,7 @@
     "ip": "100.73.37.105",
     "port": 8010,
     "table": "cgh_hoppen",
+    "nivel_vertimento": 869.90,
     "dispositivos": {
       "UG-01": {
         "conexao": {
@@ -1171,14 +1174,6 @@
             "REAL",
             {
               "offset": -1
-            }
-          ],
-          "Nivel Montante": [
-            13519,
-            "REAL",
-            {
-              "offset": -1,
-              "converter": "word_order"
             }
           ],
           "Nivel Jusante UG-01": [
@@ -1589,7 +1584,7 @@
               "offset": -1
             }
           ],
-          "Nivel Montante": [
+          "Nível Montante": [
             13519,
             "REAL",
             {
@@ -1982,6 +1977,7 @@
     "ip": "100.79.241.13",
     "port": 8010,
     "table": "cgh_picadas_altas",
+    "nivel_vertimento": 416.50,
     "dispositivos": {
       "UG-01": {
         "conexao": {
@@ -2000,7 +1996,7 @@
               "offset": -1
             }
           ],
-          "Nivel Montante": [
+          "Nível Montante": [
             13519,
             "REAL",
             {
@@ -2314,7 +2310,7 @@
               "offset": -1
             }
           ],
-          "Nivel Montante": [
+          "Nível Montante": [
             13519,
             "REAL",
             {
@@ -2617,6 +2613,7 @@
     "ip": "100.93.237.40",
     "port": 8010,
     "table": "pch_pedras",
+    "nivel_vertimento": 1097.50,
     "dispositivos": {
       "PSA": {
         "conexao": {
@@ -2624,7 +2621,7 @@
           "port": 502
         },
         "leituras": {
-          "Nivel montante": [
+          "Nível montante": [
             13353,
             "REAL",
             {
@@ -3378,6 +3375,7 @@
     "ip": "100.93.197.110",
     "port": 8010,
     "table": "pch_pira",
+    "nivel_vertimento": 391.00,
     "dispositivos": {
       "PSA": {
         "conexao": {
@@ -3393,7 +3391,7 @@
               "converter": "word_order"
             }
           ],
-          "nivel_barragem": [
+          "Nível Montante": [
             19393,
             "INPUT_REAL",
             {

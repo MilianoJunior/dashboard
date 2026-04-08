@@ -2,7 +2,7 @@
 
 ## Descrição
 
-Esta API permite a leitura e escrita de registradores em CLPs via protocolo Modbus TCP, utilizando FastAPI. Suporta operações de leitura de dados e escrita de comandos específicos.
+Esta API permite a leitura e escrita de registradores em CLPs via protocolo Modbus TCP, utilizando FastAPI. Suporta operações de leitura de dados e escrita de comandos específicos, além de gerenciamento de conexões ativas.
 
 ---
 
@@ -14,11 +14,19 @@ Esta API permite a leitura e escrita de registradores em CLPs via protocolo Modb
      ```bash
      pip install -r requirements.txt
      ```
-2. **Executando a API:**
+2. **Executando a API padrão:**
+
    ```bash
    python interface.py
    ```
+
    A API será iniciada no endereço e porta definidos pelas variáveis de ambiente `API_HOST` e `API_PORT` (padrão: 0.0.0.0:8010).
+
+3. **Executando para PCH-PIRA (Exceção de INPUT):**
+   A usina PCH-PIRA requer a leitura de **Input Registers** em vez de Holding Registers padrão para alguns dados. Portanto, ela utiliza a API específica:
+   ```bash
+   python interfacePira.py
+   ```
 
 ---
 
@@ -64,20 +72,12 @@ Esta API permite a leitura e escrita de registradores em CLPs via protocolo Modb
     "message": null
   }
   ```
-- **Resposta (erro):**
-  ```json
-  {
-    "data": null,
-    "status": "error",
-    "message": "Mensagem de erro"
-  }
-  ```
 
 ### 2. `POST /writeCLP/{tipo}`
 
-- **Descrição:** Escreve valores em registradores do CLP (atualmente apenas para reset de alarmes automáticos).
+- **Descrição:** Escreve valores em registradores do CLP.
 - **Parâmetro de rota:**
-  - `tipo`: `reset_alarmes_automatico`
+  - `tipo`: `reset_alarmes_automatico` ou `escritas`
 - **Body (JSON):**
   ```json
   {
@@ -103,35 +103,80 @@ Esta API permite a leitura e escrita de registradores em CLPs via protocolo Modb
     "message": null
   }
   ```
-- **Resposta (erro):**
+
+### 3. `GET /listConnections`
+
+- **Descrição:** Lista todas as conexões Modbus ativas no servidor.
+- **Resposta (sucesso):**
   ```json
   {
-    "data": null,
-    "status": "error",
-    "message": "Mensagem de erro"
+    "data": {
+      "active_connections": [
+        {
+          "connection": "192.168.0.10:502",
+          "connected": true,
+          "last_used": 1712613456.12,
+          "idle_time_seconds": 15.34
+        }
+      ]
+    },
+    "status": "success",
+    "message": "1 conexões ativas encontradas"
+  }
+  ```
+
+### 4. `POST /closeConnections`
+
+- **Descrição:** Encerra forçadamente todas as conexões Modbus ativas e libera recursos.
+- **Resposta (sucesso):**
+  ```json
+  {
+    "data": {
+      "closed_connections": ["192.168.0.10:502"]
+    },
+    "status": "success",
+    "message": "1 conexões fechadas com sucesso"
+  }
+  ```
+
+### 5. `GET /diagnostics`
+
+- **Descrição:** Retorna o estado de saúde do sistema, detalhando conexões ativas e listando das últimas linhas de log.
+- **Parâmetros de query:**
+  - `log_lines` (opcional): Quantidade de linhas retirasd do fim do log que serão retornadas. Padrão: 50.
+- **Resposta (sucesso):**
+  ```json
+  {
+    "data": {
+      "server_timestamp": 1712613500.0,
+      "active_connections_count": 1,
+      "connections": [],
+      "logs": [
+        "2026-04-08 11:45:00 [INFO] Conexão Modbus ativa: 192.168.0.10:502"
+      ]
+    },
+    "status": "success",
+    "message": "Diagnóstico realizado com sucesso"
   }
   ```
 
 ---
 
-## Observações
+## Exceção PCH-PIRA (Input Registers)
+
+No script `interfacePira.py`, foi inserida uma variação nativa para ler **Input Registers** ao invés de **Holding Registers**.
+Para utilizar essa leitura exclusiva de PCH-PIRA, o `tipo` fornecido no dicionário de `registers` deve conter a string `INPUT`. Exemplos aceitos:
+
+- `"REAL INPUT"`
+- `"INT INPUT"`
+
+A lógica principal em `interfacePira.py` faz a validação `is_input = "INPUT" in tipo`, e em seguida utiliza o `client.read_input_registers` para buscar os dados corretamente, agrupando-os por tipo de registro, evitando requisições incorretas de blocos combinados entre holding/input registers.
+
+---
+
+## Observações Gerais
 
 - Os campos de conexão (`ip`, `port`, `timeout`) são obrigatórios.
 - Os nomes das variáveis em `registers` identificam as leituras/escritas no retorno.
-- Cada registro deve indicar o tipo (`REAL`, `INT`, `BOOLEAN`) e pode trazer opções extras:
-  - `offset`: ajuste aplicado ao endereço (padrão `-1`).
-  - `converter`: como combinar os dois registradores para valores `REAL` (`default`, `word_order`, `endianness`, `byte_order`, `swap`).
+- Registros suportados (`REAL`, `INT`, `BOOLEAN`) via Holding Registers ou Input Registers (na PCH-PIRA). Opções limitadas a `offset` e `converter`.
 - Em caso de erro de conexão ou leitura/escrita, a resposta terá `status: error` e uma mensagem explicativa.
-
----
-
-## Ambiente
-
-- Assegure que o CLP esteja acessível via rede e que as portas estejam liberadas.
-- Para ambientes de desenvolvimento, teste com CLPs simulados ou dispositivos reais.
-
----
-
-## Contato
-
-Dúvidas ou sugestões: [Seu Nome ou Email]

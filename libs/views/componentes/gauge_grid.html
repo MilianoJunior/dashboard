@@ -1,18 +1,44 @@
 <!-- GaugeGrid - Section 1: Kinetic Gauges -->
 {% from 'componentes/gauge_card.html' import gauge_card %}
 
-<div id="gaugeGrid" class="grid grid-cols-2 md:grid-cols-5 gap-4">
-    {% for ug in usinas %}
-    {{ gauge_card(
-        name=ug.name,
-        status=ug.status,
-        percent=ug.percent,
-        power_kw=ug.power_kw,
-        pot_max_kw=ug.pot_max_kw,
-        variant=ug.variant,
-        color=ug.color
-    ) }}
-    {% endfor %}
+<div class="space-y-4">
+    <div id="rtSummaryCard" class="bg-surface-container-highest p-5 rounded border-l-2 shadow-sm" style="border-left-color: #02aeef;">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <div class="text-[10px] uppercase font-bold tracking-widest mb-2" style="color: #02aeef;">Resumo Tempo Real</div>
+                <div class="text-2xl font-headline font-bold text-on-surface">
+                    {{ resumo_rt.percent_total }}%
+                </div>
+                <div class="text-[11px] text-on-surface-variant mt-1">
+                    {{ resumo_rt.total_power_kw }} / {{ resumo_rt.pot_max_total_kw }} kW
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant mb-2">Nível Montante</div>
+                <div class="text-xl font-headline font-bold text-on-surface">
+                    {% if resumo_rt.nivel_montante is not none %}
+                    {{ "%.2f"|format(resumo_rt.nivel_montante) }} m
+                    {% else %}
+                    --
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="gaugeGrid" class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {% for ug in usinas %}
+        {{ gauge_card(
+            name=ug.name,
+            status=ug.status,
+            percent=ug.percent,
+            power_kw=ug.power_kw,
+            pot_max_kw=ug.pot_max_kw,
+            variant=ug.variant,
+            color=ug.color
+        ) }}
+        {% endfor %}
+    </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
@@ -40,7 +66,31 @@
     socket.on('atualizar_gauges', function (data) {
         var usinas = data.usinas;
         var grid = document.getElementById('gaugeGrid');
+        var resumo = data.resumo_rt || {};
+        var summaryCard = document.getElementById('rtSummaryCard');
         console.log('[SOCKET] Gauges atualizados -', usinas.length, 'UGs -', data.codigo_usina);
+
+        if (summaryCard) {
+            var nivelMontante = resumo.nivel_montante;
+            var nivelTexto = (nivelMontante === null || nivelMontante === undefined)
+                ? '--'
+                : Number(nivelMontante).toFixed(2) + ' m';
+
+            summaryCard.innerHTML =
+                '<div class="flex items-start justify-between gap-4">' +
+                    '<div>' +
+                        '<div class="text-[10px] uppercase font-bold tracking-widest mb-2" style="color: #02aeef;">Resumo Tempo Real</div>' +
+                        '<div class="text-2xl font-headline font-bold text-on-surface">' + (resumo.percent_total ?? 0) + '%</div>' +
+                        '<div class="text-[11px] text-on-surface-variant mt-1">' +
+                            (resumo.total_power_kw ?? 0) + ' / ' + (resumo.pot_max_total_kw ?? 0) + ' kW' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="text-right">' +
+                        '<div class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant mb-2">Nível Montante</div>' +
+                        '<div class="text-xl font-headline font-bold text-on-surface">' + nivelTexto + '</div>' +
+                    '</div>' +
+                '</div>';
+        }
 
         // Reconstruir os cards dinamicamente (o número de UGs muda por usina)
         grid.innerHTML = '';

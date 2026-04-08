@@ -2,6 +2,7 @@ import httpx
 import time
 from libs.utils.decorators import desempenho
 
+contador = 0
 LEITURA_ATIVA = {}
 contador_leituras = 0
 
@@ -56,6 +57,8 @@ async def get_data(config, data, nome_usina=None, nome_dispositivo=None):
         contexto += "] "
 
     # Definindo timeout de 3 segundos para a requisição
+    contador += 1
+    print(f" 3 [DEBUG] get_data: contador={contador}, nome_usina={nome_usina}, nome_dispositivo={nome_dispositivo}")
     timeout = httpx.Timeout(3.0)
     async with httpx.AsyncClient(verify=False, timeout=timeout) as client:
         try:

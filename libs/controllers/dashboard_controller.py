@@ -9,6 +9,7 @@
 import re
 from datetime import datetime, timedelta
 
+from libs.models.gauge_rt import dispositivo_tem_gauge
 from libs.models.consultas import (
     carregar_config_usina,
     consultar_nivel,
@@ -56,8 +57,7 @@ def _montar_gauges_iniciais(codigo_usina):
     usinas = []
     idx = 0
     for nome_disp, disp_cfg in dispositivos.items():
-        leituras = disp_cfg.get("leituras", {})
-        if "Potência Ativa" not in leituras:
+        if not dispositivo_tem_gauge(disp_cfg):
             continue
         pot_max = disp_cfg.get("caracteristicas", {}).get("potência máxima", 0)
         usinas.append({
@@ -72,6 +72,24 @@ def _montar_gauges_iniciais(codigo_usina):
         idx += 1
 
     return usinas
+
+
+def _montar_resumo_rt_inicial(codigo_usina):
+    config = carregar_config_usina(codigo_usina)
+    dispositivos = config.get("dispositivos", {})
+
+    pot_max_total_kw = 0.0
+    for disp_cfg in dispositivos.values():
+        if not dispositivo_tem_gauge(disp_cfg):
+            continue
+        pot_max_total_kw += float(disp_cfg.get("caracteristicas", {}).get("potência máxima", 0) or 0)
+
+    return {
+        "nivel_montante": None,
+        "total_power_kw": 0.0,
+        "percent_total": 0,
+        "pot_max_total_kw": round(pot_max_total_kw, 1),
+    }
 
 
 @desempenho
@@ -225,6 +243,7 @@ def get_dashboard_data(parametros=None):
 
     # Dados iniciais dos gauges (placeholder — dados reais chegam via WebSocket)
     usinas = _montar_gauges_iniciais(codigo_usina)
+    resumo_rt = _montar_resumo_rt_inicial(codigo_usina)
 
     chart_data, ug_names = _preparar_dados_geracao(
         codigo_usina=codigo_usina,
@@ -253,5 +272,6 @@ def get_dashboard_data(parametros=None):
         "active_period": periodo,
         "codigo_usina": codigo_usina,
         "usinas_disponiveis": USINAS_DISPONIVEIS,
+        "resumo_rt": resumo_rt,
         **nivel_data,
     }
