@@ -41,21 +41,27 @@
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
 <script>
 (function () {
     var socket = io();
 
-    // Ao conectar, informar qual usina está selecionada
     socket.on('connect', function () {
         console.log('[SOCKET] Conectado ao servidor');
+
+        setTimeout(function () {
+            var m = {};
+            if (window.__perfShell) m.shell_ms = window.__perfShell;
+            if (window.__perfDom)   m.dom_ms   = window.__perfDom;
+            if (window.__perfAjax)  m.data_ms  = window.__perfAjax;
+            if (Object.keys(m).length) socket.emit('page_loaded', m);
+        }, 200);
+
         var select = document.getElementById('usinaSelect');
         if (select) {
             socket.emit('selecionar_usina', { usina: select.value });
         }
     });
 
-    // Quando o usuário troca a usina no select, notificar o servidor via socket
     var select = document.getElementById('usinaSelect');
     if (select) {
         select.addEventListener('change', function () {

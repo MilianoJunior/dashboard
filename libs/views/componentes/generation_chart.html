@@ -33,76 +33,179 @@
         </form>
     </div>
 
-    {% if chart_data %}
-    <!-- Stacked Bar Chart com dados reais -->
-    <div class="h-[340px] w-full relative">
-        <!-- Camada de Fundo Fixa: Eixo Y e Grid -->
-        {% set y_max = max_total|round(-1) + 10 %}
-        <div class="absolute inset-0 bottom-10 flex">
-            <!-- Y-Axis labels (Fixo) -->
-            <div class="w-14 flex flex-col justify-between text-[9px] text-on-surface-variant font-mono pointer-events-none pb-[2px] pr-2">
-                <span>{{ "%.0f"|format(y_max) }}MWh</span>
-                <span>{{ "%.0f"|format(y_max * 0.8) }}MWh</span>
-                <span>{{ "%.0f"|format(y_max * 0.6) }}MWh</span>
-                <span>{{ "%.0f"|format(y_max * 0.4) }}MWh</span>
-                <span>{{ "%.0f"|format(y_max * 0.2) }}MWh</span>
-                <span>0</span>
-            </div>
-            <!-- Grid Lines -->
-            <div class="flex-1 flex flex-col justify-between pointer-events-none border-l border-b border-outline-variant/20 -mt-[4px]">
-                {% for _ in range(5) %}
-                <div class="w-full border-t border-outline-variant/5"></div>
-                {% endfor %}
-                <div class="w-full h-0"></div><!-- Linha do zero -->
-            </div>
-        </div>
+    <!-- Layout: Gráfico + Card Resumo lado a lado -->
+    <div class="flex flex-col lg:flex-row gap-6">
 
-        <!-- Camada de Rolagem: Barras do Gráfico -->
-        <div class="absolute inset-0 left-14 overflow-x-auto custom-scrollbar flex items-end">
-            <!-- Bar Columns -->
-            <div class="flex-1 flex items-end justify-around gap-1 min-w-max px-2 pb-10 mr-4 h-full">
-                {% set chart_height = 280 %}
-                {% for day in chart_data %}
-                <div class="flex flex-col items-center group cursor-pointer relative" style="min-width: 18px;">
-                    <!-- Tooltip -->
-                    <div class="hidden group-hover:block absolute bottom-full mb-2 bg-surface-container-highest border border-outline-variant/30 rounded p-2.5 text-[10px] text-on-surface whitespace-nowrap z-50 shadow-xl pointer-events-none" style="left: 50%; transform: translateX(-50%);">
-                        <div class="font-bold text-primary-dim mb-1">{{ day.day_label }} — Total: {{ day.total }} MWh</div>
-                        {% for val in day.ug_values %}
-                        <div class="flex justify-between gap-4 items-center py-0.5">
-                            <span class="flex items-center gap-1.5">
-                                <span class="inline-block w-2 h-2 rounded-full flex-shrink-0" style="background: {{ ug_colors[loop.index0 % ug_colors|length] }};"></span>
-                                <span class="text-on-surface-variant">{{ ug_names[loop.index0] }}:</span>
-                            </span>
-                            <span class="font-medium">{{ "%.2f"|format(val) }} MWh</span>
+        <!-- Gráfico (flex-1 para ocupar espaço disponível) -->
+        <div class="flex-1 min-w-0">
+            {% if chart_data %}
+            <!-- Stacked Bar Chart com dados reais -->
+            <div class="h-[340px] w-full relative">
+                <!-- Camada de Fundo Fixa: Eixo Y e Grid -->
+                {% set y_max = max_total|round(-1) + 10 %}
+                <div class="absolute inset-0 bottom-10 flex">
+                    <!-- Y-Axis labels (Fixo) -->
+                    <div class="w-14 flex flex-col justify-between text-[9px] text-on-surface-variant font-mono pointer-events-none pb-[2px] pr-2">
+                        <span>{{ "%.0f"|format(y_max) }}MWh</span>
+                        <span>{{ "%.0f"|format(y_max * 0.8) }}MWh</span>
+                        <span>{{ "%.0f"|format(y_max * 0.6) }}MWh</span>
+                        <span>{{ "%.0f"|format(y_max * 0.4) }}MWh</span>
+                        <span>{{ "%.0f"|format(y_max * 0.2) }}MWh</span>
+                        <span>0</span>
+                    </div>
+                    <!-- Grid Lines -->
+                    <div class="flex-1 flex flex-col justify-between pointer-events-none border-l border-b border-outline-variant/20 -mt-[4px]">
+                        {% for _ in range(5) %}
+                        <div class="w-full border-t border-outline-variant/5"></div>
+                        {% endfor %}
+                        <div class="w-full h-0"></div>
+                    </div>
+                </div>
+
+                <!-- Camada de Rolagem: Barras do Gráfico -->
+                <div class="absolute inset-0 left-14 overflow-x-auto custom-scrollbar flex items-end">
+                    <!-- Bar Columns -->
+                    <div class="flex-1 flex items-end justify-around gap-1 min-w-max px-2 pb-10 mr-4 h-full">
+                        {% set chart_height = 280 %}
+                        {% for day in chart_data %}
+                        <div class="flex flex-col items-center group cursor-pointer relative" style="min-width: 18px;">
+                            <!-- Tooltip -->
+                            <div class="hidden group-hover:block absolute bottom-full mb-2 bg-surface-container-highest border border-outline-variant/30 rounded p-2.5 text-[10px] text-on-surface whitespace-nowrap z-50 shadow-xl pointer-events-none" style="left: 50%; transform: translateX(-50%);">
+                                <div class="font-bold text-primary-dim mb-1">{{ day.day_label }} — Total: {{ day.total }} MWh</div>
+                                {% for val in day.ug_values %}
+                                <div class="flex justify-between gap-4 items-center py-0.5">
+                                    <span class="flex items-center gap-1.5">
+                                        <span class="inline-block w-2 h-2 rounded-full flex-shrink-0" style="background: {{ ug_colors[loop.index0 % ug_colors|length] }};"></span>
+                                        <span class="text-on-surface-variant">{{ ug_names[loop.index0] }}:</span>
+                                    </span>
+                                    <span class="font-medium">{{ "%.2f"|format(val) }} MWh</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <!-- Stacked bars -->
+                            <div class="flex flex-col-reverse w-4 relative z-0">
+                                {% for val in day.ug_values %}
+                                {% if y_max > 0 %}
+                                {% set h_px = (val / y_max * chart_height)|int %}
+                                {% else %}
+                                {% set h_px = 0 %}
+                                {% endif %}
+                                {% if h_px > 0 %}
+                                <div class="{{ 'rounded-t-sm' if loop.last else '' }}" style="height: {{ h_px }}px; background: {{ ug_colors[loop.index0 % ug_colors|length] }};"></div>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                            <!-- Day label -->
+                            <span class="text-[9px] text-white font-medium absolute -bottom-6 whitespace-nowrap">{{ day.day_label }}</span>
                         </div>
                         {% endfor %}
                     </div>
-                    <!-- Stacked bars (sem title nativo para evitar tooltip duplicado) -->
-                    <div class="flex flex-col-reverse w-4 relative z-0">
-                        {% for val in day.ug_values %}
-                        {% if y_max > 0 %}
-                        {% set h_px = (val / y_max * chart_height)|int %}
-                        {% else %}
-                        {% set h_px = 0 %}
-                        {% endif %}
-                        {% if h_px > 0 %}
-                        <div class="{{ 'rounded-t-sm' if loop.last else '' }}" style="height: {{ h_px }}px; background: {{ ug_colors[loop.index0 % ug_colors|length] }};"></div>
-                        {% endif %}
-                        {% endfor %}
-                    </div>
-                    <!-- Day label -->
-                    <span class="text-[9px] text-white font-medium absolute -bottom-6 whitespace-nowrap">{{ day.day_label }}</span>
                 </div>
-                {% endfor %}
             </div>
+            {% else %}
+            <div class="h-[300px] flex items-center justify-center text-on-surface-variant">
+                <span class="material-symbols-outlined mr-2">info</span>
+                Sem dados de geração disponíveis para o período.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Card Resumo do Período -->
+        <div class="w-full lg:w-72 flex-shrink-0 flex flex-col justify-between gap-4">
+
+            <!-- Card: Último registro -->
+            <div class="bg-surface-container-highest rounded border-l-2 shadow-sm p-4 flex-1" style="border-left-color: #02aeef;">
+                <div class="text-[10px] uppercase font-bold tracking-widest mb-3" style="color: #02aeef;">
+                    <span class="material-symbols-outlined text-sm align-middle mr-1">calendar_today</span>
+                    Último Registro 01 — {{ resumo_geracao.label }}
+                </div>
+                <div class="text-2xl font-headline font-bold text-on-surface">
+                    {{ "%.2f"|format(resumo_geracao.total) }} <span class="text-sm font-normal text-on-surface-variant">MWh</span>
+                </div>
+
+                <!-- Barra por UG -->
+                <div class="mt-4 space-y-2">
+                    {% for ug in resumo_geracao.ugs %}
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-bold text-on-surface-variant flex items-center gap-1.5">
+                                <span class="inline-block w-2 h-2 rounded-full" style="background: {{ ug.color }};"></span>
+                                {{ ug.name }}
+                            </span>
+                            <span class="text-[10px] font-mono text-on-surface">{{ "%.2f"|format(ug.value) }} MWh</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-500" style="width: {{ ug.percent }}%; background: {{ ug.color }};"></div>
+                        </div>
+                        <div class="text-right text-[9px] text-on-surface-variant mt-0.5">{{ ug.percent }}%</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Card: Resumo do Período -->
+            <!-- <div class="bg-surface-container-highest rounded border-l-2 shadow-sm p-4" style="border-left-color: #9B5DE5;">
+                <div class="text-[10px] uppercase font-bold tracking-widest mb-3" style="color: #9B5DE5;">
+                    <span class="material-symbols-outlined text-sm align-middle mr-1">analytics</span>
+                    Resumo do Período 01
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-[10px] text-on-surface-variant font-medium">Total acumulado</span>
+                        <span class="text-sm font-headline font-bold text-on-surface">{{ "%.2f"|format(resumo_geracao.total_periodo) }} MWh</span>
+                    </div>
+                    <div class="w-full h-px bg-outline-variant/20"></div>
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-[10px] text-on-surface-variant font-medium">Média por registro</span>
+                        <span class="text-sm font-headline font-bold text-on-surface">{{ "%.2f"|format(resumo_geracao.media_periodo) }} MWh</span>
+                    </div>
+                    <div class="w-full h-px bg-outline-variant/20"></div>
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-[10px] text-on-surface-variant font-medium">Registros</span>
+                        <span class="text-sm font-headline font-bold text-on-surface">{{ resumo_geracao.dias }}</span>
+                    </div>
+                </div>
+            </div> -->
+
+            <!-- Card: Nível de Água -->
+            <!-- <div class="bg-surface-container-highest rounded border-l-2 shadow-sm p-4" style="border-left-color: #00F5D4;">
+                <div class="text-[10px] uppercase font-bold tracking-widest mb-3" style="color: #00F5D4;">
+                    <span class="material-symbols-outlined text-sm align-middle mr-1">water</span>
+                    Nível de Água 01
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-[10px] text-on-surface-variant font-medium">Nível vertimento</span>
+                        <span class="text-sm font-headline font-bold text-on-surface">
+                            {% if resumo_geracao.nivel_vertimento is not none %}
+                            {{ "%.2f"|format(resumo_geracao.nivel_vertimento) }} m
+                            {% else %}
+                            --
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% if resumo_rt.nivel_montante is not none %}
+                    <div class="w-full h-px bg-outline-variant/20"></div>
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-[10px] text-on-surface-variant font-medium">Nível montante (RT)</span>
+                        <span class="text-sm font-headline font-bold text-on-surface">{{ "%.2f"|format(resumo_rt.nivel_montante) }} m</span>
+                    </div>
+                    {% if resumo_geracao.nivel_vertimento is not none and resumo_rt.nivel_montante is not none %}
+                    {% set diff = resumo_geracao.nivel_vertimento - resumo_rt.nivel_montante %}
+                    <div class="w-full h-px bg-outline-variant/20"></div>
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-[10px] text-on-surface-variant font-medium">Margem p/ vertimento</span>
+                        <span class="text-sm font-headline font-bold {{ 'text-error' if diff < 0.5 else 'text-on-surface' }}">
+                            {{ "%.2f"|format(diff) }} m
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div> -->
+
         </div>
     </div>
-    {% else %}
-    <div class="h-[300px] flex items-center justify-center text-on-surface-variant">
-        <span class="material-symbols-outlined mr-2">info</span>
-        Sem dados de geração disponíveis para o período.
-    </div>
-    {% endif %}
 
     <!-- Legend -->
     <div class="mt-4 flex flex-wrap gap-4 text-[10px] font-bold text-on-surface-variant uppercase justify-center">

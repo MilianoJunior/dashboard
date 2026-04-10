@@ -114,7 +114,7 @@ def desempenho(funcao):
         contexto = _obter_contexto_execucao()
         args_resumidos = _resumir_argumentos(funcao, *args, **kwargs)
 
-        _log_desempenho("->", chamada_id, nivel_atual, nome_completo, contexto, f"args: {args_resumidos}",None)
+        # _log_desempenho("->", chamada_id, nivel_atual, nome_completo, contexto, f"args: {args_resumidos}",None)
 
         token_nivel = _NIVEL_CHAMADA.set(nivel_atual + 1)
         inicio = time.perf_counter()
@@ -123,15 +123,15 @@ def desempenho(funcao):
             resultado = funcao(*args, **kwargs)
             tempo_total = time.perf_counter() - inicio
             retorno_resumido = _resumir_valor(resultado, "retorno")
-            _log_desempenho(
-                "<-",
-                chamada_id,
-                nivel_atual,
-                nome_completo,
-                contexto,
-                f"tempo={tempo_total:.4f}s | retorno: {retorno_resumido}",
-                f"tempo={tempo_total:.4f}s",
-            )
+            # _log_desempenho(
+            #     "<-",
+            #     chamada_id,
+            #     nivel_atual,
+            #     nome_completo,
+            #     contexto,
+            #     f"tempo={tempo_total:.4f}s | retorno: {retorno_resumido}",
+            #     f"tempo={tempo_total:.4f}s",
+            # )
             return resultado
         except Exception as erro:
             tempo_total = time.perf_counter() - inicio

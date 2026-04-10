@@ -45,60 +45,8 @@ class ConexaoAPI:
     def __init__(self):
         self.contador = 0
         self.erro = 0
-        
-    def _registrar_observabilidade(self, ip, port, tipo, body):
-        try:
-            agora = time.time()
-            conexao_info = body.get("conexao", {})
-            clp_ip = conexao_info.get("ip", ip)
-            clp_port = conexao_info.get("port", port)
-            clp_id = f"{clp_ip}:{clp_port}"
-            
-            registros = body.get("registers", {})
-            reg_str = json.dumps(registros, sort_keys=True).encode("utf-8")
-            assinatura = hashlib.md5(reg_str).hexdigest()
-            
-            origem = "desconhecida"
-            try:
-                frame = inspect.currentframe()
-                if frame and frame.f_back and frame.f_back.f_back:
-                    origem = frame.f_back.f_back.f_code.co_name
-            except Exception:
-                pass
-            
-            cls = ConexaoAPI
-            cls._observabilidade_historico = [
-                h for h in cls._observabilidade_historico 
-                if (agora - h["timestamp"]) <= cls._JANELA_SEGUNDOS
-            ][-cls._MAX_HISTORICO:]
-            
-            historico_clp = [h for h in cls._observabilidade_historico if h["clp_id"] == clp_id]
-            
-            chamadas_15s = len(historico_clp) + 1
-            repetida = any(h["assinatura"] == assinatura for h in historico_clp)
-            
-            intervalo_medio = 0.0
-            if historico_clp:
-                if len(historico_clp) > 1:
-                    delta_total = historico_clp[-1]["timestamp"] - historico_clp[0]["timestamp"]
-                    intervalo_medio = delta_total / (len(historico_clp) - 1)
-                else:
-                    intervalo_medio = agora - historico_clp[0]["timestamp"]
-                    
-            print(f"[OBS] CLP={clp_id} | chamadas_15s={chamadas_15s} | intervalo_medio={intervalo_medio:.1f}s | repetida={repetida} | origem={origem}", flush=True)
-
-            cls._observabilidade_historico.append({
-                "timestamp": agora,
-                "clp_id": clp_id,
-                "tipo": tipo,
-                "assinatura": assinatura,
-                "origem": origem
-            })
-        except Exception as e:
-            print(f"[OBS] Falha interna ao registrar log: {e}", flush=True)
 
     def read_clp(self, ip, port, body, tipo="leituras", timeout=5, log_context="API"):
-        # self._registrar_observabilidade(ip, port, tipo, body)
         self.contador += 1
         url = f"http://{ip}:{port}/readCLP/{tipo}"
         req = urllib_request.Request(
@@ -182,8 +130,6 @@ class ConexaoAPI:
             
         return False
 
-    
-
 
 # Singleton global de gerência HTTP
 api_manager = ConexaoAPI()
@@ -216,11 +162,11 @@ def _ler_dados_ug(api_ip, api_port, codigo_usina, conexao, registros_gauge, nome
         valor = leituras_rt.get("Potência Ativa")
         status = resolver_status_ug(leituras_rt, codigo_usina=codigo_usina)
         leituras_log = json.dumps(leituras_rt, ensure_ascii=False, sort_keys=True)
-        # print(
-        #     f"[SOCKET] {codigo_usina} | {nome_ug} -> Leituras RT = {leituras_log} | "
-        #     f"Potência Ativa = {valor} | Status = {status}",
-        #     flush=True,
-        # )
+        print(
+            f"[SOCKET] {codigo_usina} | {nome_ug} -> Leituras RT = {leituras_log} | "
+            f"Potência Ativa = {valor} | Status = {status}",
+            flush=True,
+        )
         return leituras_rt
 
     return None
@@ -247,11 +193,11 @@ def _ler_nivel_montante(api_ip, api_port, codigo_usina, usina_cfg):
     
     if data is not None:
         nivel = data.get(NIVEL_MONTANTE_LABEL)
-        # print(
-        #     f"[SOCKET] {codigo_usina} | {leitura_nivel['nome']} -> "
-        #     f"Nível Montante = {nivel}",
-        #     flush=True,
-        # )
+        print(
+            f"[SOCKET] {codigo_usina} | {leitura_nivel['nome']} -> "
+            f"Nível Montante = {nivel}",
+            flush=True,
+        )
         return nivel
 
     return None
@@ -377,9 +323,12 @@ class ConexaoSocketIO:
         self.usina_atual = "PCH-PIRA"
         self.contador = 0
         self.tempo = time.time()
+        self.clientes_conectados = 0
 
     def emitir_gauges(self):
         """Lê dados reais e envia para todos os clientes."""
+        if self.clientes_conectados == 0:
+            return
         self.contador += 1
         tempo_atual = time.time()
         print(' ')
@@ -411,7 +360,8 @@ class ConexaoSocketIO:
         """Registra os eventos do SocketIO."""
         @self.sio.on("connect")
         def handle_connect():
-            # print(f"[SOCKET] Cliente conectado — usina: {self.usina_atual}", flush=True)
+            self.clientes_conectados += 1
+            print(f"[SOCKET] Cliente conectado (total: {self.clientes_conectados})", flush=True)
             self.emitir_gauges()
 
         @self.sio.on("selecionar_usina")
@@ -419,13 +369,23 @@ class ConexaoSocketIO:
             nova = data.get("usina", self.usina_atual)
             if nova != self.usina_atual:
                 self.usina_atual = nova
-                # print(f"[SOCKET] Usina alterada para: {self.usina_atual}", flush=True)
             self.emitir_gauges()
+
+        @self.sio.on("page_loaded")
+        def handle_page_loaded(data):
+            shell = data.get("shell_ms", 0)
+            dados = data.get("data_ms", 0)
+            total = shell + dados if dados else shell
+            print(
+                f"[PERF] Página carregada em {total}ms "
+                f"(Shell: {shell}ms | Dados: {dados}ms)",
+                flush=True,
+            )
 
         @self.sio.on("disconnect")
         def handle_disconnect():
-            pass
-            # print("[SOCKET] Cliente desconectado", flush=True)
+            self.clientes_conectados = max(0, self.clientes_conectados - 1)
+            print(f"[SOCKET] Cliente desconectado (total: {self.clientes_conectados})", flush=True)
 
 
 # ===================================================================

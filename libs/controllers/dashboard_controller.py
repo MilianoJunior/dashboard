@@ -10,6 +10,7 @@ import re
 from datetime import datetime, timedelta
 
 from libs.models.gauge_rt import dispositivo_tem_gauge
+from libs.models.api_model import iniciar_rastreio_api, imprimir_resumo_api
 from libs.models.consultas import (
     carregar_config_usina,
     consultar_nivel,
@@ -233,8 +234,48 @@ def _preparar_dados_nivel(codigo_usina=USINA_PADRAO, data_inicio=None, data_fim=
     }
 
 
+def _montar_resumo_geracao(chart_data, ug_names, nivel_data):
+    """Monta resumo do ultimo periodo disponivel para o card lateral."""
+    if not chart_data:
+        return {
+            "label": "--",
+            "total": 0.0,
+            "ugs": [],
+            "nivel_vertimento": nivel_data.get("nivel_vertimento"),
+        }
+
+    ultimo = chart_data[-1]
+    total = ultimo["total"]
+
+    ugs = []
+    for idx, val in enumerate(ultimo["ug_values"]):
+        nome = ug_names[idx] if idx < len(ug_names) else f"UG-{idx + 1}"
+        pct = round(val / total * 100, 1) if total > 0 else 0.0
+        ugs.append({
+            "name": nome,
+            "value": round(val, 2),
+            "percent": pct,
+            "color": UG_COLORS[idx % len(UG_COLORS)],
+        })
+
+    # Totais do periodo inteiro
+    total_periodo = round(sum(d["total"] for d in chart_data), 2)
+    media_periodo = round(total_periodo / len(chart_data), 2) if chart_data else 0.0
+
+    return {
+        "label": ultimo["day_label"],
+        "total": total,
+        "total_periodo": total_periodo,
+        "media_periodo": media_periodo,
+        "dias": len(chart_data),
+        "ugs": ugs,
+        "nivel_vertimento": nivel_data.get("nivel_vertimento"),
+    }
+
+
 @desempenho
 def get_dashboard_data(parametros=None):
+    iniciar_rastreio_api()
     periodo, data_inicio, data_fim = _parse_filtros(parametros)
     parametros = parametros or {}
     codigo_usina = parametros.get("usina", USINA_PADRAO)
@@ -260,6 +301,11 @@ def get_dashboard_data(parametros=None):
         data_fim=data_fim,
     )
 
+    # Card de resumo do periodo (ultimo ponto disponivel)
+    resumo_geracao = _montar_resumo_geracao(chart_data, ug_names, nivel_data)
+
+    imprimir_resumo_api()
+
     return {
         "usinas": usinas,
         "chart_data": chart_data,
@@ -273,5 +319,6 @@ def get_dashboard_data(parametros=None):
         "codigo_usina": codigo_usina,
         "usinas_disponiveis": USINAS_DISPONIVEIS,
         "resumo_rt": resumo_rt,
+        "resumo_geracao": resumo_geracao,
         **nivel_data,
     }
