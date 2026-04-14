@@ -116,3 +116,11 @@ a visualização em pagina unica.
 - O arquivo `config/usuarios_usinas.yaml` contem mapeamentos criticos (colunas do banco variam por usina/fabricante do CLP) e nao deve ser alterado sem validacao.
 - O codigo esta em transicao de acesso direto ao banco para uso exclusivo da API ENGESEP, mantendo codigo legado em `datas.py`.
 - Usinas com 2 UGs e tabelas separadas (Pedras, Hoppen) exigem merge de dados por `data_hora`.
+
+'''
+Tenho dois bancos de dados que preciso fazer um sicronização, todas as tabelas do mysql railway devem ser criadas no gcloud e todos os dados devem ser copiado para lá, mas no banco do gcloud eu
+já comecei a fazer a migração, então primeiro eu preciso ver:
+
+
+Pode listar todas as tabelas do gcloud?
+'''
