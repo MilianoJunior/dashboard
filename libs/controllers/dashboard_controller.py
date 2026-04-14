@@ -113,7 +113,9 @@ def _parse_filtros(parametros=None):
         data_inicio = agora - delta
 
     try:
-        data_fim = datetime.strptime(end_str, "%Y-%m-%d")
+        data_fim = datetime.strptime(end_str, "%Y-%m-%d").replace(
+            hour=23, minute=59, second=59
+        )
     except ValueError:
         data_fim = agora
 

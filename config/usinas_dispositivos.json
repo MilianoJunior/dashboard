@@ -22,7 +22,7 @@
               "offset": -1
             }
           ],
-          "Nível montante": [
+          "Nível Montante": [
             13519,
             "REAL",
             {
@@ -529,7 +529,7 @@
           "port": 502
         },
         "leituras": {
-          "Nível montante": [
+          "Nível Montante": [
             13353,
             "REAL",
             {
@@ -1176,6 +1176,14 @@
               "offset": -1
             }
           ],
+          "Nível Montante": [
+            13519,
+            "REAL",
+            {
+              "offset": -1,
+              "converter": "word_order"
+            }
+          ],
           "Nivel Jusante UG-01": [
             13521,
             "REAL",
@@ -1582,14 +1590,6 @@
             "REAL",
             {
               "offset": -1
-            }
-          ],
-          "Nível Montante": [
-            13519,
-            "REAL",
-            {
-              "offset": -1,
-              "converter": "word_order"
             }
           ],
           "Nivel Jusante UG-02": [
@@ -2310,14 +2310,6 @@
               "offset": -1
             }
           ],
-          "Nível Montante": [
-            13519,
-            "REAL",
-            {
-              "offset": -1,
-              "converter": "word_order"
-            }
-          ],
           "Nivel Jusante UG-02": [
             13521,
             "REAL",
@@ -2621,14 +2613,7 @@
           "port": 502
         },
         "leituras": {
-          "Nível montante": [
-            13353,
-            "REAL",
-            {
-              "offset": -1,
-              "converter": "word_order"
-            }
-          ],
+
           "Nivel jusante UG-01": [
             13355,
             "REAL",
@@ -2662,6 +2647,14 @@
             "REAL",
             {
               "offset": -1
+            }
+          ],
+          "Nível Montante": [
+            13519,
+            "REAL",
+            {
+              "offset": -1,
+              "converter": "word_order"
             }
           ],
           "UP (parada)": [
