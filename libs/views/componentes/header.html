@@ -11,40 +11,27 @@
         {% for item in nav_items %}
         <a class="{{ 'text-[#02aeef] font-bold border-b-2 border-[#02aeef]' if item.active else 'text-[#a6abb4] hover:bg-[#1e272f] transition-colors duration-200' }} px-1 py-1 transition-transform active:scale-95" href="{{ item.href }}">{{ item.label }}</a>
         {% endfor %}
-        <div class="border-l border-outline-variant/30 pl-4 ml-2">
-            <select id="usinaSelect"
-                class="bg-[#131a22] border border-outline-variant/30 text-[#e6ebf4] text-xs font-medium rounded px-3 py-1.5 focus:ring-1 focus:ring-[#02aeef] focus:border-[#02aeef] cursor-pointer">
-                {% for usina in usinas_disponiveis %}
-                <option value="{{ usina }}" {{ 'selected' if usina == codigo_usina }}>{{ usina }}</option>
-                {% endfor %}
-            </select>
+        <div class="border-l border-outline-variant/30 pl-4 ml-2 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[#02aeef] text-base">bolt</span>
+            <span class="text-[#e6ebf4] text-xs font-semibold tracking-wider">{{ codigo_usina }}</span>
         </div>
     </nav>
     <div class="flex items-center gap-4">
-        {% for icon in ['notifications', 'settings', 'account_circle'] %}
+        {% if username %}
+        <div class="hidden md:flex items-center gap-2 text-[#a6abb4] text-xs">
+            <span class="material-symbols-outlined text-base">person</span>
+            <span class="uppercase tracking-wider">{{ username }}</span>
+        </div>
+        {% endif %}
+        {% for icon in ['notifications', 'settings'] %}
         <button class="p-2 text-[#a6abb4] hover:bg-[#1e272f] rounded-full transition-all">
             <span class="material-symbols-outlined">{{ icon }}</span>
         </button>
         {% endfor %}
+        <a href="{{ url_for('dashboard.logout') }}"
+           class="p-2 text-[#a6abb4] hover:bg-[#1e272f] hover:text-[#ff716c] rounded-full transition-all"
+           title="Sair">
+            <span class="material-symbols-outlined">logout</span>
+        </a>
     </div>
 </header>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    var select = document.getElementById('usinaSelect');
-    if (!select) return;
-
-    select.addEventListener('change', function () {
-        var usinaSelecionada = this.value;
-        var url = new URL(window.location.href);
-
-        url.searchParams.set('usina', usinaSelecionada);
-
-        // Resetar datas ao trocar de usina para carregar o período padrão
-        url.searchParams.delete('start_date');
-        url.searchParams.delete('end_date');
-
-        window.location.href = url.toString();
-    });
-});
-</script>

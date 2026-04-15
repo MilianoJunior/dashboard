@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EngeSEP O&amp;M IA - Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary": "#003b54",
+                    "on-surface": "#e6ebf4",
+                    "on-primary-container": "#003045",
+                    "on-primary-fixed": "#001a28",
+                    "on-primary-fixed-variant": "#003e58",
+                    "on-secondary-fixed-variant": "#4c5e6a",
+                    "on-secondary": "#425460",
+                    "inverse-on-surface": "#50565d",
+                    "secondary": "#d2e5f4",
+                    "on-surface-variant": "#a6abb4",
+                    "surface-container-lowest": "#000000",
+                    "surface": "#090f15",
+                    "on-tertiary-container": "#120076",
+                    "tertiary": "#a4a1ff",
+                    "inverse-surface": "#f7f9ff",
+                    "error-dim": "#d7383b",
+                    "error": "#ff716c",
+                    "surface-container-low": "#0d141b",
+                    "secondary-dim": "#c4d7e5",
+                    "surface-container": "#131a22",
+                    "on-background": "#e6ebf4",
+                    "surface-container-highest": "#1e272f",
+                    "primary-fixed-dim": "#02aeef",
+                    "on-error-container": "#ffa8a3",
+                    "tertiary-fixed-dim": "#9b98ff",
+                    "primary-container": "#21b6f8",
+                    "tertiary-fixed": "#aaa8ff",
+                    "background": "#090f15",
+                    "on-error": "#490006",
+                    "primary": "#54c3ff",
+                    "surface-bright": "#242d37",
+                    "primary-dim": "#02aeef",
+                    "secondary-fixed-dim": "#c4d7e5",
+                    "surface-tint": "#54c3ff",
+                    "inverse-primary": "#00668e",
+                    "tertiary-container": "#9592ff",
+                    "tertiary-dim": "#9592ff",
+                    "secondary-fixed": "#d2e5f4",
+                    "outline-variant": "#424850",
+                    "primary-fixed": "#2dbcfe",
+                    "on-tertiary-fixed": "#0d005f",
+                    "surface-container-high": "#182028",
+                    "outline": "#70767e",
+                    "surface-variant": "#1e272f",
+                    "error-container": "#9f0519",
+                    "on-tertiary-fixed-variant": "#2e2792",
+                    "on-tertiary": "#201585",
+                    "on-secondary-fixed": "#30424d",
+                    "on-secondary-container": "#c0d3e1",
+                    "surface-dim": "#090f15",
+                    "secondary-container": "#374955"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Space Grotesk"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #090f15;
+        }
+        .font-headline {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .kinetic-glass {
+            background: rgba(36, 45, 55, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .glow-primary {
+            box-shadow: 0 0 15px rgba(2, 174, 239, 0.3);
+        }
+        .energy-grid {
+            background-image: radial-gradient(circle at 2px 2px, rgba(2, 174, 239, 0.05) 1px, transparent 0);
+            background-size: 40px 40px;
+        }
+    </style>
+</head>
+<body class="text-on-surface min-h-screen flex items-center justify-center relative overflow-hidden bg-background">
+<!-- Background Abstract Layer -->
+<div class="absolute inset-0 z-0 energy-grid pointer-events-none"></div>
+<div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary-dim/10 blur-[120px] rounded-full pointer-events-none"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-tertiary-dim/5 blur-[120px] rounded-full pointer-events-none"></div>
+<!-- Login Container -->
+<main class="relative z-10 w-full max-w-[420px] px-6 py-12">
+<!-- Branding Header -->
+<header class="mb-10 text-center">
+<div class="inline-flex items-center justify-center mb-6">
+<div class="w-12 h-12 bg-primary-dim flex items-center justify-center rounded-lg glow-primary">
+<span class="material-symbols-outlined text-on-primary-fixed text-3xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+</div>
+<h1 class="font-headline text-3xl font-bold tracking-tighter text-primary-dim uppercase">EngeSEP O&amp;M IA</h1>
+<p class="font-body text-xs text-on-surface-variant tracking-[0.2em] uppercase mt-2">Kinetic Precision Systems</p>
+</header>
+<!-- Glass Login Card -->
+<section class="kinetic-glass p-8 rounded-lg shadow-2xl relative overflow-hidden">
+<!-- Decorative Accent -->
+<div class="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary-dim/50 to-transparent"></div>
+<form class="space-y-6" method="POST" action="{{ url_for('dashboard.login') }}">
+{% if erro %}
+<div class="bg-error-container/30 border border-error/40 text-error text-xs rounded px-3 py-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">error</span>
+<span>{{ erro }}</span>
+</div>
+{% endif %}
+<!-- User Field -->
+<div class="space-y-2">
+<label class="font-headline text-[10px] font-bold uppercase tracking-widest text-on-surface-variant px-1" for="username">Usuário</label>
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-on-surface-variant text-lg group-focus-within:text-primary-dim transition-colors">person</span>
+</div>
+<input class="w-full bg-surface-container-highest border-none text-on-surface text-sm rounded focus:ring-1 focus:ring-primary-dim/30 py-3 pl-10 placeholder:text-outline-variant transition-all" id="username" name="username" placeholder="Seu ID de acesso" type="text"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="space-y-2">
+<div class="flex justify-between items-center px-1">
+<label class="font-headline text-[10px] font-bold uppercase tracking-widest text-on-surface-variant" for="password">Senha</label>
+<a class="text-[10px] font-bold uppercase tracking-widest text-primary-dim hover:text-primary transition-colors" href="#">Esqueci minha senha</a>
+</div>
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-on-surface-variant text-lg group-focus-within:text-primary-dim transition-colors">lock</span>
+</div>
+<input class="w-full bg-surface-container-highest border-none text-on-surface text-sm rounded focus:ring-1 focus:ring-primary-dim/30 py-3 pl-10 placeholder:text-outline-variant transition-all" id="password" name="password" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<!-- Remember Me -->
+<div class="flex items-center space-x-2 px-1">
+<input class="w-4 h-4 rounded-sm bg-surface-container-highest border-none text-primary-dim focus:ring-offset-background focus:ring-primary-dim" id="remember" name="remember" type="checkbox"/>
+<label class="text-xs text-on-surface-variant cursor-pointer select-none" for="remember">Lembrar de mim</label>
+</div>
+<!-- Login Button -->
+<button class="w-full bg-primary-dim text-on-primary-fixed font-headline font-bold uppercase tracking-widest py-4 rounded-lg glow-primary hover:bg-primary transition-all active:scale-[0.98] mt-4 flex items-center justify-center gap-2 group" type="submit" name="submit">
+                    Acessar Dashboard
+                    <span class="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</form>
+</section>
+<!-- Visual Context Background Elements (Hidden on mobile) -->
+<div class="hidden lg:block absolute top-1/2 left-[-400px] -translate-y-1/2 w-[320px] h-[320px] opacity-20 pointer-events-none">
+<img class="w-full h-full object-cover rounded-full mix-blend-screen" data-alt="Technical close-up of high-voltage electrical infrastructure and power plant components with blue lighting and industrial precision" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEyQF4klX4oGAn4_zfu5MqSyIaGOTL8ora2LbmRt4RP4HzBi7ypUcHhF_QVjZJ9TwTF8efI6CziMtw1nXmXtGOf1ncRM-YJ46-nv_QMswJ6GeBanSMLxSvxG9Mr6iPsa3V872U1BJ5I0eLqt9nLJSs32_kXOO-K1stZF6ENC2E0TnTRrzqLbBMUoyVnziqYWQYPlbh_GOhj4tSDM1H8KHZtTt5hnn58facHjwahHjd7VZnFUYlpILoGdD24cOQOBXSnBvVB925Eg"/>
+</div>
+<div class="hidden lg:block absolute top-1/2 right-[-400px] -translate-y-1/2 w-[320px] h-[320px] opacity-20 pointer-events-none">
+<img class="w-full h-full object-cover rounded-full mix-blend-screen" data-alt="Abstract glowing energy data visual with blue digital streams and technical grid representing smart power grid management" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAChO7-Ct5_DyCXQnoFnM98MXqn8A6kvHAo6acj9shdJClCbda9VkS0XouURD3uyeeGG-ZrwR1Uk1tnKNYe5Skaku0lDeF5enjmYTRSZAqsBcDrZhSxwxA5TQDgC5RMMswgYRLHZogN5I6ATUqS2Ll1Q_OmZ6xlcYg1UzOo89c1qRvvmATevCi29aZB-PByMhhzSExlFZdOuv_iN_vFoCIVxVgvOOqAAgCxIUMs_5AJMb5twV1zubzMf54hQ4j-qUr1w8XoBYVXug"/>
+</div>
+</main>
+<!-- Footer - Direct implementation from Shared Components JSON -->
+<footer class="fixed bottom-0 left-0 w-full z-50 flex justify-center items-center gap-8 py-6 bg-transparent">
+<div class="flex items-center gap-8">
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest text-slate-500">© 2024 EngeSEP Kinetic Precision. All rights reserved.</span>
+<div class="flex gap-6">
+<a class="font-['Inter'] text-[10px] uppercase tracking-widest text-slate-500 hover:text-sky-300 transition-opacity duration-300" href="#">Privacy Policy</a>
+<a class="font-['Inter'] text-[10px] uppercase tracking-widest text-slate-500 hover:text-sky-300 transition-opacity duration-300" href="#">Terms of Service</a>
+<a class="font-['Inter'] text-[10px] uppercase tracking-widest text-slate-500 hover:text-sky-300 transition-opacity duration-300" href="#">System Status</a>
+</div>
+</div>
+</footer>
+</body></html>

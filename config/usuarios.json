@@ -1,0 +1,34 @@
+{
+  "usuarios": [
+    {
+      "username": "cgh-aparecida",
+      "password": "Apa654123@",
+      "usina": "CGH-APARECIDA"
+    },
+    {
+      "username": "cgh-fae",
+      "password": "Fae654123@",
+      "usina": "CGH-FAE"
+    },
+    {
+      "username": "pch-pedras",
+      "password": "Pedras654123@",
+      "usina": "PCH-PEDRAS"
+    },
+    {
+      "username": "cgh-picadas-altas",
+      "password": "PicadasAltas654123@",
+      "usina": "CGH-PICADAS-ALTAS"
+    },
+    {
+      "username": "cgh-hoppen",
+      "password": "Hoppen654123@",
+      "usina": "CGH-HOPPEN"
+    },
+    {
+      "username": "pch-pira",
+      "password": "Pira654123@",
+      "usina": "PCH-PIRA"
+    }
+  ]
+}
