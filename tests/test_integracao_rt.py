@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from libs.views.servicos.connect import _ler_gauges_usina, _carregar_config
 from libs.models.gauge_rt import montar_registros_gauge, dispositivo_tem_gauge
+from libs.models.colors import UG_COLORS
 
 LIMITE_CICLO_SEGUNDOS = 20.0
 LIMITE_LEITURA_INDIVIDUAL = 5.0
@@ -122,8 +123,6 @@ def _ler_gauges_com_tempos(codigo_usina):
     api_ip = usina_cfg["ip"]
     api_port = usina_cfg["port"]
     dispositivos = usina_cfg.get("dispositivos", {})
-
-    UG_COLORS = ["#5BC0EB", "#9B5DE5", "#F15BB5", "#FEE440", "#00F5D4"]
 
     ugs_para_ler = []
     for nome_disp, disp_cfg in dispositivos.items():

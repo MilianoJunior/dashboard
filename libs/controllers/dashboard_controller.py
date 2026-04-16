@@ -19,16 +19,7 @@ from libs.models.consultas import (
     normalizar_nivel,
 )
 from libs.utils.decorators import desempenho
-
-UG_COLORS = [
-    "#5BC0EB",
-    "#9B5DE5",
-    "#F15BB5",
-    "#FEE440",
-    "#00F5D4",
-]
-
-NIVEL_COLORS = ["#02aeef", "#a4a1ff", "#c4d7e5", "#70767e", "#f9a825", "#ef5350"]
+from libs.models.colors import UG_COLORS, NIVEL_COLORS
 
 PERIODOS = {
     "HORA": {"api": "H", "delta_days": 1, "fmt_label": "%H:%M"},

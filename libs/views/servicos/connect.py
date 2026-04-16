@@ -16,6 +16,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib import error, request as urllib_request
 
+from flask import request as flask_request
 from flask_socketio import SocketIO
 
 from libs.models.gauge_rt import (
@@ -24,11 +25,9 @@ from libs.models.gauge_rt import (
     obter_registro_nivel_montante,
     resolver_status_ug,
 )
+from libs.models.colors import UG_COLORS
 
 socketio = SocketIO(async_mode="threading")
-
-UG_COLORS = ["#5BC0EB", "#9B5DE5", "#F15BB5", "#FEE440", "#00F5D4"]
-
 _CONFIG_PATH = os.path.join(
     os.path.dirname(__file__), "..", "..", "..", "config", "usinas_dispositivos.json"
 )
@@ -321,30 +320,55 @@ class ConexaoSocketIO:
     def __init__(self, sio):
         self.sio = sio
         self.usina_atual = "PCH-PIRA"
+        self.usinas_por_sid = {}
         self.contador = 0
         self.tempo = time.time()
         self.clientes_conectados = 0
 
-    def emitir_gauges(self):
-        """Lê dados reais e envia para todos os clientes."""
-        if self.clientes_conectados == 0:
-            return
+    def _montar_payload_gauges(self, codigo_usina):
+        """Lê dados reais e monta payload RT para uma usina."""
         self.contador += 1
         tempo_atual = time.time()
         print(' ')
         print('-------------------------------------------------------------')
-        print(f" Ciclo: {self.contador} Tempo: {tempo_atual - self.tempo}")
-        if tempo_atual - self.tempo > 15:
-            self.tempo = tempo_atual
-            usinas, resumo_rt = _ler_gauges_usina(self.usina_atual)
-            self.sio.emit(
-                "atualizar_gauges",
-                {
-                "usinas": usinas,
-                "resumo_rt": resumo_rt,
-                "codigo_usina": self.usina_atual,
-            },
-        )
+        print(f" Ciclo: {self.contador} | Usina: {codigo_usina} | Tempo: {tempo_atual - self.tempo}")
+        self.tempo = tempo_atual
+
+        usinas, resumo_rt = _ler_gauges_usina(codigo_usina)
+        return {
+            "usinas": usinas,
+            "resumo_rt": resumo_rt,
+            "codigo_usina": codigo_usina,
+        }
+
+    def emitir_gauges(self, codigo_usina, sid=None):
+        """Lê dados reais e envia para o cliente solicitado."""
+        if self.clientes_conectados == 0:
+            return
+        if not codigo_usina:
+            return
+
+        payload = self._montar_payload_gauges(codigo_usina)
+        if sid:
+            self.sio.emit("atualizar_gauges", payload, to=sid)
+        else:
+            self.sio.emit("atualizar_gauges", payload)
+
+    def emitir_gauges_periodico(self):
+        """Emite dados RT por cliente, respeitando a usina escolhida em cada socket."""
+        if self.clientes_conectados == 0:
+            return
+
+        sids_por_usina = {}
+        for sid, codigo_usina in list(self.usinas_por_sid.items()):
+            if not codigo_usina:
+                continue
+            sids_por_usina.setdefault(codigo_usina, []).append(sid)
+
+        for codigo_usina, sids in sids_por_usina.items():
+            payload = self._montar_payload_gauges(codigo_usina)
+            for sid in sids:
+                self.sio.emit("atualizar_gauges", payload, to=sid)
 
     def iniciar_emissao_periodica(self, app):
         """Loop que emite dados dos gauges a cada 20 segundos."""
@@ -352,7 +376,7 @@ class ConexaoSocketIO:
             while True:
                 self.sio.sleep(20)
                 with app.app_context():
-                    self.emitir_gauges()
+                    self.emitir_gauges_periodico()
 
         self.sio.start_background_task(_loop)
 
@@ -360,16 +384,20 @@ class ConexaoSocketIO:
         """Registra os eventos do SocketIO."""
         @self.sio.on("connect")
         def handle_connect():
+            sid = flask_request.sid
             self.clientes_conectados += 1
-            print(f"[SOCKET] Cliente conectado (total: {self.clientes_conectados})", flush=True)
-            self.emitir_gauges()
+            self.usinas_por_sid.setdefault(sid, None)
+            print(f"[SOCKET] Cliente conectado sid={sid} (total: {self.clientes_conectados})", flush=True)
 
         @self.sio.on("selecionar_usina")
         def handle_selecionar_usina(data):
+            sid = flask_request.sid
             nova = data.get("usina", self.usina_atual)
             if nova != self.usina_atual:
                 self.usina_atual = nova
-            self.emitir_gauges()
+            self.usinas_por_sid[sid] = nova
+            print(f"[SOCKET] Cliente sid={sid} selecionou {nova}", flush=True)
+            self.emitir_gauges(nova, sid=sid)
 
         @self.sio.on("page_loaded")
         def handle_page_loaded(data):
@@ -384,8 +412,10 @@ class ConexaoSocketIO:
 
         @self.sio.on("disconnect")
         def handle_disconnect():
+            sid = flask_request.sid
+            self.usinas_por_sid.pop(sid, None)
             self.clientes_conectados = max(0, self.clientes_conectados - 1)
-            print(f"[SOCKET] Cliente desconectado (total: {self.clientes_conectados})", flush=True)
+            print(f"[SOCKET] Cliente desconectado sid={sid} (total: {self.clientes_conectados})", flush=True)
 
 
 # ===================================================================

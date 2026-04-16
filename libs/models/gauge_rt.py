@@ -3,7 +3,7 @@
 # 1. dispositivo_tem_gauge  -> Valida se o dispositivo tem leituras minimas
 # 2. montar_registros_gauge -> Seleciona os registradores usados no gauge RT
 # 3. obter_leitura_nivel_montante -> Localiza a leitura de nivel montante
-# 4. resolver_status_ug     -> Resolve o status ativo da UG por ordem
+# 4. resolver_status_ug     -> Resolve status por coerencia entre booleanos e potencia
 # -------------------------------------------------------------------
 
 STATUS_LABEL_ORDER = [
@@ -22,19 +22,23 @@ STATUS_DISPLAY_BY_LABEL = {
     "UP (parada)": "UP",
 }
 
+STATUS_SEM_GERACAO = {
+    "UMD (marcha desexcitada)",
+    "UPS (pronta para sincronização)",
+    "UPGM (pronta para giro mecânico)",
+    "UP (parada)",
+}
+
 GAUGE_BASE_LABELS = ("Potência Ativa",)
 NIVEL_MONTANTE_LABEL = "Nível Montante"
 
 
-def _status_ativo(valor):
-    if isinstance(valor, bool):
-        return valor
-
-    if isinstance(valor, (int, float)):
-        return valor != 0
-
-    texto = str(valor).strip().lower()
-    return texto in {"1", "1.0", "true", "on", "sim", "yes"}
+def _potencia_ativa_kw(leituras_rt):
+    valor = leituras_rt.get("Potência Ativa", 0)
+    try:
+        return float(str(valor).replace(",", "."))
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def montar_registros_gauge(dispositivo_cfg):
@@ -69,23 +73,43 @@ def obter_registro_nivel_montante(usina_cfg):
 
     return None
 
-def _status_corresponde_ao_estado(valor, codigo_usina):
-    # print(f" 1 [DEBUG] _status_corresponde_ao_estado: valor={valor}, codigo_usina={codigo_usina}")
-    ativo = _status_ativo(valor)
-    # print(f" 2 [DEBUG] _status_corresponde_ao_estado: valor={valor}, codigo_usina={codigo_usina}")
-    # if codigo_usina == "PCH-PIRA":
-    #     return not ativo
-    return ativo
+def _estados_booleanos(leituras_rt):
+    return {
+        label: leituras_rt.get(label)
+        for label in STATUS_LABEL_ORDER
+        if isinstance(leituras_rt.get(label), bool)
+    }
 
-cont = 0
+
+def _status_display(label):
+    return STATUS_DISPLAY_BY_LABEL.get(label, "SEM STATUS")
+
+
+def _estado_divergente_coerente(label, potencia_kw):
+    if potencia_kw > 0:
+        return label == "US (sincronizado)"
+    return label in STATUS_SEM_GERACAO
+
 
 def resolver_status_ug(leituras_rt, codigo_usina=None):
-    global cont
-    cont += 1
-    # print(" ")
-    # print(f" 3 [DEBUG] resolver_status_ug: cont={cont}, codigo_usina={codigo_usina}")
-    for label in STATUS_LABEL_ORDER:
-        if _status_corresponde_ao_estado(leituras_rt.get(label), codigo_usina):
-            return STATUS_DISPLAY_BY_LABEL[label]
+    estados = _estados_booleanos(leituras_rt)
+    potencia_kw = _potencia_ativa_kw(leituras_rt)
+
+    estados_true = [label for label, ativo in estados.items() if ativo is True]
+    estados_false = [label for label, ativo in estados.items() if ativo is False]
+
+    if len(estados_true) == 1:
+        return _status_display(estados_true[0])
+
+    if potencia_kw > 0:
+        return _status_display("US (sincronizado)")
+
+    if len(estados_false) == 1:
+        estado_divergente = estados_false[0]
+        if _estado_divergente_coerente(estado_divergente, potencia_kw):
+            return _status_display(estado_divergente)
+
+    if potencia_kw <= 0:
+        return _status_display("UP (parada)")
 
     return "SEM STATUS"

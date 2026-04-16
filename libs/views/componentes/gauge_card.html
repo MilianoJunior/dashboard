@@ -1,5 +1,5 @@
 <!-- GaugeCard Macro — usa cor da paleta UG -->
-{% macro gauge_card(name, status, percent, power_kw=0, pot_max_kw=0, variant='normal', color='#5BC0EB') %}
+{% macro gauge_card(name, status, percent, power_kw=0, pot_max_kw=0, variant='normal', color='#60A5FA') %}
 {% set offset = 141.37 * (1 - percent / 100) %}
 {% set status_colors = {
     'normal': {'text_class': '', 'value_class': ''},
@@ -16,6 +16,7 @@
         </svg>
         <div class="gauge-percent absolute bottom-0 w-full text-center font-headline text-xl font-bold {{ sc.value_class }}" {% if not sc.value_class %}style="color: {{ color }};"{% endif %}>{{ percent }}%</div>
     </div>
+    <div class="gauge-sparkline w-full mt-1" style="height:24px;"></div>
     <div class="gauge-power text-[10px] text-on-surface-variant mt-1">{{ power_kw }} / {{ pot_max_kw }} kW</div>
 </div>
 {% endmacro %}

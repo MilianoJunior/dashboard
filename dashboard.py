@@ -91,9 +91,26 @@ def abrir_navegador(url, delay=1.5):
         chrome = next((c for c in _CHROME_BINS if shutil.which(c)), None)
         if chrome:
             _browser_profile = tempfile.mkdtemp(prefix="dashboard_")
+            args = [
+                chrome, f'--app={url}', f'--user-data-dir={_browser_profile}',
+                '--no-first-run', '--no-default-browser-check'
+            ]
+            
+            width = 1900
+            height = 1000
+            if width and height:
+                args.append(f'--window-size={width},{height}')
+            else:
+                args.append('--start-maximized')
+
+            pos_x = os.getenv("CHROME_POS_X", "5400")
+            pos_y = os.getenv("CHROME_POS_Y", "400")
+            print(f'pos_x: {pos_x}, pos_y: {pos_y}, width: {width}, height: {height}')
+            if pos_x is not None:
+                args.append(f'--window-position={pos_x},{pos_y}')
+
             _browser_proc = subprocess.Popen(
-                [chrome, f'--app={url}', f'--user-data-dir={_browser_profile}',
-                 '--no-first-run', '--no-default-browser-check'],
+                args,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
         else:
@@ -121,10 +138,12 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", "5000"))
     debug = DEV_RELOAD or os.getenv("FLASK_DEBUG", "0") == "1"
     host = "0.0.0.0"
+    print(os.environ.get("WERKZEUG_RUN_MAIN"))
 
     if not os.environ.get("WERKZEUG_RUN_MAIN"):
+        print("entrou")
         abrir_navegador(f"http://localhost:{port}")
         atexit.register(fechar_navegador)
 
     print(f"[MAIN] Iniciando servidor em {host}:{port} (DEV_RELOAD={debug})", flush=True)
-    socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)
+    socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True, use_reloader=False)

@@ -5,17 +5,20 @@
     <div id="rtSummaryCard" class="bg-surface-container-highest p-5 rounded border-l-2 shadow-sm" style="border-left-color: #02aeef;">
         <div class="flex items-start justify-between gap-4">
             <div>
-                <div class="text-[10px] uppercase font-bold tracking-widest mb-2" style="color: #02aeef;">Resumo Tempo Real</div>
-                <div class="text-2xl font-headline font-bold text-on-surface">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="text-[10px] uppercase font-bold tracking-widest flex items-center" style="color: #02aeef;"><span class="live-dot"></span>Resumo Tempo Real</div>
+                    <div id="rtTimestamp" class="text-[9px] text-on-surface-variant opacity-60">Aguardando dados…</div>
+                </div>
+                <div id="rtPercentTotal" class="text-2xl font-headline font-bold text-on-surface" data-val="{{ resumo_rt.percent_total }}">
                     {{ resumo_rt.percent_total }}%
                 </div>
                 <div class="text-[11px] text-on-surface-variant mt-1">
-                    {{ resumo_rt.total_power_kw }} / {{ resumo_rt.pot_max_total_kw }} kW
+                    <span id="rtPowerKw" data-val="{{ resumo_rt.total_power_kw }}">{{ resumo_rt.total_power_kw }}</span> / <span id="rtPowerMax">{{ resumo_rt.pot_max_total_kw }}</span> kW
                 </div>
             </div>
             <div class="text-right">
                 <div class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant mb-2">Nível Montante</div>
-                <div class="text-xl font-headline font-bold text-on-surface">
+                <div id="rtNivelMontante" class="text-xl font-headline font-bold text-on-surface" data-val="{{ resumo_rt.nivel_montante if resumo_rt.nivel_montante is not none else '' }}">
                     {% if resumo_rt.nivel_montante is not none %}
                     {{ "%.2f"|format(resumo_rt.nivel_montante) }} m
                     {% else %}
@@ -24,6 +27,7 @@
                 </div>
             </div>
         </div>
+        <div id="rtSummarySparkline" style="margin: 0.5rem -1.25rem -1.25rem; height: 32px; overflow: hidden;"></div>
     </div>
 
     <div id="gaugeGrid" class="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -43,9 +47,293 @@
 
 <script>
 (function () {
-    var socket = io();
+    if (window.__gaugeGridCleanup) {
+        window.__gaugeGridCleanup();
+    }
 
-    socket.on('connect', function () {
+    var socket = window.__engegomSocket || (window.__engegomSocket = io());
+    var CURRENT_USINA = "{{ codigo_usina }}";
+    var _lastUpdate = null;
+    var _MAX_HISTORY = 50;          // ~15min a cada 20s
+    var _ugHistory = {};            // { ugName: [percent, ...] }
+    var _summaryHistory = [];       // [percent_total, ...]
+
+    /* ── Timestamp dinâmico ── */
+    function _fmtElapsed() {
+        var el = document.getElementById('rtTimestamp');
+        if (!el || !_lastUpdate) return;
+        var diff = Math.floor((Date.now() - _lastUpdate) / 1000);
+        var txt;
+        if (diff < 5) txt = 'agora mesmo';
+        else if (diff < 60) txt = 'há ' + diff + 's';
+        else { var m = Math.floor(diff / 60); txt = 'há ' + m + 'min'; }
+        var ts = new Date(_lastUpdate);
+        var hh = String(ts.getHours()).padStart(2, '0');
+        var mm = String(ts.getMinutes()).padStart(2, '0');
+        var ss = String(ts.getSeconds()).padStart(2, '0');
+        el.textContent = 'Atualizado às ' + hh + ':' + mm + ':' + ss + ' · ' + txt;
+    }
+    var _timestampTimer = setInterval(_fmtElapsed, 1000);
+
+    /* ── Histórico: empurra valor e mantém limite ── */
+    function pushHistory(key, val) {
+        if (!_ugHistory[key]) _ugHistory[key] = [];
+        _ugHistory[key].push(val);
+        if (_ugHistory[key].length > _MAX_HISTORY) _ugHistory[key].shift();
+    }
+
+    /* ── Catmull-Rom → Cubic Bezier (curvas suaves) ── */
+    function smoothPath(pts) {
+        if (pts.length < 2) return '';
+        if (pts.length === 2)
+            return 'M' + pts[0][0].toFixed(1) + ',' + pts[0][1].toFixed(1) +
+                   'L' + pts[1][0].toFixed(1) + ',' + pts[1][1].toFixed(1);
+        var d = 'M' + pts[0][0].toFixed(1) + ',' + pts[0][1].toFixed(1);
+        for (var i = 0; i < pts.length - 1; i++) {
+            var p0 = pts[i === 0 ? 0 : i - 1];
+            var p1 = pts[i];
+            var p2 = pts[i + 1];
+            var p3 = pts[Math.min(i + 2, pts.length - 1)];
+            var cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+            var cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+            var cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+            var cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+            d += 'C' + cp1x.toFixed(1) + ',' + cp1y.toFixed(1) +
+                 ' ' + cp2x.toFixed(1) + ',' + cp2y.toFixed(1) +
+                 ' ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1);
+        }
+        return d;
+    }
+
+    /* ── Sparkline: área com gradiente, curva Bezier, leading dot pulsante ── */
+    function renderSparkline(container, history, color, id, isIdle) {
+        if (!container) return;
+        if (history.length < 2) {
+            container.innerHTML = '';
+            return;
+        }
+        var w = 200, h = 32, pad = 3;
+        var vals = history;
+        var max = -Infinity, min = Infinity;
+        for (var i = 0; i < vals.length; i++) {
+            if (vals[i] > max) max = vals[i];
+            if (vals[i] < min) min = vals[i];
+        }
+        var range = max - min;
+        if (range === 0) { min -= 1; max += 1; range = 2; }
+        min -= range * 0.1;
+        max += range * 0.1;
+        range = max - min;
+
+        // Calcular pontos XY
+        var pts = [];
+        for (var j = 0; j < vals.length; j++) {
+            var x = pad + (j / (vals.length - 1)) * (w - pad * 2);
+            var y = pad + (1 - (vals[j] - min) / range) * (h - pad * 2);
+            pts.push([x, y]);
+        }
+
+        // Path suave (Bezier) para a linha
+        var linePath = smoothPath(pts);
+
+        // Path da área: mesma curva + fechar por baixo
+        var lastPt = pts[pts.length - 1];
+        var firstPt = pts[0];
+        var areaPath = linePath +
+            'L' + lastPt[0].toFixed(1) + ',' + h +
+            'L' + firstPt[0].toFixed(1) + ',' + h + 'Z';
+
+        var gradId = 'spkGrad-' + id;
+        var glowId = 'spkGlow-' + id;
+
+        // UGs paradas: cor cinza, opacidade reduzida
+        var strokeColor = isIdle ? '#424850' : color;
+        var fillOpTop   = isIdle ? '0.08' : '0.35';
+        var fillOpBot   = '0';
+        var lineOpacity = isIdle ? '0.3' : '0.8';
+        var wrapOpacity = isIdle ? '0.4' : '1';
+
+        // Leading dot
+        var dotR = isIdle ? '0' : '3.5';
+        var dotCx = lastPt[0].toFixed(1);
+        var dotCy = lastPt[1].toFixed(1);
+
+        container.innerHTML =
+            '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" ' +
+                'style="width:100%;height:100%;display:block;opacity:' + wrapOpacity + ';">' +
+                '<defs>' +
+                    '<linearGradient id="' + gradId + '" x1="0" y1="0" x2="0" y2="1">' +
+                        '<stop offset="0%" stop-color="' + strokeColor + '" stop-opacity="' + fillOpTop + '"/>' +
+                        '<stop offset="100%" stop-color="' + strokeColor + '" stop-opacity="' + fillOpBot + '"/>' +
+                    '</linearGradient>' +
+                    '<filter id="' + glowId + '" x="-50%" y="-50%" width="200%" height="200%">' +
+                        '<feGaussianBlur stdDeviation="2.5" result="blur"/>' +
+                        '<feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>' +
+                    '</filter>' +
+                '</defs>' +
+                '<path d="' + areaPath + '" fill="url(#' + gradId + ')"/>' +
+                '<path d="' + linePath + '" fill="none" stroke="' + strokeColor + '" ' +
+                    'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="' + lineOpacity + '"/>' +
+                (isIdle ? '' :
+                    '<circle cx="' + dotCx + '" cy="' + dotCy + '" r="' + dotR + '" ' +
+                        'fill="' + color + '" filter="url(#' + glowId + ')" ' +
+                        'style="animation: spark-dot-pulse 2s ease-in-out infinite;"/>'
+                ) +
+            '</svg>';
+    }
+
+    /* ── Odômetro: rola número de oldVal → newVal ── */
+    function rollValue(el, newVal, decimals, suffix) {
+        if (!el) return;
+        var oldVal = parseFloat(el.dataset.val || '0');
+        newVal = parseFloat(newVal) || 0;
+        if (Math.abs(oldVal - newVal) < Math.pow(10, -(decimals + 1))) return;
+        el.dataset.val = newVal;
+
+        el.classList.remove('value-changed');
+        void el.offsetWidth;
+        el.classList.add('value-changed');
+
+        var start = performance.now();
+        var duration = 800;
+        function tick(now) {
+            var t = Math.min((now - start) / duration, 1);
+            var ease = 1 - Math.pow(1 - t, 3);
+            var v = oldVal + (newVal - oldVal) * ease;
+            el.textContent = v.toFixed(decimals) + (suffix || '');
+            if (t < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+    }
+
+    /* ── Atualiza summary card in-place ── */
+    function updateSummary(resumo) {
+        rollValue(document.getElementById('rtPercentTotal'), resumo.percent_total ?? 0, 0, '%');
+        rollValue(document.getElementById('rtPowerKw'), resumo.total_power_kw ?? 0, 0, '');
+        var maxEl = document.getElementById('rtPowerMax');
+        if (maxEl) maxEl.textContent = resumo.pot_max_total_kw ?? 0;
+
+        var nivelEl = document.getElementById('rtNivelMontante');
+        if (nivelEl) {
+            var nv = resumo.nivel_montante;
+            if (nv === null || nv === undefined) {
+                nivelEl.textContent = '--';
+                nivelEl.dataset.val = '';
+            } else {
+                rollValue(nivelEl, nv, 2, ' m');
+            }
+        }
+
+        // Sparkline do resumo total (full-width footer)
+        _summaryHistory.push(resumo.percent_total ?? 0);
+        if (_summaryHistory.length > _MAX_HISTORY) _summaryHistory.shift();
+        renderSparkline(
+            document.getElementById('rtSummarySparkline'),
+            _summaryHistory, '#02aeef', 'summary', false
+        );
+    }
+
+    /* ── Cria card UG do zero ── */
+    function createGaugeCard(ug) {
+        var offset = (141.37 * (1 - ug.percent / 100)).toFixed(2);
+        var card = document.createElement('div');
+        card.id = 'gauge-' + ug.name;
+        card.className = 'bg-surface-container-highest p-4 rounded border-l-2 shadow-sm flex flex-col items-center justify-center';
+        card.style.borderLeftColor = ug.color;
+        card.innerHTML =
+            '<div class="gauge-label text-[10px] uppercase font-bold tracking-widest mb-2"></div>' +
+            '<div class="relative w-32 h-16 overflow-hidden">' +
+                '<svg class="w-32 h-32 absolute top-0 left-0" viewBox="0 0 100 100">' +
+                    '<circle class="text-surface-variant" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="141.37" stroke-dashoffset="0" stroke-width="8" transform="rotate(180 50 50)"></circle>' +
+                    '<circle class="gauge-arc" cx="50" cy="50" fill="none" r="45" stroke="' + ug.color + '" stroke-dasharray="141.37" stroke-dashoffset="' + offset + '" stroke-width="8" style="filter:drop-shadow(0 0 4px ' + ug.color + ');transition:stroke-dashoffset 0.8s ease;" transform="rotate(180 50 50)"></circle>' +
+                '</svg>' +
+                '<div class="gauge-percent absolute bottom-0 w-full text-center font-headline text-xl font-bold" data-val="' + ug.percent + '">' + ug.percent + '%</div>' +
+            '</div>' +
+            '<div class="gauge-sparkline w-full mt-1" style="height:24px;"></div>' +
+            '<div class="gauge-power text-[10px] text-on-surface-variant mt-1" data-pw="' + ug.power_kw + '">' + ug.power_kw + ' / ' + ug.pot_max_kw + ' kW</div>';
+        applyVariantColors(card, ug);
+        return card;
+    }
+
+    /* ── Aplica cores de variante (normal/warning/critical) ── */
+    function applyVariantColors(card, ug) {
+        var label = card.querySelector('.gauge-label');
+        var pct   = card.querySelector('.gauge-percent');
+        label.textContent = ug.name + ' \u2022 ' + ug.status;
+        label.className = 'gauge-label text-[10px] uppercase font-bold tracking-widest mb-2';
+        pct.className   = 'gauge-percent absolute bottom-0 w-full text-center font-headline text-xl font-bold';
+        if (ug.variant === 'warning') {
+            label.classList.add('text-tertiary');
+            pct.classList.add('text-tertiary');
+            label.style.color = '';
+            pct.style.color   = '';
+        } else if (ug.variant === 'critical') {
+            label.classList.add('text-error');
+            pct.classList.add('text-error');
+            label.style.color = '';
+            pct.style.color   = '';
+        } else {
+            label.style.color = ug.color;
+            pct.style.color   = ug.color;
+        }
+    }
+
+    /* ── Atualiza card UG existente in-place ── */
+    function updateGaugeCard(card, ug) {
+        // Arco: a transição CSS cuida da animação suave
+        var arc = card.querySelector('.gauge-arc');
+        var newOffset = (141.37 * (1 - ug.percent / 100)).toFixed(2);
+        if (arc) {
+            arc.setAttribute('stroke-dashoffset', newOffset);
+            arc.setAttribute('stroke', ug.color);
+            arc.style.filter = 'drop-shadow(0 0 4px ' + ug.color + ')';
+        }
+
+        // Porcentagem: odômetro
+        var pctEl = card.querySelector('.gauge-percent');
+        if (pctEl) rollValue(pctEl, ug.percent, 0, '%');
+
+        // Potência: odômetro
+        var pwEl = card.querySelector('.gauge-power');
+        if (pwEl) {
+            var oldPw = parseFloat(pwEl.dataset.pw || '0');
+            var newPw = parseFloat(ug.power_kw) || 0;
+            if (Math.abs(oldPw - newPw) > 0.01) {
+                pwEl.dataset.pw = newPw;
+                pwEl.classList.remove('value-changed');
+                void pwEl.offsetWidth;
+                pwEl.classList.add('value-changed');
+                var start = performance.now();
+                (function animPw(now) {
+                    var t = Math.min((now - start) / 800, 1);
+                    var ease = 1 - Math.pow(1 - t, 3);
+                    var v = oldPw + (newPw - oldPw) * ease;
+                    pwEl.textContent = Math.round(v) + ' / ' + ug.pot_max_kw + ' kW';
+                    if (t < 1) requestAnimationFrame(animPw);
+                })(performance.now());
+            } else {
+                pwEl.textContent = ug.power_kw + ' / ' + ug.pot_max_kw + ' kW';
+            }
+        }
+
+        // Sparkline (idle = UG parada em 0%)
+        var sparkContainer = card.querySelector('.gauge-sparkline');
+        if (sparkContainer) {
+            var idle = ug.percent === 0;
+            renderSparkline(sparkContainer, _ugHistory[ug.name] || [], ug.color, ug.name, idle);
+        }
+
+        // Cores e status
+        card.style.borderLeftColor = ug.color;
+        applyVariantColors(card, ug);
+    }
+
+    /* ── Socket handlers ── */
+    function selecionarUsinaAtual() {
+        socket.emit('selecionar_usina', { usina: CURRENT_USINA });
+    }
+
+    function onSocketConnect() {
         console.log('[SOCKET] Conectado ao servidor');
 
         setTimeout(function () {
@@ -56,80 +344,81 @@
             if (Object.keys(m).length) socket.emit('page_loaded', m);
         }, 200);
 
-        socket.emit('selecionar_usina', { usina: "{{ codigo_usina }}" });
-    });
+        selecionarUsinaAtual();
+    }
 
-    socket.on('atualizar_gauges', function (data) {
+    if (socket.connected) {
+        selecionarUsinaAtual();
+    }
+
+    function onAtualizarGauges(data) {
+        if (data.codigo_usina && data.codigo_usina !== CURRENT_USINA) {
+            console.warn('[SOCKET] Ignorando gauges de outra usina:', data.codigo_usina, 'esperado:', CURRENT_USINA);
+            return;
+        }
+
         var usinas = data.usinas;
         var grid = document.getElementById('gaugeGrid');
         var resumo = data.resumo_rt || {};
-        var summaryCard = document.getElementById('rtSummaryCard');
         console.log('[SOCKET] Gauges atualizados -', usinas.length, 'UGs -', data.codigo_usina);
 
-        if (summaryCard) {
-            var nivelMontante = resumo.nivel_montante;
-            var nivelTexto = (nivelMontante === null || nivelMontante === undefined)
-                ? '--'
-                : Number(nivelMontante).toFixed(2) + ' m';
+        _lastUpdate = Date.now();
+        _fmtElapsed();
 
-            summaryCard.innerHTML =
-                '<div class="flex items-start justify-between gap-4">' +
-                    '<div>' +
-                        '<div class="text-[10px] uppercase font-bold tracking-widest mb-2" style="color: #02aeef;">Resumo Tempo Real</div>' +
-                        '<div class="text-2xl font-headline font-bold text-on-surface">' + (resumo.percent_total ?? 0) + '%</div>' +
-                        '<div class="text-[11px] text-on-surface-variant mt-1">' +
-                            (resumo.total_power_kw ?? 0) + ' / ' + (resumo.pot_max_total_kw ?? 0) + ' kW' +
-                        '</div>' +
-                    '</div>' +
-                    '<div class="text-right">' +
-                        '<div class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant mb-2">Nível Montante</div>' +
-                        '<div class="text-xl font-headline font-bold text-on-surface">' + nivelTexto + '</div>' +
-                    '</div>' +
-                '</div>';
-        }
-
-        // Reconstruir os cards dinamicamente (o número de UGs muda por usina)
-        grid.innerHTML = '';
-        usinas.forEach(function (ug, idx) {
-            var offset = (141.37 * (1 - ug.percent / 100)).toFixed(2);
-
-            var labelClass = '';
-            var labelStyle = '';
-            var pctClass = '';
-            var pctStyle = '';
-            if (ug.variant === 'warning') {
-                labelClass = 'text-tertiary';
-                pctClass = 'text-tertiary';
-            } else if (ug.variant === 'critical') {
-                labelClass = 'text-error';
-                pctClass = 'text-error';
-            } else {
-                labelStyle = 'color:' + ug.color + ';';
-                pctStyle = 'color:' + ug.color + ';';
-            }
-
-            var card = document.createElement('div');
-            card.id = 'gauge-' + ug.name;
-            card.className = 'bg-surface-container-highest p-4 rounded border-l-2 shadow-sm flex flex-col items-center justify-center';
-            card.style.borderLeftColor = ug.color;
-
-            card.innerHTML =
-                '<div class="gauge-label text-[10px] uppercase font-bold tracking-widest mb-2 ' + labelClass + '" style="' + labelStyle + '">' + ug.name + ' \u2022 ' + ug.status + '</div>' +
-                '<div class="relative w-32 h-16 overflow-hidden">' +
-                    '<svg class="w-32 h-32 absolute top-0 left-0" viewBox="0 0 100 100">' +
-                        '<circle class="text-surface-variant" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="141.37" stroke-dashoffset="0" stroke-width="8" transform="rotate(180 50 50)"></circle>' +
-                        '<circle class="gauge-arc" cx="50" cy="50" fill="none" r="45" stroke="' + ug.color + '" stroke-dasharray="141.37" stroke-dashoffset="' + offset + '" stroke-width="8" style="filter:drop-shadow(0 0 4px ' + ug.color + ');transition:stroke-dashoffset 0.8s ease;" transform="rotate(180 50 50)"></circle>' +
-                    '</svg>' +
-                    '<div class="gauge-percent absolute bottom-0 w-full text-center font-headline text-xl font-bold ' + pctClass + '" style="' + pctStyle + '">' + ug.percent + '%</div>' +
-                '</div>' +
-                '<div class="gauge-power text-[10px] text-on-surface-variant mt-1">' + ug.power_kw + ' / ' + ug.pot_max_kw + ' kW</div>';
-
-            grid.appendChild(card);
+        // Acumular histórico de cada UG
+        usinas.forEach(function (ug) {
+            pushHistory(ug.name, ug.percent);
         });
-    });
 
-    socket.on('disconnect', function () {
+        // Atualiza summary card in-place (inclui sparkline)
+        updateSummary(resumo);
+
+        // Mapa das UGs novas para controle de remoção
+        var newNames = {};
+        usinas.forEach(function (ug) { newNames['gauge-' + ug.name] = true; });
+
+        // Remove cards que não existem mais (e limpa histórico)
+        Array.from(grid.children).forEach(function (child) {
+            if (!newNames[child.id]) {
+                var ugKey = child.id.replace('gauge-', '');
+                delete _ugHistory[ugKey];
+                grid.removeChild(child);
+            }
+        });
+
+        // Cria ou atualiza cada card in-place
+        usinas.forEach(function (ug, idx) {
+            var cardId = 'gauge-' + ug.name;
+            var existing = document.getElementById(cardId);
+            if (existing) {
+                updateGaugeCard(existing, ug);
+            } else {
+                var newCard = createGaugeCard(ug);
+                if (grid.children[idx]) {
+                    grid.insertBefore(newCard, grid.children[idx]);
+                } else {
+                    grid.appendChild(newCard);
+                }
+                // Renderizar sparkline inicial (pode ter histórico de reconexão)
+                var sc = newCard.querySelector('.gauge-sparkline');
+                if (sc) renderSparkline(sc, _ugHistory[ug.name] || [], ug.color, ug.name, ug.percent === 0);
+            }
+        });
+    }
+
+    function onSocketDisconnect() {
         console.log('[SOCKET] Desconectado do servidor');
-    });
+    }
+
+    socket.on('connect', onSocketConnect);
+    socket.on('atualizar_gauges', onAtualizarGauges);
+    socket.on('disconnect', onSocketDisconnect);
+
+    window.__gaugeGridCleanup = function () {
+        clearInterval(_timestampTimer);
+        socket.off('connect', onSocketConnect);
+        socket.off('atualizar_gauges', onAtualizarGauges);
+        socket.off('disconnect', onSocketDisconnect);
+    };
 })();
 </script>

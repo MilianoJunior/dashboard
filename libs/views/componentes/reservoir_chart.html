@@ -1,53 +1,93 @@
-<!-- ReservoirSection - Section 3: Nível dos Reservatórios -->
+<!-- ReservoirSection - Section 3: Nível dos Reservatórios (Zoom Semântico) -->
 <div class="bg-surface-container-low rounded p-6 shadow-xl border border-outline-variant/10">
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
             <h3 class="text-headline-sm font-headline font-bold text-on-surface flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary-dim">waves</span>
                 NÍVEL DOS RESERVATÓRIOS
             </h3>
         </div>
-        <div class="flex gap-4">
-            {% for res in nivel_series %}
-            <div class="flex items-center gap-2">
-                <span class="w-3 h-0.5" style="background-color: {{ res.color }};"></span>
-                <span class="text-[10px] font-bold text-on-surface-variant">{{ res.name }}</span>
+        <div class="flex items-center gap-4 flex-wrap">
+            <!-- Toggle Histórico / Ao Vivo -->
+            <div id="nivelToggle" class="flex bg-surface-variant/30 rounded-full p-0.5">
+                <button type="button" data-mode="HISTORICO" aria-pressed="true" class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all bg-primary-dim text-on-primary">Histórico (24h/Dias)</button>
+                <button type="button" data-mode="AO_VIVO" aria-pressed="false" class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all text-on-surface-variant hover:text-on-surface">Ao Vivo</button>
             </div>
-            {% endfor %}
+            <!-- Legenda (Histórico) -->
+            <div id="nivelLegendHist" class="flex gap-4">
+                {% for res in nivel_series %}
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-0.5" style="background-color: {{ res.color }};"></span>
+                    <span class="text-[10px] font-bold text-on-surface-variant">{{ res.name }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <!-- Legenda (Ao Vivo) -->
+            <div id="nivelLegendLive" class="flex gap-4" style="display:none;">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-0.5" style="background-color: #02aeef;"></span>
+                    <span class="text-[10px] font-bold text-on-surface-variant">Nível Montante</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-0.5 border-t-2 border-dashed" style="border-color: #ff716c;"></span>
+                    <span class="text-[10px] font-bold text-on-surface-variant">Vertimento</span>
+                </div>
+            </div>
         </div>
     </div>
+
     <div class="flex">
-        <!-- Eixo Y Dinâmico (Valores) -->
-        <div class="flex flex-col justify-between h-[250px] pr-3 text-[10px] text-on-surface-variant font-mono text-right select-none">
+        <!-- Eixo Y -->
+        <div id="nivelYAxis" class="flex flex-col justify-between h-[250px] pr-3 text-[10px] text-on-surface-variant font-mono text-right select-none">
             {% for y_val in nivel_y_axis %}
             <span class="transform -translate-y-1/2 leading-none relative z-10">{{ y_val | replace('m', '') }}</span>
             {% endfor %}
         </div>
 
         <div class="relative h-[250px] w-full border-l border-b border-outline-variant/20 flex-1 mb-6">
-            <!-- SVG Line Chart -->
-            <svg class="w-full h-full preserve-3d overflow-visible" preserveAspectRatio="none" viewBox="0 0 1000 250">
-                <!-- Grid Lines Horizontais (5 faixas acompanhando os labels Y) -->
-                {% for y_pos in [0, 62.5, 125, 187.5, 250] %}
-                <line stroke="#ffffff" opacity="0.05" stroke-width="1" x1="0" x2="1000" y1="{{ y_pos }}" y2="{{ y_pos }}"></line>
-                {% endfor %}
+            <svg id="nivelSvg" class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 1000 250">
+                <!-- Grid horizontal -->
+                <g id="nivelGrid">
+                    {% for y_pos in [0, 62.5, 125, 187.5, 250] %}
+                    <line stroke="#ffffff" opacity="0.05" stroke-width="1" x1="0" x2="1000" y1="{{ y_pos }}" y2="{{ y_pos }}"></line>
+                    {% endfor %}
+                </g>
 
-                <!-- Spill Level Line -->
-                <line stroke="#ff716c" stroke-dasharray="8 4" stroke-width="2" x1="0" x2="1000" y1="{{ spill_y }}" y2="{{ spill_y }}"></line>
-                
-                <!-- Reservoir Lines -->
-                {% for res in nivel_series %}
-                <path d="{{ res.path }}" fill="none" stroke="{{ res.color }}" stroke-linejoin="round" stroke-linecap="round" stroke-width="1.5"></path>
-                {% endfor %}
+                <!-- Linha de vertimento (sempre visível) -->
+                <line id="nivelSpillLine" stroke="#ff716c" stroke-dasharray="8 4" stroke-width="2" x1="0" x2="1000" y1="{{ spill_y }}" y2="{{ spill_y }}"></line>
+
+                <!-- Grupo Histórico (paths do Jinja) -->
+                <g id="nivelHistGroup">
+                    {% for res in nivel_series %}
+                    <path class="nivel-hist-path" d="{{ res.path }}" fill="none" stroke="{{ res.color }}" stroke-linejoin="round" stroke-linecap="round" stroke-width="1.5" data-color="{{ res.color }}"></path>
+                    {% endfor %}
+                </g>
+
+                <!-- Grupo Ao Vivo (oculto inicialmente) -->
+                <g id="nivelLiveGroup" style="display:none;">
+                    <defs>
+                        <linearGradient id="nivelLiveGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#02aeef" stop-opacity="0.30"/>
+                            <stop offset="100%" stop-color="#02aeef" stop-opacity="0.02"/>
+                        </linearGradient>
+                        <filter id="nivelLiveDotGlow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur stdDeviation="3" result="blur"/>
+                            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                        </filter>
+                    </defs>
+                    <path id="nivelLiveArea" d="" fill="url(#nivelLiveGrad)"/>
+                    <path id="nivelLiveLine" d="" fill="none" stroke="#02aeef" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+                    <circle id="nivelLiveDot" cx="0" cy="0" r="4" fill="#02aeef" filter="url(#nivelLiveDotGlow)" style="animation: spark-dot-pulse 2s ease-in-out infinite; display:none;"/>
+                </g>
             </svg>
 
-            <!-- Spill Level Label -->
+            <!-- Label vertimento -->
             <div class="absolute top-2 right-2 flex items-center gap-2">
-                <span class="text-[9px] font-bold text-error uppercase bg-error/10 px-2 py-0.5 rounded">Vertimento: {{ nivel_vertimento_label }}</span>
+                <span id="nivelSpillLabel" class="text-[9px] font-bold text-error uppercase bg-error/10 px-2 py-0.5 rounded">Vertimento: {{ nivel_vertimento_label }}</span>
             </div>
 
-            <!-- X-Axis markers -->
-            <div class="absolute -bottom-6 left-0 right-0 flex justify-between text-[9px] text-on-surface-variant font-mono uppercase px-2 w-full">
+            <!-- Eixo X -->
+            <div id="nivelXAxis" class="absolute -bottom-6 left-0 right-0 flex justify-between text-[9px] text-on-surface-variant font-mono uppercase px-2 w-full">
                 {% for label in nivel_labels %}
                 <span>{{ label }}</span>
                 {% endfor %}
@@ -55,3 +95,356 @@
         </div>
     </div>
 </div>
+
+<script>
+(function () {
+    if (window.__nivelReservatorioCleanup) {
+        window.__nivelReservatorioCleanup();
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       Configuração inicial — dados injetados pelo Jinja
+       ═══════════════════════════════════════════════════════ */
+    let VERTIMENTO = Number({{ nivel_vertimento if nivel_vertimento is not none else 0 }}) || 0;
+    const CODIGO_USINA = "{{ codigo_usina }}";
+    const Y_LABELS = {{ nivel_y_axis | tojson }};
+    const SERIES_RAW = {{ nivel_series | tojson }};
+    const X_LABELS = {{ nivel_labels | tojson }};
+    const SVG_W = 1000;
+    const SVG_H = 250;
+    const LIVE_AXIS_TICKS = 7;
+
+    /* ── Escala histórica (derivada dos labels do eixo Y) ── */
+    const hYTop = parseFloat(Y_LABELS[0]) || 0;
+    const hYBottom = parseFloat(Y_LABELS[Y_LABELS.length - 1]) || 0;
+    const hYRange = hYTop - hYBottom || 1;
+
+    function histValToY(v) { return SVG_H - ((v - hYBottom) / hYRange * SVG_H); }
+
+    /* ── Parsear paths SVG em arrays de pontos [[svgX, svgY], ...] ── */
+    const histSeries = SERIES_RAW.map(function (s) {
+        const pts = [];
+        if (s.path) {
+            s.path.replace(/[ML]/g, ' ').trim().split(/\s+/).forEach(function (tok) {
+                const xy = tok.split(',');
+                if (xy.length === 2) pts.push([parseFloat(xy[0]), parseFloat(xy[1])]);
+            });
+        }
+        return { name: s.name, color: s.color, points: pts };
+    });
+
+    /* ═══════════════════════════════════════════════════════
+       Estado
+       ═══════════════════════════════════════════════════════ */
+    let modoNivel = 'HISTORICO';
+    let ultimoPontoRt = null;
+    const livePoints = [];       // [{ ts: ms, val: number }]
+    const MAX_LIVE = 60;
+
+    /* ═══════════════════════════════════════════════════════
+       Referências DOM
+       ═══════════════════════════════════════════════════════ */
+    const histGroup = document.getElementById('nivelHistGroup');
+    const liveGroup = document.getElementById('nivelLiveGroup');
+    const liveAreaPath = document.getElementById('nivelLiveArea');
+    const liveLinePath = document.getElementById('nivelLiveLine');
+    const liveDot = document.getElementById('nivelLiveDot');
+    const spillLine = document.getElementById('nivelSpillLine');
+    const spillLabel = document.getElementById('nivelSpillLabel');
+    const xAxisEl = document.getElementById('nivelXAxis');
+    const yAxisEl = document.getElementById('nivelYAxis');
+    const legendHist = document.getElementById('nivelLegendHist');
+    const legendLive = document.getElementById('nivelLegendLive');
+    const histPaths = histGroup.querySelectorAll('.nivel-hist-path');
+
+    /* ═══════════════════════════════════════════════════════
+       Toggle de modo
+       ═══════════════════════════════════════════════════════ */
+    const BTN_ON  = 'px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all bg-primary-dim text-on-primary';
+    const BTN_OFF = 'px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all text-on-surface-variant hover:text-on-surface';
+
+    document.querySelectorAll('#nivelToggle button').forEach(function (btn) {
+        btn.addEventListener('click', function () { setNivelMode(btn.dataset.mode); });
+    });
+
+    function setNivelMode(newMode) {
+        modoNivel = newMode;
+        document.querySelectorAll('#nivelToggle button').forEach(function (btn) {
+            const selected = btn.dataset.mode === modoNivel;
+            btn.className = selected ? BTN_ON : BTN_OFF;
+            btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        });
+
+        if (modoNivel === 'HISTORICO') {
+            histGroup.style.display  = '';
+            liveGroup.style.display  = 'none';
+            legendHist.style.display = '';
+            legendLive.style.display = 'none';
+            renderHistorico();
+        } else {
+            if (livePoints.length === 0 && ultimoPontoRt) {
+                pushLivePoint(ultimoPontoRt);
+            }
+            histGroup.style.display  = 'none';
+            liveGroup.style.display  = '';
+            legendHist.style.display = 'none';
+            legendLive.style.display = '';
+            renderLive();
+        }
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       Catmull-Rom → Bezier cúbico (curvas suaves)
+       ═══════════════════════════════════════════════════════ */
+    function smoothPath(pts) {
+        if (pts.length < 2) return '';
+        if (pts.length === 2)
+            return 'M' + pts[0][0].toFixed(1) + ',' + pts[0][1].toFixed(1) +
+                   'L' + pts[1][0].toFixed(1) + ',' + pts[1][1].toFixed(1);
+        let d = 'M' + pts[0][0].toFixed(1) + ',' + pts[0][1].toFixed(1);
+        for (let i = 0; i < pts.length - 1; i++) {
+            const p0 = pts[i === 0 ? 0 : i - 1];
+            const p1 = pts[i];
+            const p2 = pts[i + 1];
+            const p3 = pts[Math.min(i + 2, pts.length - 1)];
+            d += 'C' + (p1[0] + (p2[0] - p0[0]) / 6).toFixed(1) + ',' +
+                       (p1[1] + (p2[1] - p0[1]) / 6).toFixed(1) + ' ' +
+                       (p2[0] - (p3[0] - p1[0]) / 6).toFixed(1) + ',' +
+                       (p2[1] - (p3[1] - p1[1]) / 6).toFixed(1) + ' ' +
+                       p2[0].toFixed(1) + ',' + p2[1].toFixed(1);
+        }
+        return d;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       Render HISTÓRICO
+       ═══════════════════════════════════════════════════════ */
+    function renderHistorico() {
+        /* Atualizar atributo d de cada path (in-place, sem recriar) */
+        histSeries.forEach(function (s, idx) {
+            renderHistoricoPath(idx);
+        });
+
+        /* Restaurar eixo Y histórico */
+        const ySpans = yAxisEl.querySelectorAll('span');
+        Y_LABELS.forEach(function (lbl, i) {
+            if (ySpans[i]) ySpans[i].textContent = String(lbl).replace('m', '');
+        });
+
+        /* Restaurar eixo X histórico */
+        syncAxisLabels(X_LABELS);
+
+        /* Spill line na escala histórica */
+        renderSpillLine(histValToY(VERTIMENTO));
+    }
+
+    function renderHistoricoPath(idx) {
+        const serie = histSeries[idx];
+        if (!serie || !histPaths[idx] || serie.points.length < 2) return;
+        const d = 'M' + serie.points.map(function (p) {
+            return p[0].toFixed(1) + ',' + p[1].toFixed(1);
+        }).join(' L');
+        histPaths[idx].setAttribute('d', d);
+    }
+
+    function updateHistoricoLastPoint(nivel) {
+        renderSpillLine(histValToY(VERTIMENTO));
+        if (!histSeries.length || !histSeries[0].points.length) return;
+        const firstSeries = histSeries[0];
+        const lastPt = firstSeries.points[firstSeries.points.length - 1];
+        lastPt[1] = histValToY(nivel);
+        renderHistoricoPath(0);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       Render AO VIVO (eletrocardiograma com área)
+       ═══════════════════════════════════════════════════════ */
+    function renderLive() {
+        if (livePoints.length < 2) {
+            liveAreaPath.setAttribute('d', '');
+            liveLinePath.setAttribute('d', '');
+            liveDot.style.display = 'none';
+            renderLiveAxis(true);
+            return;
+        }
+        liveDot.style.display = '';
+
+        /* Escala dinâmica baseada nos dados live + vertimento */
+        const vals = livePoints.map(function (p) { return p.val; });
+        let lMin = Math.min.apply(null, vals);
+        let lMax = Math.max.apply(null, vals);
+        lMax = Math.max(lMax, VERTIMENTO);
+        const margin = (lMax - lMin) * 0.15 || 0.5;
+        const lBottom = lMin - margin;
+        const lTop    = lMax + margin;
+        const lRange  = lTop - lBottom || 1;
+
+        function liveValToY(v) { return SVG_H - ((v - lBottom) / lRange * SVG_H); }
+
+        /* Montar pontos SVG */
+        const n = livePoints.length;
+        const pts = [];
+        for (let j = 0; j < n; j++) {
+            pts.push([
+                (j / Math.max(n - 1, 1)) * SVG_W,
+                liveValToY(livePoints[j].val)
+            ]);
+        }
+
+        /* Linha suave (Bezier) */
+        const lineD = smoothPath(pts);
+        liveLinePath.setAttribute('d', lineD);
+
+        /* Área: fechar curva por baixo */
+        const last  = pts[pts.length - 1];
+        const first = pts[0];
+        liveAreaPath.setAttribute('d',
+            lineD +
+            'L' + last[0].toFixed(1) + ',' + SVG_H +
+            'L' + first[0].toFixed(1) + ',' + SVG_H + 'Z'
+        );
+
+        /* Leading dot */
+        liveDot.setAttribute('cx', last[0].toFixed(1));
+        liveDot.setAttribute('cy', last[1].toFixed(1));
+
+        /* Spill line na escala live */
+        renderSpillLine(liveValToY(VERTIMENTO));
+
+        /* Eixo Y live */
+        const ySpans = yAxisEl.querySelectorAll('span');
+        const fracs = [1.0, 0.75, 0.5, 0.25, 0.0];
+        fracs.forEach(function (f, i) {
+            if (ySpans[i]) ySpans[i].textContent = (lBottom + f * lRange).toFixed(2);
+        });
+
+        renderLiveAxis(false);
+    }
+
+    function syncAxisLabels(labels) {
+        while (xAxisEl.children.length < labels.length) {
+            xAxisEl.appendChild(document.createElement('span'));
+        }
+        while (xAxisEl.children.length > labels.length) {
+            xAxisEl.removeChild(xAxisEl.lastElementChild);
+        }
+        Array.from(xAxisEl.children).forEach(function (sp, i) {
+            sp.className = '';
+            sp.textContent = labels[i] || '';
+        });
+    }
+
+    function renderLiveAxis(isWaiting) {
+        const labels = [];
+        if (isWaiting) {
+            labels.push('Aguardando dados ao vivo...');
+        } else {
+            const n = livePoints.length;
+            for (let i = 0; i < LIVE_AXIS_TICKS; i++) {
+                const idx = Math.round((i / (LIVE_AXIS_TICKS - 1)) * (n - 1));
+                labels.push(_tsLabel(livePoints[idx].ts));
+            }
+        }
+
+        while (labels.length < LIVE_AXIS_TICKS) labels.push('');
+        syncAxisLabels(labels.slice(0, LIVE_AXIS_TICKS));
+        Array.from(xAxisEl.children).forEach(function (sp, i) {
+            sp.className = isWaiting && i === 0 ? 'text-on-surface-variant opacity-50' : '';
+        });
+    }
+
+    function renderSpillLine(y) {
+        spillLine.setAttribute('y1', y.toFixed(1));
+        spillLine.setAttribute('y2', y.toFixed(1));
+    }
+
+    function setVertimento(limiteVertimento) {
+        if (limiteVertimento === null || limiteVertimento === undefined) return;
+        VERTIMENTO = limiteVertimento;
+        if (spillLabel) {
+            spillLabel.textContent = 'Vertimento: ' + VERTIMENTO.toFixed(2) + 'm';
+        }
+    }
+
+    function pushLivePoint(ponto) {
+        livePoints.push({ ts: ponto.ts, val: ponto.nivel });
+        if (livePoints.length > MAX_LIVE) livePoints.shift();
+    }
+
+    function _tsLabel(ms) {
+        const d = new Date(ms);
+        return String(d.getHours()).padStart(2, '0') + ':' +
+               String(d.getMinutes()).padStart(2, '0') + ':' +
+               String(d.getSeconds()).padStart(2, '0');
+    }
+
+    function parseNumber(raw) {
+        if (raw === null || raw === undefined || raw === '') return null;
+        const valor = Number(String(raw).replace(',', '.'));
+        return Number.isFinite(valor) ? valor : null;
+    }
+
+    function parseTimestamp(raw) {
+        if (!raw) return Date.now();
+        if (typeof raw === 'number') return raw < 10000000000 ? raw * 1000 : raw;
+        const parsed = Date.parse(raw);
+        return Number.isNaN(parsed) ? Date.now() : parsed;
+    }
+
+    function normalizarPayloadNivel(data) {
+        if (!data) return null;
+        const resumo = data.resumo_rt || {};
+        const nivel = parseNumber(
+            data.nivel_montante !== undefined ? data.nivel_montante : resumo.nivel_montante
+        );
+        if (nivel === null) return null;
+
+        return {
+            ts: parseTimestamp(data.timestamp || resumo.timestamp),
+            nivel: nivel,
+            limiteVertimento: parseNumber(
+                data.limite_vertimento !== undefined
+                    ? data.limite_vertimento
+                    : resumo.limite_vertimento
+            ),
+        };
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       Socket — usa o evento solicitado e mantém compatibilidade com o evento atual
+       ═══════════════════════════════════════════════════════ */
+    const socket = window.__engegomSocket || (window.__engegomSocket = io());
+
+    function handleNivelSocketPayload(data) {
+        if (data && data.codigo_usina && data.codigo_usina !== CODIGO_USINA) {
+            return;
+        }
+
+        const ponto = normalizarPayloadNivel(data);
+        if (!ponto) return;
+
+        ultimoPontoRt = ponto;
+        setVertimento(ponto.limiteVertimento);
+
+        if (modoNivel === 'AO_VIVO') {
+            pushLivePoint(ponto);
+            renderLive();
+        } else {
+            updateHistoricoLastPoint(ponto.nivel);
+        }
+    }
+
+    socket.on('rt_nivel_data', handleNivelSocketPayload);
+    socket.on('atualizar_gauges', handleNivelSocketPayload);
+
+    window.__nivelReservatorioCleanup = function () {
+        socket.off('rt_nivel_data', handleNivelSocketPayload);
+        socket.off('atualizar_gauges', handleNivelSocketPayload);
+    };
+
+    /* ═══════════════════════════════════════════════════════
+       Init — modo padrão Histórico
+       ═══════════════════════════════════════════════════════ */
+    setNivelMode('HISTORICO');
+})();
+</script>

@@ -2,9 +2,12 @@
 # FLUXO DO MÓDULO
 # 1. test_dispositivo_tem_gauge_exige_status -> Garante labels minimas do card
 # 2. test_montar_registros_gauge             -> Mantem ordem esperada da leitura
-# 3. test_obter_leitura_nivel_montante       -> Localiza a leitura agregada
-# 4. test_resolver_status_ug_padrao          -> Usa status True no fluxo padrao
-# 5. test_resolver_status_ug_pch_pira        -> Inverte a logica booleana na PIRA
+# 3. test_obter_registro_nivel_montante      -> Localiza a leitura agregada
+# 4. test_resolver_status_true_unico         -> Usa o unico True booleano
+# 5. test_resolver_status_potencia_forca_us  -> Potencia positiva privilegia US
+# 6. test_resolver_status_false_coerente     -> Usa False unico coerente sem geracao
+# 7. test_resolver_status_ambiguo_sem_geracao-> Ambiguidade sem potencia privilegia UP
+# 8. test_resolver_status_logs_reais         -> Reproduz leituras observadas em log
 # -------------------------------------------------------------------
 
 import os
@@ -16,7 +19,7 @@ from libs.models.gauge_rt import (
     STATUS_LABEL_ORDER,
     dispositivo_tem_gauge,
     montar_registros_gauge,
-    obter_leitura_nivel_montante,
+    obter_registro_nivel_montante,
     resolver_status_ug,
 )
 
@@ -41,7 +44,7 @@ def test_montar_registros_gauge():
     assert list(registros.keys()) == ["Potência Ativa", *STATUS_LABEL_ORDER]
 
 
-def test_obter_leitura_nivel_montante():
+def test_obter_registro_nivel_montante():
     usina_cfg = {
         "dispositivos": {
             "PSA": {
@@ -52,7 +55,7 @@ def test_obter_leitura_nivel_montante():
         }
     }
 
-    leitura = obter_leitura_nivel_montante(usina_cfg)
+    leitura = obter_registro_nivel_montante(usina_cfg)
 
     assert leitura == {
         "nome": "PSA",
@@ -61,8 +64,9 @@ def test_obter_leitura_nivel_montante():
     }
 
 
-def test_resolver_status_ug_padrao():
+def test_resolver_status_true_unico():
     leituras_rt = {
+        "Potência Ativa": 0.0,
         "US (sincronizado)": False,
         "UMD (marcha desexcitada)": False,
         "UPS (pronta para sincronização)": True,
@@ -70,14 +74,38 @@ def test_resolver_status_ug_padrao():
         "UP (parada)": False,
     }
 
-    status, variant = resolver_status_ug(leituras_rt, codigo_usina="CGH-FAE")
-
-    assert status == "UPS"
-    assert variant == "warning"
+    assert resolver_status_ug(leituras_rt, codigo_usina="CGH-FAE") == "UPS"
 
 
-def test_resolver_status_ug_pch_pira():
+def test_resolver_status_log_pira_parada():
     leituras_rt = {
+        "Potência Ativa": 0.0,
+        "US (sincronizado)": False,
+        "UMD (marcha desexcitada)": False,
+        "UPS (pronta para sincronização)": False,
+        "UPGM (pronta para giro mecânico)": False,
+        "UP (parada)": True,
+    }
+
+    assert resolver_status_ug(leituras_rt, codigo_usina="PCH-PIRA") == "UP"
+
+
+def test_resolver_status_log_aparecida_gerando():
+    leituras_rt = {
+        "Potência Ativa": 440,
+        "US (sincronizado)": True,
+        "UMD (marcha desexcitada)": False,
+        "UPS (pronta para sincronização)": False,
+        "UPGM (pronta para giro mecânico)": False,
+        "UP (parada)": False,
+    }
+
+    assert resolver_status_ug(leituras_rt, codigo_usina="CGH-APARECIDA") == "US"
+
+
+def test_resolver_status_potencia_forca_us_antes_de_false_unico():
+    leituras_rt = {
+        "Potência Ativa": 440,
         "US (sincronizado)": True,
         "UMD (marcha desexcitada)": True,
         "UPS (pronta para sincronização)": False,
@@ -85,7 +113,43 @@ def test_resolver_status_ug_pch_pira():
         "UP (parada)": True,
     }
 
-    status, variant = resolver_status_ug(leituras_rt, codigo_usina="PCH-PIRA")
+    assert resolver_status_ug(leituras_rt, codigo_usina="CGH-APARECIDA") == "US"
 
-    assert status == "UPS"
-    assert variant == "warning"
+
+def test_resolver_status_false_unico_coerente_sem_geracao():
+    leituras_rt = {
+        "Potência Ativa": 0.0,
+        "US (sincronizado)": True,
+        "UMD (marcha desexcitada)": True,
+        "UPS (pronta para sincronização)": False,
+        "UPGM (pronta para giro mecânico)": True,
+        "UP (parada)": True,
+    }
+
+    assert resolver_status_ug(leituras_rt, codigo_usina="PCH-PIRA") == "UPS"
+
+
+def test_resolver_status_false_unico_incoerente_sem_geracao_cai_para_up():
+    leituras_rt = {
+        "Potência Ativa": 0.0,
+        "US (sincronizado)": False,
+        "UMD (marcha desexcitada)": True,
+        "UPS (pronta para sincronização)": True,
+        "UPGM (pronta para giro mecânico)": True,
+        "UP (parada)": True,
+    }
+
+    assert resolver_status_ug(leituras_rt, codigo_usina="PCH-PIRA") == "UP"
+
+
+def test_resolver_status_ambiguo_sem_geracao_privilegia_up():
+    leituras_rt = {
+        "Potência Ativa": 0.0,
+        "US (sincronizado)": False,
+        "UMD (marcha desexcitada)": True,
+        "UPS (pronta para sincronização)": True,
+        "UPGM (pronta para giro mecânico)": False,
+        "UP (parada)": False,
+    }
+
+    assert resolver_status_ug(leituras_rt, codigo_usina="PCH-PIRA") == "UP"

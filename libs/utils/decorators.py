@@ -95,7 +95,7 @@ def _obter_contexto_execucao():
     return "fora-flask"
 
 
-def _log_desempenho(evento, chamada_id, nivel, nome_completo, contexto, detalhe, detalhe2):
+def _log_desempenho(evento, chamada_id, nivel, nome_completo, contexto, detalhe, detalhe2=None):
     identacao = "  " * nivel
     detalhe2 = f" | {detalhe2}" if detalhe2 else ""
     print(

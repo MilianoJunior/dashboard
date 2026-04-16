@@ -29,11 +29,11 @@
             </div>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div class="bg-surface-container-highest p-4 rounded border-l-2 shadow-sm animate-pulse flex flex-col items-center justify-center h-28" style="border-left-color:#5BC0EB;"><div class="h-2 w-16 bg-surface-variant rounded mb-3"></div><div class="w-16 h-8 bg-surface-variant rounded-full"></div></div>
-            <div class="bg-surface-container-highest p-4 rounded border-l-2 shadow-sm animate-pulse flex flex-col items-center justify-center h-28" style="border-left-color:#9B5DE5;"><div class="h-2 w-16 bg-surface-variant rounded mb-3"></div><div class="w-16 h-8 bg-surface-variant rounded-full"></div></div>
-            <div class="bg-surface-container-highest p-4 rounded border-l-2 shadow-sm animate-pulse flex flex-col items-center justify-center h-28" style="border-left-color:#F15BB5;"><div class="h-2 w-16 bg-surface-variant rounded mb-3"></div><div class="w-16 h-8 bg-surface-variant rounded-full"></div></div>
-            <div class="bg-surface-container-highest p-4 rounded border-l-2 shadow-sm animate-pulse flex flex-col items-center justify-center h-28" style="border-left-color:#FEE440;"><div class="h-2 w-16 bg-surface-variant rounded mb-3"></div><div class="w-16 h-8 bg-surface-variant rounded-full"></div></div>
-            <div class="bg-surface-container-highest p-4 rounded border-l-2 shadow-sm animate-pulse flex flex-col items-center justify-center h-28" style="border-left-color:#00F5D4;"><div class="h-2 w-16 bg-surface-variant rounded mb-3"></div><div class="w-16 h-8 bg-surface-variant rounded-full"></div></div>
+            <div class="bg-surface-container-highest p-4 rounded border-l-2 shadow-sm animate-pulse flex flex-col items-center justify-center h-28" style="border-left-color:#60A5FA;"><div class="h-2 w-16 bg-surface-variant rounded mb-3"></div><div class="w-16 h-8 bg-surface-variant rounded-full"></div></div>
+            <div class="bg-surface-container-highest p-4 rounded border-l-2 shadow-sm animate-pulse flex flex-col items-center justify-center h-28" style="border-left-color:#A78BFA;"><div class="h-2 w-16 bg-surface-variant rounded mb-3"></div><div class="w-16 h-8 bg-surface-variant rounded-full"></div></div>
+            <div class="bg-surface-container-highest p-4 rounded border-l-2 shadow-sm animate-pulse flex flex-col items-center justify-center h-28" style="border-left-color:#34D399;"><div class="h-2 w-16 bg-surface-variant rounded mb-3"></div><div class="w-16 h-8 bg-surface-variant rounded-full"></div></div>
+            <div class="bg-surface-container-highest p-4 rounded border-l-2 shadow-sm animate-pulse flex flex-col items-center justify-center h-28" style="border-left-color:#FB923C;"><div class="h-2 w-16 bg-surface-variant rounded mb-3"></div><div class="w-16 h-8 bg-surface-variant rounded-full"></div></div>
+            <div class="bg-surface-container-highest p-4 rounded border-l-2 shadow-sm animate-pulse flex flex-col items-center justify-center h-28" style="border-left-color:#FB7185;"><div class="h-2 w-16 bg-surface-variant rounded mb-3"></div><div class="w-16 h-8 bg-surface-variant rounded-full"></div></div>
         </div>
     </div>
 </div>
@@ -119,6 +119,8 @@
             document.getElementById('section-reservoir').innerHTML   = data.reservoir_chart;
 
             execScripts(document.getElementById('section-gauges'));
+            execScripts(document.getElementById('section-generation'));
+            execScripts(document.getElementById('section-reservoir'));
 
             interceptarFiltros();
             finalizarCarga();
@@ -185,6 +187,9 @@
             .then(function (data) {
                 document.getElementById('section-generation').innerHTML = data.generation_chart;
                 document.getElementById('section-reservoir').innerHTML  = data.reservoir_chart;
+
+                execScripts(document.getElementById('section-generation'));
+                execScripts(document.getElementById('section-reservoir'));
 
                 interceptarFiltros();
 
