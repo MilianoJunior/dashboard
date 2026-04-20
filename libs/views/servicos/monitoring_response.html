@@ -1,0 +1,91 @@
+<html lang="pt-br">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="">
+        <meta name="author" content="">
+        <link rel="icon" href="app/templates/theme3/img/logo.png">
+        <title>NaturWelt::Gateway v.3.17.0</title>
+        
+        
+    <!-- Third part libraries required by Adianti Framework -->
+    <script src="lib/jquery/jquery.min.js?afver=3.17.0" type="text/javascript"></script>
+    <script src="lib/bootstrap/js/bootstrap.min.js?afver=3.17.0"></script>
+    <script src="lib/bootstrap/js/bootstrap-plugins.min.js?afver=3.17.0" type="text/javascript"></script>
+    <script src="lib/bootstrap/js/locales/bootstrap-datepicker.pt.js?afver=3.17.0" type="text/javascript"></script>
+    <script src="lib/jquery/jquery-ui.min.js?afver=3.17.0" type="text/javascript"></script>
+    <script src="lib/jquery/jquery-plugins.min.js?afver=3.17.0" type="text/javascript"></script>
+    <script src="app/templates/theme3/js/custom.js?appver=3.17.0" type="text/javascript"></script>
+    <script src="app/templates/theme3/js/ol.min.js?appver=3.17.0" type="text/javascript"></script>
+    
+    <!-- Adianti Framework core and components -->
+    <script src="lib/adianti/include/adianti.js?afver=3.17.0" type="text/javascript"></script>
+    <script src="lib/adianti/include/components.min.js?afver=3.17.0" type="text/javascript"></script>
+    
+    <!-- Application custom Javascript (Optional) -->
+    <script src="app/lib/include/application.js?appver=3.17.0" type="text/javascript"></script>
+    <script src="app/templates/theme3/js/chart.min.js?appver=3.17.0" type="text/javascript"></script>
+    <script src="app/templates/theme3/js/bootstrap-datetimepicker.min.js?afver=3.17.0" type="text/javascript"></script>
+    <script src="app/templates/theme3/js/bootstrap-datetimepicker.pt.js?afver=3.17.0" type="text/javascript"></script>
+    <script src="app/templates/theme3/js/tdatetime.js?appver=3.17.0" type="text/javascript"></script>
+    
+    <!-- Third part CSS required by Adianti Framework -->
+    <link href="lib/jquery/jquery-ui.min.css?afver=3.17.0" rel="stylesheet" type="text/css" media="screen" />
+    <link href="lib/jquery/jquery-plugins.min.css?afver=3.17.0" rel="stylesheet" type="text/css" media="screen" />
+    <link href="lib/bootstrap/css/bootstrap.min.css?afver=3.17.0" rel="stylesheet" type="text/css" media="screen" />
+    <link href="lib/bootstrap/css/boostrap-plugins.min.css?afver=3.17.0" rel="stylesheet" type="text/css" media="screen" />
+    <link href="lib/font-awesome/css/font-awesome.min.css?afver=3.17.0" rel="stylesheet" type="text/css" media="screen" />
+    
+    <!-- Adianti Framework Components CSS -->
+    <link href="lib/adianti/include/adianti.min.css?afver=3.17.0" rel="stylesheet" type="text/css" media="screen" />
+    <link href="lib/adianti/include/components.min.css?afver=3.17.0" rel="stylesheet" type="text/css" media="screen" />
+    
+    <!-- Application custom CSS -->
+    <link href="app/templates/theme3/css/bootstrap-datetimepicker.min.css?appver=3.17.0" rel="stylesheet" type="text/css" media="screen">
+    <link href="app/templates/theme3/application.css?appver=3.17.0" rel="stylesheet" type="text/css" media="screen">
+    <link href="app/templates/theme3/css/ol.min.css?appver=3.17.0" rel="stylesheet" type="text/css" media="screen">
+
+        
+            
+        <link rel="stylesheet" href="app/templates/theme3/css/AdminLTE.min.css">
+        <link rel="stylesheet" href="app/templates/theme3/css/skins/skin-green-blue-light.min.css">
+    </head>
+    <body>
+        <div id="wrapper" style="z-index:3;position:relative">
+            <div style="margin:60px 0 20px 0;text-align:center">
+                <img src="app/templates/theme3/img/logo.png">
+            </div>
+            <div id="adianti_div_content"></div>
+            <div id="adianti_online_content"></div>
+            <div id="adianti_online_content2"></div>
+        </div>
+    </body>
+</html><script language='JavaScript'>__adianti_load_page('index.php?class=LoginForm&method=');</script>
+
+
+<div><form class="tform" style="max-width: 450px; margin:auto;" enctype="multipart/form-data" name="form_login" id="form_login" method="post"><table width="100%">
+<tr class="tformtitle"><td colspan="2"><label>Por favor, identifique-se:</label>
+</td>
+</tr>
+<tr><td colspan="2"><div>
+<span style="float:left;width:35px;margin-left:45px;height:35px;" class="input-group-addon"><span class="glyphicon glyphicon-user"></span></span><input class="tfield" style="height:35px; font-size:14px;float:left;border-bottom-left-radius: 0;border-top-left-radius: 0;;width:70%;" placeholder="Usuário" name="login" type="text"/></div>
+</td>
+</tr>
+<tr><td colspan="2"><div>
+<span style="float:left;width:35px;margin-left:45px;height:35px;" class="input-group-addon"><span class="glyphicon glyphicon-lock"></span></span><input class="tfield" style="height:35px;margin-bottom: 15px;font-size:14px;float:left;border-bottom-left-radius: 0;border-top-left-radius: 0;;width:70%;" placeholder="Senha" name="password" type="password"/></div>
+</td>
+</tr>
+<tr class="tformaction"><td style="text-align:center"><button class="btn btn-danger btn-flat" onclick="Adianti.waitMessage = 'Carregando';__adianti_post_data('form_login', 'class=LoginForm&method=onLogin');return false;" id="tbutton_save" name="save" style="font-size:18px;width:90%;padding:10px;background-color:#333;border-color: #000;"><span>Entrar</span>
+</button>
+</td>
+</tr>
+<tr style="background-color: whiteSmoke;"><td style="text-align:center"><button class="btn btn-link" onclick="Adianti.waitMessage = 'Carregando';__adianti_post_data('form_login', 'class=LoginForm&method=onRequestPassword');return false;" id="tbutton_pass" name="pass"><span>Esqueceu a sua senha?</span>
+</button>
+</td>
+</tr>
+</table>
+</form>
+</div>
+
+<button class="btn btn-danger btn-flat" onclick="Adianti.waitMessage = 'Carregando';__adianti_post_data('form_login', 'class=LoginForm&amp;method=onLogin');return false;" id="tbutton_save" name="save" style="font-size:18px;width:90%;padding:10px;background-color:#333;border-color: #000;"><span>Entrar</span>
+</button>
