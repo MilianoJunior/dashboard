@@ -1,36 +1,36 @@
 # Dashboard EngeGOM
 
-Dashboard web para monitoramento operacional de usinas hidreletricas (CGH/PCH), desenvolvido pela EngeGOM.
+Dashboard web para monitoramento operacional de usinas hidrelétricas (CGH/PCH), desenvolvido pela EngeGOM.
 
-## Visao Geral
+## Visão Geral
 
-Aplicacao Flask + Flask-SocketIO que exibe em tempo real e historicamente:
+Aplicação Flask + Flask-SocketIO que exibe em tempo real e historicamente o status das usinas:
 
-- **Gauges de potencia** de cada Unidade Geradora (UG), com status e percentual de carga
-- **Nivel de montante** (nivel d'agua a montante da barragem)
-- **Graficos de producao de energia** (horaria, diaria e mensal)
-- **Graficos de nivel** com linha de vertimento
+- **Gauges de potência** de cada Unidade Geradora (UG), com status e percentual de carga
+- **Nível de montante** (nível d'água a montante da barragem)
+- **Gráficos de produção de energia** (horária, diária e mensal)
+- **Gráficos de nível** com linha de vertimento
 
-Os dados historicos vem de uma API REST externa (`/producao-acumulada`, `/grupo-usina`, `/sensor-usina`). Os dados em tempo real sao lidos via API Modbus/CLP e enviados ao frontend por WebSocket.
+Os dados históricos vêm de uma API REST externa (`/producao-acumulada`, `/grupo-usina`, `/sensor-usina`). Os dados em tempo real são lidos via API Modbus/CLP e enviados ao frontend por WebSocket. O projeto segue um padrão de interface com tailwindcss, atualizações in-place e responsividade.
 
-## Experiencia de Monitoramento em Tempo Real
+## Experiência de Monitoramento em Tempo Real
 
-O frontend foi projetado para transmitir ao operador a sensacao de "sistema vivo":
+O frontend foi projetado para transmitir ao operador a sensação de "sistema vivo":
 
-- **Live Dot**: ponto verde pulsante ao lado do titulo "Resumo Tempo Real", indicando que o sistema esta ativo
-- **Timestamp dinamico**: contador regressivo ao lado do titulo mostrando "Atualizado as HH:MM:SS - ha Xs", atualizado a cada segundo
-- **Efeito odometro**: valores numericos (percentual, potencia, nivel montante) rolam suavemente do valor antigo ao novo com interpolacao ease-out cubic (800ms)
-- **Transicao suave nos arcos**: as barras dos gauges SVG deslizam via CSS transition ao inves de saltar
-- **Sparklines com curvas Bezier**: mini-graficos de area em cada card de UG e no resumo, mostrando a tendencia dos ultimos ~15 minutos (ate 50 pontos)
-  - Curvas suaves via conversao Catmull-Rom para Bezier cubico
-  - Gradiente de area (cor da UG -> transparente) dando volume visual
+- **Live Dot**: ponto verde pulsante ao lado do título "Resumo Tempo Real", indicando que o sistema está ativo
+- **Timestamp dinâmico**: contador regressivo ao lado do título mostrando "Atualizado às HH:MM:SS - há Xs", atualizado a cada segundo
+- **Efeito odômetro**: valores numéricos (percentual, potência, nível montante) rolam suavemente do valor antigo ao novo com interpolação ease-out cubic (800ms)
+- **Transição suave nos arcos**: as barras dos gauges SVG deslizam via CSS transition ao invés de saltar
+- **Sparklines com curvas Bezier**: mini-gráficos de área em cada card de UG e no resumo, mostrando a tendência dos últimos ~15 minutos (até 50 pontos)
+  - Curvas suaves via conversão Catmull-Rom para Bezier cúbico
+  - Gradiente de área (cor da UG -> transparente) dando volume visual
   - Leading dot pulsante com glow SVG no ponto atual
   - UGs paradas (0%) recuam visualmente: cor cinza, opacidade reduzida, sem dot
-- **Atualizacao in-place**: o DOM nunca e destruido/recriado nas atualizacoes via socket, permitindo que todas as animacoes CSS e JS funcionem
+- **Atualização in-place**: o DOM nunca é destruído/recriado nas atualizações via socket, permitindo que todas as animações CSS e JS funcionem
 
 ## Usinas Suportadas
 
-| Codigo            | Tipo |
+| Código            | Tipo |
 | ----------------- | ---- |
 | PCH-PIRA          | PCH  |
 | PCH-PEDRAS        | PCH  |
@@ -39,64 +39,64 @@ O frontend foi projetado para transmitir ao operador a sensacao de "sistema vivo
 | CGH-FAE           | CGH  |
 | CGH-HOPPEN        | CGH  |
 
-O numero de UGs e dinamico por usina (1 a N). A paleta de cores e aplicada ciclicamente via `idx % len(UG_COLORS)`.
+O número de UGs é dinâmico por usina (1 a N). A paleta de cores é aplicada ciclicamente. Cada usina possui autenticação própria persistida via sessão/cookies.
 
 ## Estrutura do Projeto
 
 ```
 dashboard.py                  # Entrypoint Flask + SocketIO
 libs/
-  routes/routes.py            # Rotas HTTP (/, /health)
+  routes/routes.py            # Rotas HTTP (/, /health, login)
   controllers/
-    dashboard_controller.py   # Logica de montagem dos dados do dashboard
+    dashboard_controller.py   # Lógica de montagem dos dados do dashboard
   models/
-    api_model.py              # Chamadas HTTP para API externa (producao, nivel, sensor)
-    consultas.py              # Consulta e normalizacao de dados (producao, nivel)
-    config_model.py           # Modelo de configuracao (YAML)
-    gauge_rt.py               # Logica de gauges e status das UGs
+    api_model.py              # Chamadas HTTP para API externa (produção, nível, sensor)
+    consultas.py              # Consulta e normalização de dados (produção, nível)
+    config_model.py           # Modelo de configuração (YAML)
+    gauge_rt.py               # Lógica de gauges e status das UGs
     colors.py                 # Paleta centralizada de cores (UG_COLORS, NIVEL_COLORS)
-    utils.py                  # Filtros de template e utilitarios
+    utils.py                  # Filtros de template e utilitários
   views/
     componentes/
-      base.html               # Layout base (Tailwind, fontes, animacoes CSS)
-      dashboard.html           # Skeleton de loading + carga assincrona
-      gauge_card.html          # Macro Jinja do card individual de UG
-      gauge_grid.html          # Grid de gauges + resumo RT + sparklines + socket JS
-      generation_chart.html    # Grafico de producao empilhado
-      reservoir_chart.html     # Grafico de nivel do reservatorio
-      header.html              # Cabecalho com seletor de usina
-      bottom_nav.html          # Navegacao inferior
+      base.html               # Layout base (Tailwind, fontes, animações CSS)
+      dashboard.html          # Skeleton de loading + carga assíncrona
+      gauge_card.html         # Macro Jinja do card individual de UG
+      gauge_grid.html         # Grid de gauges + resumo RT + sparklines + socket JS
+      generation_chart.html   # Gráfico de produção empilhado
+      reservoir_chart.html    # Gráfico de nível do reservatório
+      header.html             # Cabeçalho com seletor de usina
+      bottom_nav.html         # Navegação inferior
     servicos/
-      connect.py              # WebSocket: leitura RT via Modbus e emissao periodica
+      connect.py              # WebSocket: leitura RT via Modbus e emissão periódica
   utils/
     decorators.py             # Decorador de desempenho e logging
-    auth.py                   # Autenticacao de rotas
+    auth.py                   # Autenticação de rotas e usinas
 config/
-  usinas_dispositivos.json    # Configuracao de dispositivos/registros Modbus por usina
-  usuarios_usinas.yaml        # Mapeamento usuarios x usinas
-  usinas_cont.yaml            # Configuracao de contabilizacao
-assets/                       # Logos e recursos estaticos
+  usinas_dispositivos.json    # Configuração de dispositivos/registros Modbus por usina
+  usuarios_usinas.yaml        # Mapeamento usuários x usinas
+  usinas_cont.yaml            # Configuração de contabilização
+assets/                       # Logos e recursos estáticos
 tests/                        # Testes automatizados
-docs/                         # Documentacao e codigo legado
 ```
 
-## Arquitetura
+## Arquitetura e Fluxo
 
 ```
 Browser  <--WebSocket-->  Flask-SocketIO  <--HTTP/Modbus-->  API CLP
 Browser  <--HTTP GET-->   Flask Routes    <--HTTP POST-->    API REST externa
 ```
 
-1. O usuario acessa `/` e recebe o skeleton de loading (dashboard.html)
-2. O JS do skeleton faz um fetch assincrono para `/api/dashboard` que retorna os dados historicos
-3. O SocketIO inicia emissao periodica (~15-20s) lendo dados RT de cada UG via API Modbus
-4. O frontend atualiza gauges, sparklines e resumo em tempo real sem reload (update in-place)
+1. O usuário acessa a página de `/login`, autentica com as credenciais da usina e é redirecionado para `/`.
+2. Acessando `/`, o usuário recebe o skeleton de loading inicial (`dashboard.html`).
+3. O JS do skeleton faz um fetch assíncrono para `/api/dashboard` que retorna os dados históricos renderizados.
+4. O SocketIO inicia a emissão periódica (~15-20s) lendo dados em tempo real de cada UG via API Modbus.
+5. O frontend atualiza gauges, sparklines e resumo em tempo real sem reload da página.
 
 ## Paleta de Cores
 
-Definida em `libs/models/colors.py` (fonte unica de verdade):
+Definida em `libs/models/colors.py` (fonte única de verdade):
 
-| Indice | Cor       | Uso             |
+| Índice | Cor       | Uso             |
 | ------ | --------- | --------------- |
 | 0      | `#60A5FA` | Azul - UG-01    |
 | 1      | `#A78BFA` | Roxo - UG-02    |
@@ -106,80 +106,32 @@ Definida em `libs/models/colors.py` (fonte unica de verdade):
 
 Para alterar as cores de todo o sistema, edite apenas `libs/models/colors.py`.
 
-## Como Executar
+## Como Executar Localmente
 
-1. Instale as dependencias:
-
-   ```
+1. Ative o ambiente virtual e instale as dependências:
+   ```bash
+   source /home/jrmfilho23/projetos/amb/bin/activate
    pip install -r requirements.txt
    ```
 
-2. Configure o `.env`:
-
-   ```
+2. Configure o arquivo `.env`:
+   ```env
    URL_API=https://...
    API_TOKEN=...
-   SECRET_KEY=...
+   SECRET_KEY=change-me
    ```
 
-3. Configure `config/usinas_dispositivos.json` com IPs e registros Modbus das usinas.
+3. Verifique a configuração em `config/usinas_dispositivos.json` com os IPs e registros Modbus das usinas.
 
-4. Execute:
-   ```
+4. Execute a aplicação:
+   ```bash
    python dashboard.py
    ```
-   O servidor sobe em `http://0.0.0.0:5000` e abre automaticamente uma janela Chrome dedicada.
+   O servidor iniciará em `http://0.0.0.0:5000` e abrirá automaticamente uma janela Chrome dedicada, se disponível.
 
 ## Deploy
 
-Deploy automatico via GitHub no **Railway**. O `Procfile` executa `python dashboard.py`.
+O deploy é contínuo e automático via GitHub no **Railway**. O arquivo `Procfile` se encarrega de executar a inicialização via gunicorn/python (`python dashboard.py`).
 
-## Creditos
-
-Desenvolvido por EngeGOM.
-
-# 1. Mata o processo pausado no background deste terminal específico
-
-kill -9 %1
-
-# 2. Força o encerramento de qualquer processo do next rodando no seu usuário
-
-pkill -9 -u $USER -f "next"
-
-# 3. Limpa a pasta de cache onde o arquivo de bloqueio do PID ficou preso
-
-rm -rf .next
-
-Não acho “difícil” no sentido de impossível ou mal encaminhado. Acho que ele está numa fase em que
-ficou sensível a acoplamento: Flask renderizando HTML, AJAX recarregando pedaços da tela, SocketIO
-atualizando em tempo real, regras de negócio por usina, config de CLP e histórico no banco. Cada
-parte isolada é simples; o difícil é garantir que elas não se atravessem.
-
-Os pontos que mais aumentam a complexidade hoje são:
-
-- Estado em tempo real por usina: quando SocketIO usa estado global ou broadcast, uma usina pode
-  vazar dados para outra tela.
-- Templates com JS embutido: ao trocar seção por AJAX, scripts podem ser executados de novo e
-  duplicar listeners.
-- Regras de status operacional: os estados booleanos do CLP não são sempre “limpos”, então precisa
-  regra de coerência com potência.
-- Configuração por usina: cada CLP tem nomes e registradores próprios; não dá para padronizar no
-  chute.
-- Testes antigos misturados com código atual: a suíte completa falha por módulos legados, o que
-  atrapalha confiança.
-
-Mas o projeto tem uma base viável. A arquitetura atual funciona para um dashboard industrial
-pequeno/médio, desde que a gente imponha alguns limites: SocketIO sempre com contexto por cliente/
-usina, componentes JS com cleanup, regras de negócio centralizadas, e testes focados nos pontos
-críticos.
-
-Se fosse meu projeto, eu não reescreveria agora. Eu faria uma estabilização incremental:
-
-1. separar claramente “estado inicial renderizado” de “estado RT via SocketIO”;
-2. padronizar contrato dos eventos SocketIO com codigo_usina, timestamp, payload;
-3. limpar ou isolar testes legados;
-4. criar testes pequenos para regras de status, config e montagem de payload;
-5. só depois pensar em autenticação, permissões mais finas ou refatorações maiores.
-
-Então: está ficando complexo, mas não está fora de controle. O importante é não deixar regra
-operacional espalhar por template, controller e socket ao mesmo tempo.
+---
+**Créditos**: Desenvolvido por EngeGOM.
