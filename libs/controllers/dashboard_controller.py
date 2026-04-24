@@ -3,7 +3,8 @@
 # 1. _parse_filtros          -> Lê filtros da query string
 # 2. _preparar_dados_geracao -> Consulta e normaliza produção para o template
 # 3. _preparar_dados_nivel   -> Consulta e normaliza níveis para o template
-# 4. get_dashboard_data      -> Monta o contexto completo do dashboard
+# 4. _preparar_dados_vazao   -> Consulta 30 dias de vazão exclusivo para PCH-PIRA
+# 5. get_dashboard_data      -> Monta o contexto completo do dashboard
 # -------------------------------------------------------------------
 
 import re
@@ -160,7 +161,9 @@ def _preparar_dados_nivel(codigo_usina=USINA_PADRAO, data_inicio=None, data_fim=
         data_inicio=data_inicio,
         data_fim=data_fim,
     )
+    print(resposta)
     df = normalizar_nivel(resposta)
+    print(df.head(10))
 
     if df.empty:
         return {
@@ -170,7 +173,18 @@ def _preparar_dados_nivel(codigo_usina=USINA_PADRAO, data_inicio=None, data_fim=
             "nivel_colors": [],
         }
 
-    col_names = list(df.columns)
+    col_names = [c for c in df.columns if "vazão" not in c.lower() and "vazao" not in c.lower()]
+
+    if not col_names:
+        return {
+            "nivel_series": [],
+            "nivel_labels": [],
+            "nivel_vertimento": nivel_vertimento,
+            "nivel_vertimento_label": f"{nivel_vertimento:.2f}m",
+            "spill_y": 0,
+            "nivel_colors": [],
+            "nivel_y_axis": [],
+        }
 
     all_values = df[col_names].values.flatten()
     y_min = float(all_values.min())
@@ -226,6 +240,71 @@ def _preparar_dados_nivel(codigo_usina=USINA_PADRAO, data_inicio=None, data_fim=
         "nivel_y_axis": y_axis_labels,
     }
 
+@desempenho
+def _preparar_dados_vazao(codigo_usina=USINA_PADRAO):
+    defaults = {"vazao_series": [], "vazao_latest": 0, "vazao_media": 0, "vazao_data_hora": ""}
+    if codigo_usina != "PCH-PIRA":
+        return defaults
+
+    agora = datetime.now()
+    data_inicio = (agora - timedelta(days=30)).strftime("%d/%m/%Y %H:%M")
+    data_fim = agora.strftime("%d/%m/%Y %H:%M")
+
+    resposta = consultar_nivel(
+        codigo_usina=codigo_usina,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+    )
+    df = normalizar_nivel(resposta)
+
+    if df.empty:
+        return defaults
+
+    col_names = [c for c in df.columns if "vazão" in c.lower() or "vazao" in c.lower()]
+    if not col_names:
+        return defaults
+
+    df = df[col_names]
+    
+    all_values = df.values.flatten()
+    y_min = float(all_values.min())
+    y_max = float(all_values.max())
+    margem = (y_max - y_min) * 0.1 if y_max != y_min else 1.0
+    y_bottom = max(0, y_min - margem)
+    y_top = y_max + margem
+    y_range = y_top - y_bottom if y_top > y_bottom else 1.0
+
+    svg_w, svg_h = 400, 80
+    n_points = len(df)
+
+    vazao_series = []
+    color = "#34D399"
+    
+    for _, coluna in enumerate(col_names):
+        points = []
+        for posicao, (_, valor) in enumerate(df[coluna].items()):
+            x = (posicao / max(n_points - 1, 1)) * svg_w
+            y = svg_h - ((float(valor) - y_bottom) / y_range * svg_h)
+            points.append(f"{x:.1f},{y:.1f}")
+
+        vazao_series.append(
+            {
+                "name": coluna,
+                "path": "M" + " L".join(points) if points else "",
+                "color": color,
+            }
+        )
+
+    latest_val = float(df.sum(axis=1).iloc[-1]) if not df.empty else 0
+    media_val = float(df.sum(axis=1).mean()) if not df.empty else 0
+    data_hora_val = df.index[-1].strftime("%d/%m/%Y %H:%M") if not df.empty else ""
+
+    return {
+        "vazao_series": vazao_series,
+        "vazao_latest": latest_val,
+        "vazao_media": media_val,
+        "vazao_data_hora": data_hora_val
+    }
 
 def _montar_resumo_geracao(chart_data, ug_names, nivel_data):
     """Monta resumo do ultimo periodo disponivel para o card lateral."""
@@ -294,6 +373,8 @@ def get_dashboard_data(parametros=None):
         data_fim=data_fim,
     )
 
+    vazao_data = _preparar_dados_vazao(codigo_usina=codigo_usina)
+
     # Card de resumo do periodo (ultimo ponto disponivel)
     resumo_geracao = _montar_resumo_geracao(chart_data, ug_names, nivel_data)
 
@@ -313,5 +394,6 @@ def get_dashboard_data(parametros=None):
         "usinas_disponiveis": USINAS_DISPONIVEIS,
         "resumo_rt": resumo_rt,
         "resumo_geracao": resumo_geracao,
+        "vazao_data": vazao_data,
         **nivel_data,
     }

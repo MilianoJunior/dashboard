@@ -216,8 +216,12 @@ def normalizar_nivel(resposta_api):
         df[col] = pd.to_numeric(df[col], errors="coerce").round(2)
 
     # Excluir coluna se tiver >= 30% de Nones (exige 70% de dados não-nulos)
-    limite = int(len(df) * 0.7)
-    df = df.dropna(thresh=limite, axis=1)
+    # Exceção para vazão, pois é atualizada de hora em hora e será esparsa.
+    cols_a_manter = [
+        col for col in df.columns 
+        if "vazão" in col.lower() or "vazao" in col.lower() or df[col].count() >= int(len(df) * 0.7)
+    ]
+    df = df[cols_a_manter]
 
     # Preencher restantes com o anterior, e preencher qualquer sobra inicial com 0.0
     df = df.ffill().fillna(0.0)

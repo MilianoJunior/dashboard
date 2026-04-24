@@ -37,9 +37,9 @@ Use o **nome do grupo** (`POST /grupo-usina`) ou o **alias da variável** (`POST
 | **1 UG**  | `CGH-APARECIDA` | Todas as variáveis retornam com prefixo `UG-01`                                 |
 | **2 UGs** | `PCH-PEDRAS`    | As variáveis de cada UG vêm juntas na mesma resposta: `UG-01 ...` e `UG-02 ...` |
 
-### Resolução Automática
+### Resolução Dinâmica Automática
 
-O cliente envia apenas as datas. A API decide o intervalo de resample:
+O cliente envia apenas as datas. A API decide o intervalo principal de resample da resposta:
 
 | Intervalo solicitado | Resolução aplicada   |
 | :------------------- | :------------------- |
@@ -47,9 +47,11 @@ O cliente envia apenas as datas. A API decide o intervalo de resample:
 | ≤ 1 dia              | 15 min               |
 | > 1 dia              | 30 min               |
 
+> **Agrupamento Dinâmico (Novidade):** Variáveis com baixa frequência nativa (intervalo médio > 10 min, como a **Vazão** da `PCH-PIRA` que é atualizada a cada 1 hora) **não sofrem média**. Seus valores são enviados integralmente no exato timestamp (usando `.first()`), preservando os dados brutos e evitando distorções no gráfico. Já variáveis com alta frequência (≤ 10 min) são agregadas pela média móvel do bloco.
+
 ### Filtro de Outliers (IQR)
 
-Valores fora de `[Q1 - 1.5×IQR, Q3 + 1.5×IQR]` são substituídos pelo último valor válido (`ffill`). Nenhum registro é removido. Grupos do tipo `status` não são filtrados.
+Valores fora de `[Q1 - 1.5×IQR, Q3 + 1.5×IQR]` são substituídos por `nulo` (`pd.NA`). Nenhum registro é removido, e o preenchimento automático (forward-fill) foi removido para não distorcer dados esparsos (como vazão de hora em hora). Grupos do tipo `status` não são filtrados.
 
 ---
 
@@ -65,6 +67,7 @@ Lista todas as usinas configuradas.
 {
   "usinas_disponiveis": [
     { "codigo": "CGH-APARECIDA", "descricao": "CGH Aparecida - 1 UG" },
+    { "codigo": "PCH-PIRA", "descricao": "PCH Pira - 5 UGs" },
     { "codigo": "CGH-FAE", "descricao": "CGH FAE - 2 UGs" },
     { "codigo": "PCH-PEDRAS", "descricao": "PCH Pedras - 2 UGs" },
     { "codigo": "CGH-PICADAS-ALTAS", "descricao": "CGH Picadas Altas - 2 UGs" },
@@ -248,43 +251,37 @@ Consulta o histórico de **uma única variável**.
 
 Consulta **todas as variáveis de um grupo** de uma vez.
 
-#### Exemplo: 1 UG — Grupo `potencia` (CGH-APARECIDA)
+#### Exemplo: 1 UG — Grupo `temperaturas` (CGH-APARECIDA)
 
 **Request:**
 
 ```json
 {
   "usina": "CGH-APARECIDA",
-  "grupo": "potencia",
+  "grupo": "temperaturas",
   "data_inicio": "15/01/2026 00:00",
   "data_fim": "16/01/2026 00:00",
   "token": "seu_token"
 }
 ```
 
-**Response:** (intervalo = 1 dia → resolução 15 min)
+**Response:** (intervalo = 1 dia → resolução 30 min)
 
 ```json
 {
   "usina": "CGH-APARECIDA",
-  "grupo": "potencia",
+  "grupo": "temperaturas",
   "registros": 96,
   "dados": [
     {
       "data_hora": "2026-01-15T00:00:00",
-      "UG-01 Potência Ativa": 120.5,
-      "UG-01 Potência Reativa": 18.3,
-      "UG-01 Potência Aparente": 121.9,
-      "UG-01 Fator de Potência": 0.989
-    },
-    {
-      "data_hora": "2026-01-15T00:15:00",
-      "UG-01 Potência Ativa": 118.2,
-      "UG-01 Potência Reativa": 17.9,
-      "UG-01 Potência Aparente": 119.6,
-      "UG-01 Fator de Potência": 0.988
-    },
-    "..."
+      "UG-01 Temp. Óleo UHLM": 120.5,
+      "UG-01 Temp. Óleo UHRV": 18.3,
+      "UG-01 Temp. Mancal Casquilho Combinado": 121.9,
+      "UG-01 Temp. Enrolamento Fase A": 0.989
+      "..."
+    }
+
   ]
 }
 ```
@@ -413,18 +410,18 @@ Calcula geração de energia por período.
 
 ## 📚 Referência de Grupos por Usina
 
-| Grupo        | CGH-APARECIDA | CGH-FAE | PCH-PEDRAS | CGH-PICADAS-ALTAS | CGH-HOPPEN |
-| :----------- | :-----------: | :-----: | :--------: | :---------------: | :--------: |
-| status       |      ✅       |   ✅    |     ✅     |        ✅         |     ✅     |
-| energia      |      ✅       |   ✅    |     ✅     |        ✅         |     ✅     |
-| eletrica     |      ✅       |   ✅    |     ✅     |        ✅         |     ✅     |
-| potencia     |      ✅       |   ✅    |     ✅     |        ✅         |     ✅     |
-| mecanica     |      ✅       |   ✅    |     ✅     |        ✅         |     ✅     |
-| hidraulica   |      ✅       |   ✅    |     ✅     |        ✅         |     ✅     |
-| pressoes     |      ✅       |   ✅    |     ✅     |        ✅         |     ✅     |
-| temperaturas |      ✅       |   ✅    |     ✅     |        ✅         |     ✅     |
-| vibracao     |       —       |   ✅    |     ✅     |         —         |     —      |
-| diversos     |       —       |    —    |     ✅     |        ✅         |     —      |
+| Grupo        | CGH-APARECIDA | PCH-PIRA | CGH-FAE | PCH-PEDRAS | CGH-PICADAS-ALTAS | CGH-HOPPEN |
+| :----------- | :-----------: | :------: | :-----: | :--------: | :---------------: | :--------: |
+| status       |      ✅       |    —     |   ✅    |     ✅     |        ✅         |     ✅     |
+| energia      |      ✅       |    ✅    |   ✅    |     ✅     |        ✅         |     ✅     |
+| eletrica     |      ✅       |    —     |   ✅    |     ✅     |        ✅         |     ✅     |
+| potencia     |      ✅       |    —     |   ✅    |     ✅     |        ✅         |     ✅     |
+| mecanica     |      ✅       |    —     |   ✅    |     ✅     |        ✅         |     ✅     |
+| hidraulica   |      ✅       |    ✅    |   ✅    |     ✅     |        ✅         |     ✅     |
+| pressoes     |      ✅       |    —     |   ✅    |     ✅     |        ✅         |     ✅     |
+| temperaturas |      ✅       |    —     |   ✅    |     ✅     |        ✅         |     ✅     |
+| vibracao     |       —       |    —     |   ✅    |     ✅     |         —         |     —      |
+| diversos     |       —       |    —     |    —    |     ✅     |        ✅         |     —      |
 
 ---
 
@@ -462,4 +459,4 @@ API_TOKEN=seu_token_seguro
 uvicorn main:app --reload
 ```
 
-Swagger: `http://engesepapi-production.up.railway.app/docs`
+Swagger: `http://localhost:8000/docs`

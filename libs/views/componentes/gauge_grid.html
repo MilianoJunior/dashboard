@@ -2,8 +2,9 @@
 {% from 'componentes/gauge_card.html' import gauge_card %}
 
 <div class="space-y-4">
-    <div id="rtSummaryCard" class="bg-surface-container-highest p-5 rounded border-l-2 shadow-sm" style="border-left-color: #02aeef;">
-        <div class="flex items-start justify-between gap-4">
+<div class="grid grid-cols-1 {{ 'lg:grid-cols-2' if codigo_usina == 'PCH-PIRA' else 'lg:grid-cols-1' }} gap-4">
+    <div id="rtSummaryCard" class="bg-surface-container-highest p-5 rounded border-l-2 shadow-sm flex flex-col justify-between" style="border-left-color: #02aeef;">
+        <div class="flex items-start justify-between gap-4 mb-2">
             <div>
                 <div class="flex items-center gap-2 mb-2">
                     <div class="text-[10px] uppercase font-bold tracking-widest flex items-center" style="color: #02aeef;"><span class="live-dot"></span>Resumo Tempo Real</div>
@@ -27,8 +28,56 @@
                 </div>
             </div>
         </div>
-        <div id="rtSummarySparkline" style="margin: 0.5rem -1.25rem -1.25rem; height: 32px; overflow: hidden;"></div>
+        <div id="rtSummarySparkline" class="mt-auto" style="margin-left: -1.25rem; margin-right: -1.25rem; margin-bottom: -1.25rem; height: 32px; overflow: hidden;"></div>
     </div>
+
+    {% if codigo_usina == 'PCH-PIRA' %}
+    <div id="flowCard" class="bg-surface-container-highest rounded border-l-2 shadow-sm flex flex-row overflow-hidden" style="border-left-color: #34D399;">
+        <!-- Coluna 1: Textos -->
+        <div class="p-5 flex flex-col justify-center min-w-[200px] z-10">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="text-[10px] uppercase font-bold tracking-widest flex items-center" style="color: #34D399;">
+                    <span class="material-symbols-outlined text-sm align-middle mr-1" style="font-size: 14px;">water_drop</span>
+                    Vazão (Últimos 30 Dias)
+                </div>
+            </div>
+            {% if vazao_data.vazao_series %}
+            <div class="text-2xl font-headline font-bold text-on-surface">
+                {{ "%.2f"|format(vazao_data.vazao_latest) }} <span class="text-sm font-normal text-on-surface-variant">m³/s</span>
+            </div>
+            <div class="text-[11px] text-on-surface-variant mt-1">
+                {{ vazao_data.vazao_data_hora }}
+            </div>
+            <div class="text-[11px] text-on-surface-variant mt-0.5">
+                Média 30d: {{ "%.2f"|format(vazao_data.vazao_media) }} m³/s
+            </div>
+            {% else %}
+            <div class="text-2xl font-headline font-bold text-on-surface">--</div>
+            {% endif %}
+        </div>
+        
+        <!-- Coluna 2: Sparkline -->
+        <div class="flex-1 relative min-h-[80px]">
+            {% if vazao_data.vazao_series %}
+            <svg viewBox="0 0 400 80" preserveAspectRatio="none" class="absolute inset-0 w-full h-full opacity-80" style="padding: 10px 0;">
+                <defs>
+                    <linearGradient id="vazaoGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#34D399" stop-opacity="0.35"/>
+                        <stop offset="100%" stop-color="#34D399" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                {% for serie in vazao_data.vazao_series %}
+                <path d="{{ serie.path }} L400,80 L0,80 Z" fill="url(#vazaoGrad)"/>
+                <path d="{{ serie.path }}" fill="none" stroke="{{ serie.color }}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                {% endfor %}
+            </svg>
+            {% else %}
+            <div class="w-full h-full flex items-center justify-center text-[10px] text-on-surface-variant">Sem dados de vazão disponíveis.</div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
 
     <div id="gaugeGrid" class="grid grid-cols-2 md:grid-cols-5 gap-4">
         {% for ug in usinas %}

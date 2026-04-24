@@ -38,6 +38,7 @@ Esta API permite a leitura e escrita de registradores em CLPs via protocolo Modb
 - **Parâmetro de rota:**
   - `tipo`: `leituras` ou `alarmes`
 - **Body (JSON):**
+
   ```json
   {
     "conexao": {
@@ -60,6 +61,7 @@ Esta API permite a leitura e escrita de registradores em CLPs via protocolo Modb
   - Cada registro é definido como `[endereco, tipo, {opções}]`.
   - `offset` é opcional (padrão `-1`).
   - `converter` é opcional e pode assumir os valores `default`, `word_order`, `endianness`, `byte_order`, `swap`.
+
 - **Resposta (sucesso):**
   ```json
   {
@@ -79,6 +81,7 @@ Esta API permite a leitura e escrita de registradores em CLPs via protocolo Modb
 - **Parâmetro de rota:**
   - `tipo`: `reset_alarmes_automatico` ou `escritas`
 - **Body (JSON):**
+
   ```json
   {
     "conexao": {
@@ -93,6 +96,7 @@ Esta API permite a leitura e escrita de registradores em CLPs via protocolo Modb
   ```
 
   - Cada item de escrita segue o formato `[endereco, tipo, valor, {opções}]` com os mesmos parâmetros de offset/converter utilizados na leitura.
+
 - **Resposta (sucesso):**
   ```json
   {
