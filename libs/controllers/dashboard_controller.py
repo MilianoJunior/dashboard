@@ -161,9 +161,7 @@ def _preparar_dados_nivel(codigo_usina=USINA_PADRAO, data_inicio=None, data_fim=
         data_inicio=data_inicio,
         data_fim=data_fim,
     )
-    print(resposta)
     df = normalizar_nivel(resposta)
-    print(df.head(10))
 
     if df.empty:
         return {
