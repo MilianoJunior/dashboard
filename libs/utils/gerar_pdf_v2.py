@@ -6,9 +6,10 @@
 # 3. _gerar_grafico_barras      → Matplotlib → base64 (barras mensais)
 # 4. _gerar_grafico_comparativo → Matplotlib → base64 (barras duplas)
 # 5. _gerar_grafico_linhas      → Matplotlib → base64 (curva diária)
-# 6. _gerar_mini_sparkline      → Matplotlib → base64 (mini gráfico p/ card)
-# 7. _build_html                → Monta HTML completo com CSS inline
-# 8. gerar_relatorio            → WeasyPrint renderiza HTML → PDF
+# 6. _gerar_grafico_vazao_linhas -> Matplotlib → base64 (curva de vazão)
+# 7. _gerar_mini_sparkline      → Matplotlib → base64 (mini gráfico p/ card)
+# 8. _build_html                → Monta HTML completo com CSS inline
+# 9. gerar_relatorio            → WeasyPrint renderiza HTML → PDF
 # -------------------------------------------------------------------
 '''
 import os
@@ -17,6 +18,7 @@ import base64
 import time
 import functools
 import random
+import calendar
 
 import matplotlib
 matplotlib.use('Agg')
@@ -241,6 +243,34 @@ def _gerar_grafico_linhas(dados_dias, titulo, destaque=False):
     return _fig_to_b64(fig)
 
 
+def _gerar_grafico_vazao_linhas(dados_dias, titulo):
+    """Curva de vazao media diaria."""
+    fig, ax = plt.subplots(figsize=(8, 2.6))
+    fig.patch.set_facecolor(C["bg_card"])
+    _style_ax(ax)
+
+    dias = list(range(1, len(dados_dias) + 1))
+    ax.fill_between(dias, dados_dias, alpha=0.14, color=C["accent2"], zorder=2)
+    ax.plot(dias, dados_dias, color=C["accent2"], marker='o', markersize=2.5,
+            linewidth=1.4, zorder=3, markerfacecolor=C["accent2"],
+            markeredgecolor=C["bg_card"], markeredgewidth=0.5)
+
+    max_val = max(dados_dias) if dados_dias else 0
+    if max_val > 0:
+        max_idx = dados_dias.index(max_val) + 1
+        ax.annotate(f"{max_val:,.2f}".replace(",", "."),
+                    xy=(max_idx, max_val), xytext=(max_idx, max_val * 1.12),
+                    fontsize=7, color=C["accent"], fontweight='bold', ha='center',
+                    arrowprops=dict(arrowstyle='->', color=C["accent"], lw=0.8))
+
+    ax.set_xlim(0.5, 31.5)
+    ax.set_xticks(range(1, 32, 2))
+    ax.set_ylim(0, max_val * 1.3 if max_val > 0 else 100)
+    ax.grid(axis='y', color=C["border"], alpha=0.3, linestyle='--', zorder=0)
+    ax.set_title(titulo, fontsize=8, fontweight='bold', color=C["text"], loc='left', pad=8)
+    return _fig_to_b64(fig)
+
+
 def _gerar_sparkline(valores, cor=None):
     """Mini gráfico sparkline para cards KPI."""
     cor = cor or C["accent3"]
@@ -282,11 +312,13 @@ body {{
 
 .page {{
     width: 210mm;
-    min-height: 297mm;
+    height: 297mm;
     padding: 18mm 16mm 14mm 16mm;
     page-break-after: always;
+    break-after: page;
     position: relative;
     background: {C["bg_dark"]};
+    overflow: hidden;
 }}
 
 .page:last-child {{
@@ -501,6 +533,8 @@ body {{
     padding: 14px;
     border: 1px solid {C["border"]};
     margin-bottom: 12px;
+    break-inside: avoid;
+    page-break-inside: avoid;
 }}
 
 .chart-title {{
@@ -541,7 +575,7 @@ body {{
 }}
 
 .data-table td {{
-    padding: 3px 2px;
+    padding: 2.5px 2px;
     text-align: center;
     border-bottom: 1px solid rgba(71, 85, 105, 0.4);
     color: {C["text"]};
@@ -591,6 +625,27 @@ body {{
     font-weight: 700;
     color: {C["accent"]} !important;
     background: {C["bg_card"]} !important;
+}}
+
+.data-table-compact {{
+    font-size: 6.2px;
+}}
+
+.data-table-compact th {{
+    padding: 4px 2px;
+    font-size: 6.5px;
+}}
+
+.data-table-compact td {{
+    padding: 2px 2px;
+}}
+
+.data-table-compact .td-val {{
+    font-size: 6.5px;
+}}
+
+.data-table-compact .td-pct {{
+    font-size: 5.4px;
 }}
 
 /* ---------- SUMMARY BAR ---------- */
@@ -702,11 +757,10 @@ def _build_html(dados):
     meta = dados["meta"]
     resumo = dados["resumo"]
     meses_op = dados["meses_op"]
+    vazao = dados.get("vazao")
 
-    # Gerar sparklines para cards
-    vals_mensais = [dados["totais"].get(m, 0) for m in meses_op]
-    spark_geracao = _gerar_sparkline(vals_mensais, C["accent3"])
-    spark_perf = _gerar_sparkline([dados["perf"].get(m, 0) for m in meses_op], C["accent2"])
+    def fmt_num(valor, casas=2):
+        return f"{valor:,.{casas}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
     # Gerar gráficos
     chart_barras = _gerar_grafico_barras(dados["totais"], MESES_TODOS)
@@ -725,10 +779,32 @@ def _build_html(dados):
         destaque = (mes == resumo["pico_mes"])
         curvas.append((mes, _gerar_grafico_linhas(dados["geracao"][mes], titulo, destaque), destaque))
 
+    vazao_meses = []
+    vazao_curvas = []
+    if vazao:
+        vazao_meses = [
+            mes for mes in MESES_TODOS
+            if any(vazao.get("leituras_diarias", {}).get(mes, []))
+        ]
+        if vazao.get("disponivel"):
+            for mes in vazao_meses:
+                titulo = f"VAZÃO MÉDIA DE {mes} {meta['ano']} ({vazao.get('unidade', 'm3/s')})"
+                vazao_curvas.append((
+                    mes,
+                    _gerar_grafico_vazao_linhas(vazao["media_diaria"][mes], titulo),
+                ))
+
     # Performance badge
     pg = resumo["perf_global"]
     badge_class = "badge-green" if pg >= 100 else ("badge-amber" if pg >= 50 else "badge-red")
     badge_text = "ACIMA DA META" if pg >= 100 else ("PARCIAL" if pg >= 50 else "ABAIXO DA META")
+
+    has_comp = bool(chart_comp)
+    graficos_por_pagina = 2
+    paginas_curvas = -(-len(curvas) // graficos_por_pagina) if curvas else 0
+    pagina_comparativo = 5 if has_comp else None
+    pagina_curvas_inicio = 6 if has_comp else 5
+    pagina_vazao_inicio = pagina_curvas_inicio + paginas_curvas
 
     # ==================== PÁGINA 1: CAPA ====================
     page1 = f"""
@@ -768,8 +844,21 @@ def _build_html(dados):
         ("02", "SUMÁRIO", "2"),
         ("03", "TABELA DE GERAÇÃO OPERACIONAL (MWh)", "3"),
         ("04", "ANÁLISE DE PERFORMANCE OPERACIONAL", "4"),
-        ("05", "CURVAS DE GERAÇÃO DIÁRIA POR MÊS", "5"),
     ]
+    if has_comp:
+        toc_items.append(("05", "COMPARATIVO DIÁRIO DE GERAÇÃO", str(pagina_comparativo)))
+    toc_items.append((
+        f"{len(toc_items) + 1:02d}",
+        "CURVAS DE GERAÇÃO DIÁRIA POR MÊS",
+        str(pagina_curvas_inicio),
+    ))
+    if vazao:
+        toc_items.append((
+            f"{len(toc_items) + 1:02d}",
+            "VAZÃO - MÉDIAS DIÁRIAS E COBERTURA HORÁRIA",
+            str(pagina_vazao_inicio),
+        ))
+
     toc_html = ""
     for num, titulo, pag in toc_items:
         toc_html += f"""
@@ -802,9 +891,10 @@ def _build_html(dados):
         for m in meses:
             v = dados["geracao"][m][dia - 1]
             if v > 0:
-                gf_dia = dados["gf"][m] / 31
-                pct = v / gf_dia * 100
-                cells += f'<td><span class="td-val">{v:,.2f}</span><br><span class="td-pct">{pct:.1f}%</span></td>'.replace(",", "X").replace(".", ",").replace("X", ".")
+                dias_mes = calendar.monthrange(int(meta["ano"]), MESES_TODOS.index(m) + 1)[1]
+                gf_dia = dados["gf"][m] / dias_mes if dados["gf"][m] else 0
+                pct = v / gf_dia * 100 if gf_dia else 0
+                cells += f'<td><span class="td-val">{fmt_num(v)}</span><br><span class="td-pct">{pct:.1f}%</span></td>'
             else:
                 cells += '<td></td>'
         rows_html += f'<tr>{cells}</tr>\n'
@@ -813,14 +903,14 @@ def _build_html(dados):
     total_cells = '<td class="td-dia" style="font-weight:900">TOTAL</td>'
     for m in meses:
         v = dados["totais"][m]
-        total_cells += f'<td>{v:,.2f}</td>'.replace(",", "X").replace(".", ",").replace("X", ".")
+        total_cells += f'<td>{fmt_num(v)}</td>'
     rows_html += f'<tr class="row-total">{total_cells}</tr>\n'
 
-    # Linha G. FÍSICA
-    gf_cells = '<td>G. FÍSICA</td>'
+    # Linha de referencia energetica mensal
+    gf_cells = '<td>REFERÊNCIA</td>'
     for m in meses:
         v = dados["gf"][m]
-        gf_cells += f'<td>{v:,.2f}</td>'.replace(",", "X").replace(".", ",").replace("X", ".")
+        gf_cells += f'<td>{fmt_num(v)}</td>'
     rows_html += f'<tr class="row-gf">{gf_cells}</tr>\n'
 
     # Linha PERF. %
@@ -841,7 +931,7 @@ def _build_html(dados):
         <div class="section-header">
             <div class="section-tag">Seção 03</div>
             <div class="section-title">Geração Operacional ({meta["ano"]})</div>
-            <div class="section-desc">Valores em MWh · Percentual relativo à Garantia Física diária</div>
+            <div class="section-desc">Valores em MWh · Percentual relativo à referência diária</div>
         </div>
         <table class="data-table">
             <thead><tr>{header_cells}</tr></thead>
@@ -850,15 +940,15 @@ def _build_html(dados):
         <div class="summary-bar">
             <div class="summary-item">
                 <div class="summary-item-label">Meta Diária</div>
-                <div class="summary-item-value">{meta["meta_dia"]} MW</div>
+                <div class="summary-item-value">{meta["meta_dia"]} MWh</div>
             </div>
             <div class="summary-item">
-                <div class="summary-item-label">GF Anual</div>
-                <div class="summary-item-value">{resumo["gf_anual"]:,.0f} MW</div>
+                <div class="summary-item-label">Ref. Anual</div>
+                <div class="summary-item-value">{fmt_num(resumo["gf_anual"], 0)} MWh</div>
             </div>
             <div class="summary-item">
                 <div class="summary-item-label">Geração Anual</div>
-                <div class="summary-item-value" style="color:{C["accent2"]}">{resumo["anual"]:,.0f} MW</div>
+                <div class="summary-item-value" style="color:{C["accent2"]}">{fmt_num(resumo["anual"], 0)} MWh</div>
             </div>
             <div class="summary-item">
                 <div class="summary-item-label">Perf. Global</div>
@@ -873,14 +963,6 @@ def _build_html(dados):
     """
 
     # ==================== PÁGINA 4: PERFORMANCE ====================
-    comp_section = ""
-    if chart_comp:
-        comp_section = f"""
-        <div class="chart-container">
-            <div class="chart-title">Comparativo Diário — {meses_op[-1]} vs {meses_op[-2]} (MWh)</div>
-            <img class="chart-img" src="data:image/png;base64,{chart_comp}">
-        </div>"""
-
     page4 = f"""
     <div class="page">
         <div class="section-header">
@@ -891,19 +973,18 @@ def _build_html(dados):
         <div class="kpi-grid">
             <div class="kpi-card">
                 <div class="kpi-label">Geração Total Anual</div>
-                <div class="kpi-value">{resumo["anual"]:,.2f}<span class="kpi-unit">MWh</span></div>
+                <div class="kpi-value">{fmt_num(resumo["anual"])}<span class="kpi-unit">MWh</span></div>
                 <div class="kpi-sub">Acumulado até {meses_op[-1] if meses_op else '—'}</div>
-                <img class="kpi-sparkline" src="data:image/png;base64,{spark_geracao}" width="90">
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Média Mensal</div>
-                <div class="kpi-value">{resumo["media"]:,.2f}<span class="kpi-unit">MWh/mês</span></div>
+                <div class="kpi-value">{fmt_num(resumo["media"])}<span class="kpi-unit">MWh/mês</span></div>
                 <div class="kpi-sub">{len(meses_op)} meses operados</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Pico de Geração</div>
                 <div class="kpi-value">{resumo["pico_mes"]}</div>
-                <div class="kpi-sub">{resumo["pico_val"]:,.2f} MWh</div>
+                <div class="kpi-sub">{fmt_num(resumo["pico_val"])} MWh</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Dias Acima da Meta</div>
@@ -914,19 +995,17 @@ def _build_html(dados):
                 <div class="kpi-label">Performance Global</div>
                 <div class="kpi-value">{resumo["perf_global"]}%</div>
                 <div class="kpi-sub"><span class="badge {badge_class}">{badge_text}</span></div>
-                <img class="kpi-sparkline" src="data:image/png;base64,{spark_perf}" width="90">
             </div>
             <div class="kpi-card">
-                <div class="kpi-label">Garantia Física</div>
+                <div class="kpi-label">Referência Diária</div>
                 <div class="kpi-value">{meta["gf_mwh"]}<span class="kpi-unit">MWh</span></div>
-                <div class="kpi-sub">GF Anual: {resumo["gf_anual"]:,.0f} MW</div>
+                <div class="kpi-sub">Ref. Anual: {fmt_num(resumo["gf_anual"], 0)} MWh</div>
             </div>
         </div>
         <div class="chart-container">
             <div class="chart-title">Comparativo Anual — Geração por Mês (MWh)</div>
             <img class="chart-img" src="data:image/png;base64,{chart_barras}">
         </div>
-        {comp_section}
         <div class="page-footer">
             <span class="page-footer-text">{meta["cliente"]} · {meta["usina"]} · {meta["ano"]}</span>
             <span class="page-footer-page">04</span>
@@ -934,10 +1013,30 @@ def _build_html(dados):
     </div>
     """
 
+    # ==================== PÁGINA 5 OPCIONAL: COMPARATIVO ====================
+    page_comp = ""
+    if chart_comp:
+        page_comp = f"""
+        <div class="page">
+            <div class="section-header">
+                <div class="section-tag">Seção 05</div>
+                <div class="section-title">Comparativo Diário</div>
+                <div class="section-desc">Geração diária dos dois últimos meses com dados</div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Comparativo Diário — {meses_op[-1]} vs {meses_op[-2]} (MWh)</div>
+                <img class="chart-img" src="data:image/png;base64,{chart_comp}">
+            </div>
+            <div class="page-footer">
+                <span class="page-footer-text">{meta["cliente"]} · {meta["usina"]} · {meta["ano"]}</span>
+                <span class="page-footer-page">{pagina_comparativo:02d}</span>
+            </div>
+        </div>
+        """
+
     # ==================== PÁGINAS 5+: CURVAS DIÁRIAS ====================
     pages_curvas = ""
-    graficos_por_pagina = 3
-    page_num = 5
+    page_num = pagina_curvas_inicio
 
     for idx in range(0, len(curvas), graficos_por_pagina):
         batch = curvas[idx:idx + graficos_por_pagina]
@@ -956,7 +1055,7 @@ def _build_html(dados):
         pages_curvas += f"""
         <div class="page">
             <div class="section-header">
-                <div class="section-tag">Seção 05 · Parte {part_num}/{total_parts}</div>
+                <div class="section-tag">Seção {'06' if has_comp else '05'} · Parte {part_num}/{total_parts}</div>
                 <div class="section-title">Curvas de Geração Diária</div>
                 <div class="section-desc">Detalhamento dia a dia dos meses operados</div>
             </div>
@@ -968,6 +1067,115 @@ def _build_html(dados):
         </div>
         """
         page_num += 1
+
+    # ==================== PÁGINAS FINAIS: VAZÃO ====================
+    pages_vazao = ""
+    if vazao:
+        section_num = 7 if has_comp else 6
+        unidade = vazao.get("unidade", "m3/s")
+        if vazao.get("disponivel"):
+            resumo_vazao = f"""
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Média Anual</div>
+                    <div class="kpi-value">{fmt_num(vazao["media_anual"])}<span class="kpi-unit">{unidade}</span></div>
+                    <div class="kpi-sub">{vazao["dias_com_dados"]} dias com dados</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Máxima Horária</div>
+                    <div class="kpi-value">{fmt_num(vazao["maxima"])}<span class="kpi-unit">{unidade}</span></div>
+                    <div class="kpi-sub">{vazao["maxima_data"]}</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Leituras</div>
+                    <div class="kpi-value">{vazao["leituras_total"]}<span class="kpi-unit">pts</span></div>
+                    <div class="kpi-sub">{vazao["leituras_por_dia_esperadas"]} leituras esperadas por dia</div>
+                </div>
+            </div>
+            """
+        else:
+            resumo_vazao = f"""
+            <div class="chart-container">
+                <div class="chart-title">Sem dados de vazão</div>
+                <div class="section-desc">{vazao.get("motivo", "Sem leituras de vazao no periodo.")}</div>
+            </div>
+            """
+
+        chunks_meses = [vazao_meses[i:i + 4] for i in range(0, len(vazao_meses), 4)] or [[]]
+        faixas_dias = [(1, 16), (17, 31)]
+        pagina_vazao_idx = 0
+
+        for chunk_idx, meses_chunk in enumerate(chunks_meses):
+            header = '<th>DIA</th>' + ''.join(f'<th>{mes}</th>' for mes in meses_chunk)
+            for dia_ini, dia_fim in faixas_dias:
+                rows = ""
+                for dia in range(dia_ini, dia_fim + 1):
+                    cells = f'<td class="td-dia">{dia}º</td>'
+                    for mes in meses_chunk:
+                        valor = vazao["media_diaria"][mes][dia - 1]
+                        leituras = vazao["leituras_diarias"][mes][dia - 1]
+                        if leituras:
+                            cells += (
+                                f'<td><span class="td-val">{fmt_num(valor)}</span><br>'
+                                f'<span class="td-pct">{leituras}/{vazao["leituras_por_dia_esperadas"]} leit.</span></td>'
+                            )
+                        else:
+                            cells += '<td></td>'
+                    rows += f"<tr>{cells}</tr>\n"
+
+                table_html = ""
+                if meses_chunk:
+                    table_html = f"""
+                    <table class="data-table data-table-compact">
+                        <thead><tr>{header}</tr></thead>
+                        <tbody>{rows}</tbody>
+                    </table>
+                    """
+
+                periodo_dias = f"Dias {dia_ini:02d}-{dia_fim:02d}"
+                pages_vazao += f"""
+                <div class="page">
+                    <div class="section-header">
+                        <div class="section-tag">Seção {section_num:02d} · Vazão</div>
+                        <div class="section-title">Vazão Média Diária - PCH-PIRA</div>
+                        <div class="section-desc">Valores em {unidade} · {periodo_dias} · até 24 leituras horárias por dia</div>
+                    </div>
+                    {resumo_vazao if pagina_vazao_idx == 0 else ""}
+                    {table_html}
+                    <div class="page-footer">
+                        <span class="page-footer-text">{meta["cliente"]} · {meta["usina"]} · {meta["ano"]}</span>
+                        <span class="page-footer-page">{page_num:02d}</span>
+                    </div>
+                </div>
+                """
+                pagina_vazao_idx += 1
+                page_num += 1
+
+        for idx in range(0, len(vazao_curvas), 2):
+            batch = vazao_curvas[idx:idx + 2]
+            charts_html = ""
+            for mes, b64 in batch:
+                charts_html += f"""
+                <div class="chart-container">
+                    <div class="chart-title">Vazão média diária de {mes} {meta["ano"]} ({unidade})</div>
+                    <img class="chart-img" src="data:image/png;base64,{b64}">
+                </div>"""
+
+            pages_vazao += f"""
+            <div class="page">
+                <div class="section-header">
+                    <div class="section-tag">Seção {section_num:02d} · Curvas</div>
+                    <div class="section-title">Curvas de Vazão Diária</div>
+                    <div class="section-desc">Média diária calculada a partir das leituras horárias disponíveis</div>
+                </div>
+                {charts_html}
+                <div class="page-footer">
+                    <span class="page-footer-text">{meta["cliente"]} · {meta["usina"]} · {meta["ano"]}</span>
+                    <span class="page-footer-page">{page_num:02d}</span>
+                </div>
+            </div>
+            """
+            page_num += 1
 
     # ==================== MONTAR HTML ====================
     html = f"""<!DOCTYPE html>
@@ -981,7 +1189,9 @@ def _build_html(dados):
 {page2}
 {page3}
 {page4}
+{page_comp}
 {pages_curvas}
+{pages_vazao}
 </body>
 </html>"""
 

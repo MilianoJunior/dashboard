@@ -4,7 +4,9 @@
 # 2. logout        -> Encerra sessão e redireciona ao login
 # 3. home          -> Shell protegido, usina vem da sessão
 # 4. api_dashboard -> Retorna seções renderizadas via AJAX (dados pesados)
-# 5. health        -> Endpoint simples de saúde da aplicação
+# 5. reports       -> Tela protegida para geracao de relatorios PDF
+# 6. reports_pdf   -> Gera PDF premium com dados historicos da API
+# 7. health        -> Endpoint simples de saúde da aplicação
 # -------------------------------------------------------------------
 
 from flask import (
@@ -13,6 +15,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_file,
     session,
     url_for,
 )
@@ -24,6 +27,11 @@ from libs.controllers.dashboard_controller import (
 )
 from libs.utils.auth import autenticar, login_required
 from libs.utils.decorators import desempenho
+from libs.controllers.reports_controller import (
+    gerar_pdf_relatorio,
+    listar_anos_relatorio,
+    parse_report_params,
+)
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -62,6 +70,7 @@ def home():
         "componentes/dashboard.html",
         codigo_usina=codigo_usina,
         username=session.get("username", ""),
+        active_page="dashboard",
     )
 
 
@@ -78,6 +87,62 @@ def api_dashboard():
         "generation_chart": render_template("componentes/generation_chart.html", **data),
         "reservoir_chart": render_template("componentes/reservoir_chart.html", **data),
     })
+
+
+@dashboard_bp.route("/reports")
+@login_required
+@desempenho
+def reports():
+    codigo_usina = session.get("codigo_usina", USINA_PADRAO)
+    if codigo_usina not in USINAS_DISPONIVEIS:
+        codigo_usina = USINA_PADRAO
+
+    filtros = parse_report_params(request.args)
+    return render_template(
+        "componentes/reports.html",
+        codigo_usina=codigo_usina,
+        username=session.get("username", ""),
+        active_page="reports",
+        anos_relatorio=listar_anos_relatorio(),
+        ano_selecionado=filtros["ano"],
+    )
+
+
+@dashboard_bp.route("/reports/pdf", methods=["POST"])
+@login_required
+@desempenho
+def reports_pdf():
+    codigo_usina = session.get("codigo_usina", USINA_PADRAO)
+    if codigo_usina not in USINAS_DISPONIVEIS:
+        codigo_usina = USINA_PADRAO
+
+    filtros = parse_report_params(request.form)
+    try:
+        pdf_path, download_name = gerar_pdf_relatorio(
+            codigo_usina=codigo_usina,
+            ano=filtros["ano"],
+        )
+    except Exception as exc:
+        return (
+            render_template(
+                "componentes/reports.html",
+                codigo_usina=codigo_usina,
+                username=session.get("username", ""),
+                active_page="reports",
+                anos_relatorio=listar_anos_relatorio(),
+                ano_selecionado=filtros["ano"],
+                erro=f"Falha ao gerar relatorio: {exc}",
+            ),
+            500,
+        )
+
+    return send_file(
+        pdf_path,
+        as_attachment=True,
+        download_name=download_name,
+        mimetype="application/pdf",
+        max_age=0,
+    )
 
 
 @dashboard_bp.route("/health")

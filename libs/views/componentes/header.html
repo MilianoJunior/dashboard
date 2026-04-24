@@ -2,11 +2,12 @@
 <header class="flex justify-between items-center w-full px-6 py-3 z-50 bg-[#0d141b] dark:bg-[#0d141b] font-['Space_Grotesk'] tracking-tight sticky top-0 shadow-none">
     <div class="text-xl font-bold text-[#02aeef] uppercase tracking-wider">EngeSEP O&amp;M IA</div>
     <nav class="hidden md:flex gap-8 items-center">
+        {% set active_page = active_page or 'dashboard' %}
         {% set nav_items = nav_items or [
-            {'label': 'Dashboard', 'href': '#', 'active': true},
+            {'label': 'Dashboard', 'href': url_for('dashboard.home'), 'active': active_page == 'dashboard'},
             {'label': 'Analytics', 'href': '#', 'active': false},
             {'label': 'Alerts', 'href': '#', 'active': false},
-            {'label': 'Reports', 'href': '#', 'active': false}
+            {'label': 'Reports', 'href': url_for('dashboard.reports'), 'active': active_page == 'reports'}
         ] %}
         {% for item in nav_items %}
         <a class="{{ 'text-[#02aeef] font-bold border-b-2 border-[#02aeef]' if item.active else 'text-[#a6abb4] hover:bg-[#1e272f] transition-colors duration-200' }} px-1 py-1 transition-transform active:scale-95" href="{{ item.href }}">{{ item.label }}</a>
